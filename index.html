@@ -1521,7 +1521,7 @@ function fbSignOut() {
 auth.onAuthStateChanged(function(user) {
   if (!user) {
     document.getElementById("fb-login-screen").style.display = "flex";
-    document.querySelectorAll(".sidebar,.topbar,.main-content,#main-content").forEach(el => { if(el) el.style.visibility="hidden"; });
+    document.querySelectorAll(".sidebar,.topbar,.main").forEach(el => { if(el) el.style.visibility="hidden"; });
     return;
   }
   const email = user.email.toLowerCase();
@@ -1540,7 +1540,7 @@ auth.onAuthStateChanged(function(user) {
   STAFF = [{"id":1,"name":"Ms. Rehana Ansari","role":"Managing Director","initials":"RA"},{"id":2,"name":"Mr. Paresh Gajera","role":"Sales Executive","initials":"PG"},{"id":3,"name":"Ms. Nusaiba Puthawala","role":"Visa Executive","initials":"NP"},{"id":4,"name":"Mr. Ahyan Shaikh","role":"Operation Dept","initials":"AS"}];
 
   document.getElementById("fb-login-screen").style.display = "none";
-  document.querySelectorAll(".sidebar,.topbar,.main-content,#main-content").forEach(el => { if(el) el.style.visibility="visible"; });
+  document.querySelectorAll(".sidebar,.topbar,.main").forEach(el => { if(el) el.style.visibility="visible"; });
 
   // Update sidebar
   document.getElementById("user-avatar").textContent = staff.initials;
@@ -1586,12 +1586,17 @@ function loadFromFirestore() {
       if(col==="targets")   targets    = docs;
       loaded++;
       if(loaded >= collections.length) {
-        renderAll();
-        renderCalendar("book");
-        renderFollowUpCalendar();
-        renderStaff();
-        showTab("dashboard");
-        document.getElementById("topbar-date").textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+        try {
+          renderAll();
+          renderCalendar("book");
+          renderFollowUpCalendar();
+          renderStaff();
+          showTab("dashboard");
+          const td = document.getElementById("topbar-date");
+          if(td) td.textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+        } catch(renderErr) {
+          console.error("Render error:", renderErr);
+        }
       }
     }, err => console.error(col, err));
     _unsubscribers.push(unsub);
