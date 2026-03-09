@@ -1560,15 +1560,8 @@ auth.onAuthStateChanged(function(user) {
 // ── Load Data ────────────────────────────────────
 function loadFromFirestore() {
   const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets"];
-  let loaded = 0;
-
-  // Show loading
-  document.getElementById("main-content").innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px">
-      <div style="width:44px;height:44px;border:4px solid #f1f5f9;border-top-color:#f97316;border-radius:50%;animation:spin 0.8s linear infinite"></div>
-      <div style="font-size:14px;color:#64748b;font-weight:500">Loading CRM data...</div>
-    </div>
-    <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+  const loadedSet = new Set(); // track which collections have loaded
+  let initialRenderDone = false;
 
   // Unsubscribe previous listeners
   _unsubscribers.forEach(fn => fn());
@@ -1576,6 +1569,7 @@ function loadFromFirestore() {
 
   collections.forEach(col => {
     const unsub = db.collection(col).onSnapshot(snap => {
+      // Update the data array
       const docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
       if(col==="clients")   clients    = docs;
       if(col==="enquiries") enquiries  = docs;
@@ -1584,8 +1578,12 @@ function loadFromFirestore() {
       if(col==="reports")   reports    = docs;
       if(col==="marketing") marketing  = docs;
       if(col==="targets")   targets    = docs;
-      loaded++;
-      if(loaded >= collections.length) {
+
+      loadedSet.add(col);
+
+      // Only do initial full render once ALL collections are loaded
+      if(!initialRenderDone && loadedSet.size >= collections.length) {
+        initialRenderDone = true;
         try {
           renderAll();
           renderCalendar("book");
@@ -1594,11 +1592,15 @@ function loadFromFirestore() {
           showTab("dashboard");
           const td = document.getElementById("topbar-date");
           if(td) td.textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+          console.log("✅ All data loaded! clients=" + clients.length + " enquiries=" + enquiries.length);
         } catch(renderErr) {
           console.error("Render error:", renderErr);
         }
+      } else if(initialRenderDone) {
+        // For real-time updates after initial load — just re-render current tab
+        try { renderAll(); } catch(e) {}
       }
-    }, err => console.error(col, err));
+    }, err => console.error("Firestore error on " + col + ":", err));
     _unsubscribers.push(unsub);
   });
 }
