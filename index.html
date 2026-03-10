@@ -657,18 +657,19 @@ function renderDashboard(){
 // CLIENTS
 function renderClients(){
   document.getElementById("clients-tbody").innerHTML=clients.map(c=>`<tr>
-    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:9px">${c.firstName[0]}${c.lastName[0]}</div>
-      <div><strong>${c.firstName} ${c.lastName}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316;margin-left:4px">🔒</span>':""}</div>
+    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:9px">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+      <div>
+        <strong>${c.firstName} ${c.lastName}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316;margin-left:4px">🔒</span>':""}
+        ${c.createdByName?`<div style="font-size:9px;color:#94a3b8">Added by ${c.createdByName}</div>`:""}
+      </div>
     </div></td>
     <td>${c.gender}</td><td>${c.mobile}</td><td style="font-size:11px">${c.email}</td><td>${c.occupation}</td><td>${c.city}</td><td>${c.state}</td><td>${c.pincode}</td>
-    <td>
-      <div style="display:flex;gap:4px;align-items:center">
-        <div class="action-btn-wrap">
-          <button class="btn btn-primary" style="font-size:10px;padding:4px 10px" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
-          <div class="action-dropdown" id="action-menu-${c.id}">
-            <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
-            <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
-          </div>
+    <td style="position:relative;overflow:visible;white-space:nowrap">
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
+        <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
+        <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.12);min-width:180px;display:none">
+          <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
+          <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
         </div>
         <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
         <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
@@ -677,9 +678,17 @@ function renderClients(){
   </tr>`).join("")||`<tr><td colspan="9" class="empty">No clients yet</td></tr>`;
 }
 function toggleActionMenu(id){
-  document.querySelectorAll(".action-dropdown").forEach(d=>{if(d.id!=="action-menu-"+id)d.classList.remove("open");});
-  const m=document.getElementById("action-menu-"+id);if(m)m.classList.toggle("open");
+  document.querySelectorAll(".action-dropdown").forEach(d=>{
+    if(d.id!=="action-menu-"+id) d.style.display="none";
+  });
+  const m=document.getElementById("action-menu-"+id);
+  if(m) m.style.display = (m.style.display==="block")?"none":"block";
 }
+document.addEventListener("click", e=>{
+  if(!e.target.closest(".action-btn-wrap") && !e.target.closest(".action-dropdown") && !e.target.closest(".btn-primary")) {
+    document.querySelectorAll(".action-dropdown").forEach(d=>d.style.display="none");
+  }
+});
 document.addEventListener("click",e=>{if(!e.target.closest(".action-btn-wrap"))document.querySelectorAll(".action-dropdown").forEach(d=>d.classList.remove("open"));});
 function generateEnquiry(clientId){window._prefilledClientId=clientId;openModal("enquiry");showTab("enquiries",document.querySelector("[onclick*='enquiries']"));}
 function logMarketingCall(clientId){window._mktClientId=clientId;openModal("mktcall");}
@@ -892,13 +901,20 @@ function renderVisa(){} // Merged into Bookings
 
 // TASKS
 function renderTasks(){
-  const sorted=[...tasks].sort((a,b)=>a.done-b.done||a.dueDate.localeCompare(b.dueDate));
+  // Owner sees all tasks, staff sees only their assigned tasks
+  const isOwner = CURRENT_USER && (CURRENT_USER.id === 1);
+  const visibleTasks = isOwner
+    ? [...tasks]
+    : tasks.filter(t => t.assignedTo === CURRENT_USER?.id);
+  const sorted = visibleTasks.sort((a,b)=>a.done-b.done||(a.dueDate||"").localeCompare(b.dueDate||""));
+  const isOwnerView = CURRENT_USER && CURRENT_USER.id === 1;
   document.getElementById("tasks-list").innerHTML=sorted.map(t=>`<div class="task-item ${t.done?"done":t.dueDate<today()?"overdue":""}">
     <div class="chk ${t.done?"checked":""}" onclick="toggleTask('${t.id}')">${t.done?"✓":""}</div>
     <div class="pdot p${t.priority==="High"?"h":t.priority==="Medium"?"m":"l"}"></div>
     <div style="flex:1">
       <div style="font-weight:700;font-size:12px;color:#0f172a;text-decoration:${t.done?"line-through":"none"}">${t.title}</div>
-      <div style="font-size:10px;color:#64748b;margin-top:2px">👤 Assigned to: <strong style="color:#ea580c">${sName(t.assignedTo)}</strong> · by ${sName(t.assignedBy)}${t.clientId?` · ${cName(t.clientId)}`:""}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">👤 Assigned to: <strong style="color:#ea580c">${sName(t.assignedTo)}</strong> · by ${t.createdByName||sName(t.assignedBy)}${t.clientId?` · ${cName(t.clientId)}`:""}</div>
+      ${t.completedBy?`<div style="font-size:9px;color:#16a34a;margin-top:1px">✅ Completed by ${t.completedBy}</div>`:""}
       <div style="font-size:10px;color:${!t.done&&t.dueDate<today()?"#dc2626":"#94a3b8"};margin-top:2px">${!t.done&&t.dueDate<today()?"⚠️ OVERDUE – ":""}Due: ${t.dueDate} · <span class="badge ${t.priority==="High"?"b-aplus":t.priority==="Medium"?"b-a":"b-c"}">${t.priority}</span></div>
     </div>
     <button class="btn btn-warn" onclick="del('tasks','${t.id}')">✕</button>
@@ -1574,9 +1590,11 @@ function loadFromFirestore() {
 }
 
 // ── Save helpers (replace old save functions) ────
+let _saving = false;
 async function fbAdd(col, data) {
   data.createdAt = new Date().toISOString();
-  data.createdBy = CURRENT_USER.id;
+  data.createdBy = CURRENT_USER ? CURRENT_USER.id : 0;
+  data.createdByName = CURRENT_USER ? CURRENT_USER.name : "Unknown";
   const ref = await db.collection(col).add(data);
   return ref.id;
 }
@@ -1593,27 +1611,29 @@ async function fbDelete(col, id) {
 
 // ── Override save functions ──────────────────────
 async function saveClient() {
+  if(_saving) return;
   const fn = document.getElementById("c-fn").value.trim();
   const mob = document.getElementById("c-mob").value.trim();
   if(!fn) return alert("⚠️ First Name is required!");
   if(!mob) return alert("⚠️ Mobile Number is required!");
   const data = {
-    firstName:fn, lastName:document.getElementById("c-ln").value,
+    firstName:fn, lastName:document.getElementById("c-ln").value.trim(),
     gender:document.getElementById("c-gen").value,
-    mobile:document.getElementById("c-mob").value,
-    email:document.getElementById("c-email").value,
-    occupation:document.getElementById("c-occ").value,
+    mobile:mob,
+    email:document.getElementById("c-email").value.trim(),
+    occupation:document.getElementById("c-occ").value.trim(),
     country:document.getElementById("c-country").value,
     state:document.getElementById("c-state").value,
-    city:document.getElementById("c-city").value,
-    area:document.getElementById("c-area").value,
-    pincode:document.getElementById("c-pin").value,
+    city:document.getElementById("c-city").value.trim(),
+    area:document.getElementById("c-area").value.trim(),
+    pincode:document.getElementById("c-pin").value.trim(),
   };
+  _saving = true;
   try {
-    const id = await fbAdd("clients", data);
-    data.id = id; clients.push(data);
-    closeOverlay(); renderClients();
+    await fbAdd("clients", data);
+    closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
+  finally { _saving = false; }
 }
 
 async function saveEnquiry(isEdit) {
@@ -1654,10 +1674,15 @@ async function saveEnquiry(isEdit) {
     if(isEdit) {
       const e=enquiries.find(x=>x.id===window._editEnqId);
       await fbUpdate("enquiries", e.id, data); Object.assign(e,data);
+      window._prefilledClientId=null; closeOverlay(); renderEnquiries();
     } else {
-      const id=await fbAdd("enquiries",data); data.id=id; enquiries.push(data);
+      if(_saving) return;
+      _saving = true;
+      try {
+        await fbAdd("enquiries", data);
+        window._prefilledClientId=null; closeOverlay();
+      } finally { _saving = false; }
     }
-    window._prefilledClientId=null; closeOverlay(); renderEnquiries();
   } catch(e) { alert("Save failed: "+e.message); }
 }
 
@@ -1692,26 +1717,37 @@ async function saveBooking(isEdit) {
 }
 
 async function saveTask() {
+  if(_saving) return;
   const title=document.getElementById("t-title").value.trim();
-  if(!title) return alert("Please enter task");
+  if(!title) return alert("⚠️ Task description is required!");
+  const assignedTo = parseInt(document.getElementById("t-to").value);
   const data = {
-    title, assignedTo:parseInt(document.getElementById("t-to").value),
-    assignedBy:parseInt(document.getElementById("t-by").value),
+    title,
+    assignedTo,
+    assignedBy: CURRENT_USER ? CURRENT_USER.id : parseInt(document.getElementById("t-by").value),
     clientId:parseInt(document.getElementById("t-client").value)||0,
     dueDate:document.getElementById("t-due").value,
-    priority:document.getElementById("t-pri").value, done:false,
+    priority:document.getElementById("t-pri").value,
+    done:false,
   };
+  _saving = true;
   try {
-    const id=await fbAdd("tasks",data); data.id=id; tasks.push(data);
-    closeOverlay(); renderTasks();
+    await fbAdd("tasks", data);
+    closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
+  finally { _saving = false; }
 }
 
 async function toggleTask(id) {
   const t=tasks.find(x=>x.id===id); if(!t) return;
+  const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
+  const isAssigned = CURRENT_USER && t.assignedTo === CURRENT_USER.id;
+  if(!isOwner && !isAssigned) return alert("⚠️ Only the assigned person can complete this task.");
   t.done=!t.done;
-  try { await fbUpdate("tasks",id,{done:t.done}); renderTasks(); }
-  catch(e) { t.done=!t.done; alert("Update failed: "+e.message); }
+  try {
+    await fbUpdate("tasks",id,{done:t.done, completedBy: CURRENT_USER?.name, completedAt: new Date().toISOString()});
+    renderTasks();
+  } catch(e) { t.done=!t.done; alert("Update failed: "+e.message); }
 }
 
 async function saveReport() {
@@ -1786,6 +1822,8 @@ async function saveTarget() {
 }
 
 async function del(arr,id) {
+  const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
+  if(!isOwner) return alert("⚠️ Only Ms. Rehana Ansari (Owner) can delete records.");
   if(!confirm("Delete this record?")) return;
   const colMap={clients:"clients",enquiries:"enquiries",bookings:"bookings",tasks:"tasks",marketing:"marketing"};
   try {
