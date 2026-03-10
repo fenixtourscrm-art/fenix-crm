@@ -629,7 +629,7 @@ function renderDashboard(){
     <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">Total Clients</div><div class="kpi-value">${clients.length}</div><div class="kpi-sub">in database</div></div>
     <div class="kpi"><div class="kpi-icon">🛂</div><div class="kpi-label">Visa Pending</div><div class="kpi-value">${visas.filter(v=>v.status==="Pending"||v.status==="Submitted").length}</div><div class="kpi-sub">applications</div></div>`;
   const hot=enquiries.filter(e=>e.status==="Active"&&(e.rating==="A+"||e.rating==="A")).slice(0,4);
-  document.getElementById("dash-hot").innerHTML=hot.length?hot.map(e=>`<div class="task-item"><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)} ${rBadge(e.rating)} ${tBadge(e.type)}</div><div style="font-size:11px;color:#64748b;margin-top:2px">✈️ ${e.destination} · ${e.pax} pax · ${e.budget}</div><div style="font-size:10px;color:#94a3b8">👤 ${sName(e.staffId)} · 🎯 ${e.intentions.join(", ")}</div></div><button class="btn btn-success" style="font-size:10px" onclick="markBooked(${e.id})">Book ✓</button></div>`).join(""):`<div class="empty">No hot enquiries</div>`;
+  document.getElementById("dash-hot").innerHTML=hot.length?hot.map(e=>`<div class="task-item"><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)} ${rBadge(e.rating)} ${tBadge(e.type)}</div><div style="font-size:11px;color:#64748b;margin-top:2px">✈️ ${e.destination} · ${e.pax} pax · ${e.budget}</div><div style="font-size:10px;color:#94a3b8">👤 ${sName(e.staffId)} · 🎯 ${e.intentions.join(", ")}</div></div><button class="btn btn-success" style="font-size:10px" onclick="markBooked('${e.id}')">Book ✓</button></div>`).join(""):`<div class="empty">No hot enquiries</div>`;
   const od=tasks.filter(t=>!t.done&&t.dueDate<today()).slice(0,4);
   document.getElementById("dash-overdue").innerHTML=od.length?od.map(t=>`<div class="task-item overdue"><div class="pdot ph"></div><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${t.title}</div><div style="font-size:10px;color:#dc2626;margin-top:2px">⚠️ Due ${t.dueDate} · ${sName(t.assignedTo)}</div></div></div>`).join(""):`<div class="empty">No overdue tasks 🎉</div>`;
   const todayReports=reports.filter(r=>r.date===today());
@@ -664,14 +664,14 @@ function renderClients(){
     <td>
       <div style="display:flex;gap:4px;align-items:center">
         <div class="action-btn-wrap">
-          <button class="btn btn-primary" style="font-size:10px;padding:4px 10px" onclick="toggleActionMenu(${c.id})">Actions ▾</button>
+          <button class="btn btn-primary" style="font-size:10px;padding:4px 10px" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
           <div class="action-dropdown" id="action-menu-${c.id}">
-            <div class="action-dropdown-item" onclick="generateEnquiry(${c.id})">🎯 Generate Enquiry</div>
-            <div class="action-dropdown-item" onclick="logMarketingCall(${c.id})">📞 Log Marketing Call</div>
+            <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
+            <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
           </div>
         </div>
-        <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient(${c.id})">✏️</button>
-        <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients',${c.id})">✕</button>
+        <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
+        <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
       </div>
     </td>
   </tr>`).join("")||`<tr><td colspan="9" class="empty">No clients yet</td></tr>`;
@@ -722,35 +722,46 @@ function renderEnquiries(){
     <td style="font-size:11px">${sName(e.staffId)}</td>
     <td>
       <div style="display:flex;gap:3px;flex-wrap:wrap">
-        <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq(${e.id})">✏️</button>
-        ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked(${e.id})">Book</button>
-        <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="markLost(${e.id})">Lost</button>
-        <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk(${e.id})">Junk</button>`:""}
-        <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="del('enquiries',${e.id})">✕</button>
+        <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq('${e.id}')">✏️</button>
+        ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked('${e.id}')">Book</button>
+        <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="markLost('${e.id}')">Lost</button>
+        <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk('${e.id}')">Junk</button>`:""}
+        <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="del('enquiries','${e.id}')">✕</button>
       </div>
     </td>
   </tr>`;}).join("")||`<tr><td colspan="13" class="empty">No enquiries</td></tr>`;
 }
 
 // MARK ACTIONS WITH REASON
-function markLost(id){
+async function markLost(id){
   const e=enquiries.find(x=>x.id===id);if(!e)return;
   const reason=prompt("Reason for marking as Lost?\n1. Budget issue\n2. No response\n3. Went to another agency\n4. Trip cancelled\n5. Other\n\nType the reason:");
   if(reason===null)return;
-  e.status="Lost";e.lostReason=reason||"Not specified";renderAll();
+  try {
+    await fbUpdate("enquiries",id,{status:"Lost",lostReason:reason||"Not specified"});
+    e.status="Lost"; e.lostReason=reason||"Not specified"; renderAll();
+  } catch(err){ alert("Failed: "+err.message); }
 }
-function markJunk(id){
+async function markJunk(id){
   const e=enquiries.find(x=>x.id===id);if(!e)return;
   const reason=prompt("Reason for marking as Junk?\n1. Budget issue\n2. No response\n3. Went to another agency\n4. Trip cancelled\n5. Other\n\nType the reason:");
   if(reason===null)return;
-  e.status="Junk";e.lostReason=reason||"Not specified";renderAll();
+  try {
+    await fbUpdate("enquiries",id,{status:"Junk",lostReason:reason||"Not specified"});
+    e.status="Junk"; e.lostReason=reason||"Not specified"; renderAll();
+  } catch(err){ alert("Failed: "+err.message); }
 }
-function markBooked(id){
+async function markBooked(id){
   const e=enquiries.find(x=>x.id===id);if(!e)return;
   if(confirm(`Convert "${cName(e.clientId)} – ${e.destination}" to Booking?`)){
-    e.status="Booked";
-    allBookings.push({id:nxtBk++,category:e.destType==="Domestic"?"Domestic Tours":"International Tours",clientId:e.clientId,destination:e.destination,details:"",tourType:"",travelDate:e.startDate,adults:e.adults||e.pax||1,childBed:e.childBed||0,childNoBed:e.childNoBed||0,infant:e.infant||0,pax:e.pax||1,amount:0,paid:0,status:"Confirmed",staffId:e.staffId,notes:"From enquiry"});
-    renderAll();alert("✅ Moved to Bookings!");
+    try {
+      await fbUpdate("enquiries",id,{status:"Booked"});
+      e.status="Booked";
+      const bkData={category:e.destType==="Domestic"?"Domestic Tours":"International Tours",clientId:e.clientId,destination:e.destination,details:"",tourType:"",travelDate:e.startDate,adults:e.adults||e.pax||1,childBed:e.childBed||0,childNoBed:e.childNoBed||0,infant:e.infant||0,pax:e.pax||1,amount:0,paid:0,status:"Confirmed",staffId:e.staffId,notes:"From enquiry"};
+      const bkId=await fbAdd("bookings",bkData);
+      bkData.id=bkId; allBookings.push(bkData);
+      renderAll(); alert("✅ Moved to Bookings!");
+    } catch(err){ alert("Failed: "+err.message); }
   }
 }
 
@@ -869,7 +880,7 @@ function renderBookingList(){
       <td><div style="font-size:11px">${fmt(b.paid)}</div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-size:9px;color:${pct>=100?"#059669":"#f97316"}">${pct}%</div></td>
       <td>${sBadge(b.status||"Confirmed")}</td>
       <td style="font-size:11px">${sName(b.staffId)}</td>
-      <td><div style="display:flex;gap:3px"><button class="btn btn-ghost" style="font-size:9px;padding:3px 6px" onclick="editBk(${b.id})">✏️</button><button class="btn btn-warn" style="font-size:9px;padding:3px 6px" onclick="delBk(${b.id})">✕</button></div></td>
+      <td><div style="display:flex;gap:3px"><button class="btn btn-ghost" style="font-size:9px;padding:3px 6px" onclick="editBk('${b.id}')">✏️</button><button class="btn btn-warn" style="font-size:9px;padding:3px 6px" onclick="delBk('${b.id}')">✕</button></div></td>
     </tr>`;
   }).join("")||`<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
 }
@@ -883,14 +894,14 @@ function renderVisa(){} // Merged into Bookings
 function renderTasks(){
   const sorted=[...tasks].sort((a,b)=>a.done-b.done||a.dueDate.localeCompare(b.dueDate));
   document.getElementById("tasks-list").innerHTML=sorted.map(t=>`<div class="task-item ${t.done?"done":t.dueDate<today()?"overdue":""}">
-    <div class="chk ${t.done?"checked":""}" onclick="toggleTask(${t.id})">${t.done?"✓":""}</div>
+    <div class="chk ${t.done?"checked":""}" onclick="toggleTask('${t.id}')">${t.done?"✓":""}</div>
     <div class="pdot p${t.priority==="High"?"h":t.priority==="Medium"?"m":"l"}"></div>
     <div style="flex:1">
       <div style="font-weight:700;font-size:12px;color:#0f172a;text-decoration:${t.done?"line-through":"none"}">${t.title}</div>
       <div style="font-size:10px;color:#64748b;margin-top:2px">👤 Assigned to: <strong style="color:#ea580c">${sName(t.assignedTo)}</strong> · by ${sName(t.assignedBy)}${t.clientId?` · ${cName(t.clientId)}`:""}</div>
       <div style="font-size:10px;color:${!t.done&&t.dueDate<today()?"#dc2626":"#94a3b8"};margin-top:2px">${!t.done&&t.dueDate<today()?"⚠️ OVERDUE – ":""}Due: ${t.dueDate} · <span class="badge ${t.priority==="High"?"b-aplus":t.priority==="Medium"?"b-a":"b-c"}">${t.priority}</span></div>
     </div>
-    <button class="btn btn-warn" onclick="del('tasks',${t.id})">✕</button>
+    <button class="btn btn-warn" onclick="del('tasks','${t.id}')">✕</button>
   </div>`).join("")||`<div class="empty">No tasks</div>`;
 }
 
@@ -1253,18 +1264,24 @@ function saveEditStaff(){
   s.initials=document.getElementById("es-init").value.toUpperCase();
   closeOverlay();renderAll();renderStaff();
 }
-function saveEditClient(){
+async function saveEditClient(){
   const c=clients.find(x=>x.id===window._editClientId);
   if(!c)return;
-  c.firstName=document.getElementById("ec-fn").value;
-  c.lastName=document.getElementById("ec-ln").value;
-  c.mobile=document.getElementById("ec-mob").value;
-  c.email=document.getElementById("ec-email").value;
-  c.occupation=document.getElementById("ec-occ").value;
-  c.city=document.getElementById("ec-city").value;
-  c.state=document.getElementById("ec-state").value;
-  c.pincode=document.getElementById("ec-pin").value;
-  window._editClientId=null;closeOverlay();renderAll();
+  const data = {
+    firstName:document.getElementById("ec-fn").value,
+    lastName:document.getElementById("ec-ln").value,
+    mobile:document.getElementById("ec-mob").value,
+    email:document.getElementById("ec-email").value,
+    occupation:document.getElementById("ec-occ").value,
+    city:document.getElementById("ec-city").value,
+    state:document.getElementById("ec-state").value,
+    pincode:document.getElementById("ec-pin").value,
+  };
+  try {
+    await fbUpdate("clients", c.id, data);
+    Object.assign(c, data);
+    window._editClientId=null; closeOverlay(); renderClients();
+  } catch(e) { alert("Save failed: "+e.message); }
 }
 // Destination tab switcher
 function switchDestTab(tab){
@@ -1314,7 +1331,7 @@ function showFUDay(dateStr){
         <div style="font-size:11px;margin-top:3px"><span style="background:${FU_COLORS[e.followUpStatus]};color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${e.followUpStatus}</span></div>
       </div>
       <div style="display:flex;gap:4px">
-        <button class="btn btn-ghost" style="font-size:10px" onclick="openEditEnq(${e.id})">✏️ Edit</button>
+        <button class="btn btn-ghost" style="font-size:10px" onclick="openEditEnq('${e.id}')">✏️ Edit</button>
       </div>
     </div>`).join("");
 }
@@ -1360,7 +1377,7 @@ function renderMktCalls(){
       <td style="text-align:center;font-weight:700;color:#f97316">${m.calls}</td>
       <td style="text-align:center;font-weight:700;color:#059669">${m.newClients}</td>
       <td style="font-size:11px;max-width:200px">${m.notes}</td>
-      <td><button class="btn btn-warn" onclick="del('marketing',${m.id})">✕</button></td></tr>`;
+      <td><button class="btn btn-warn" onclick="del('marketing','${m.id}')">✕</button></td></tr>`;
   }).join("")||`<tr><td colspan="7" class="empty">No marketing entries</td></tr>`;
 }
 
