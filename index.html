@@ -266,12 +266,14 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div style="font-size:56px;margin-bottom:8px">🌍</div>
     <h2>Fenix Tours & Travels</h2>
     <p>Travel CRM — Sign in to continue</p>
-    <button class="fb-google-btn" onclick="fbSignIn()">
+    <button class="fb-google-btn" id="signin-btn" onclick="fbSignIn()">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
       Sign in with Google
     </button>
-    <div class="fb-login-error" id="fb-err">⚠️ Your account is not registered. Contact Ms. Rehana Ansari.</div>
-    <div class="fb-login-loading" id="fb-loading">Signing in...</div>
+    <div class="fb-login-error" id="fb-err" style="display:none">⚠️ Your account is not registered. Contact Ms. Rehana Ansari.</div>
+    <div class="fb-login-loading" id="fb-loading" style="display:none">
+      Signing in... <button onclick="location.reload()" style="margin-left:8px;background:none;border:none;color:#f97316;cursor:pointer;font-size:12px;text-decoration:underline">Cancel</button>
+    </div>
   </div>
 </div>
 <div class="sidebar" id="main-sidebar">
@@ -1490,11 +1492,22 @@ function fbSignIn() {
   document.getElementById("fb-loading").style.display = "block";
   document.getElementById("fb-err").style.display = "none";
   const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => {
-    document.getElementById("fb-loading").style.display = "none";
-    document.getElementById("fb-err").style.display = "block";
-    document.getElementById("fb-err").textContent = "Sign in failed: " + err.message;
-  });
+  provider.setCustomParameters({ prompt: "select_account" });
+
+  auth.signInWithPopup(provider)
+    .then(result => {
+      // Success handled by onAuthStateChanged
+    })
+    .catch(err => {
+      // If popup blocked, try redirect
+      if(err.code === "auth/popup-blocked" || err.code === "auth/popup-closed-by-user") {
+        auth.signInWithRedirect(provider);
+      } else {
+        document.getElementById("fb-loading").style.display = "none";
+        document.getElementById("fb-err").style.display = "block";
+        document.getElementById("fb-err").textContent = "Sign in failed: " + err.message;
+      }
+    });
 }
 
 function fbSignOut() {
@@ -1502,6 +1515,15 @@ function fbSignOut() {
 }
 
 // ── Auth State ───────────────────────────────────
+// Handle redirect result (for browsers that block popups)
+auth.getRedirectResult().then(result => {
+  // Handled by onAuthStateChanged
+}).catch(err => {
+  if(err.code && err.code !== "auth/no-current-user") {
+    console.error("Redirect error:", err);
+  }
+});
+
 auth.onAuthStateChanged(function(user) {
   if (!user) {
     document.getElementById("fb-login-screen").style.display = "flex";
