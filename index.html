@@ -297,6 +297,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
+    <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
   </nav>
   <div class="sidebar-footer">
@@ -519,7 +520,30 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     </div>
 
     <!-- SEARCH -->
-    <div class="tab" id="tab-search">
+    
+    <!-- BUG REPORTS TAB -->
+    <div class="tab" id="tab-bugreports">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="section-title" style="margin:0">🐛 Bug Reports</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Staff can report issues here. Owner will review and fix them.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openBugModal()">+ Report a Bug</button>
+      </div>
+
+      <!-- Filter tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <button class="btn" id="bug-filter-all" onclick="setBugFilter('all',this)" style="background:#f97316;color:#fff;font-size:12px">All</button>
+        <button class="btn" id="bug-filter-open" onclick="setBugFilter('open',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🔴 Open</button>
+        <button class="btn" id="bug-filter-progress" onclick="setBugFilter('progress',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🟡 In Progress</button>
+        <button class="btn" id="bug-filter-fixed" onclick="setBugFilter('fixed',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🟢 Fixed</button>
+      </div>
+
+      <!-- Bug list -->
+      <div id="bug-list"></div>
+    </div>
+
+<div class="tab" id="tab-search">
       <div class="section-title">🔍 Search Results</div>
       <div id="search-results"></div>
     </div>
@@ -2583,6 +2607,221 @@ async function saveAddPayment(bookingId) {
   } catch(err) {
     alert("Save failed: " + err.message);
   }
+}
+
+
+// ═══════════════════════════════════════════════════════
+//  BUG REPORTS SYSTEM
+// ═══════════════════════════════════════════════════════
+let bugReports   = [];
+let bugFilter    = "all";
+let _bugUnsub    = null;
+
+// Load bug reports from Firestore
+function loadBugReports() {
+  if(_bugUnsub) _bugUnsub();
+  _bugUnsub = db.collection("bugreports")
+    .orderBy("createdAt", "desc")
+    .onSnapshot(snap => {
+      bugReports = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      renderBugReports();
+      // Update badge — count open bugs for owner
+      const openCount = bugReports.filter(b => b.status === "open").length;
+      const badge = document.getElementById("bug-badge");
+      if(badge) {
+        badge.textContent = openCount;
+        badge.style.display = openCount > 0 ? "inline-flex" : "none";
+      }
+    }, err => console.error("Bug reports error:", err));
+}
+
+function setBugFilter(f, el) {
+  bugFilter = f;
+  document.querySelectorAll("[id^='bug-filter-']").forEach(b => {
+    b.style.background = "#f1f5f9";
+    b.style.color = "#64748b";
+  });
+  if(el) { el.style.background = "#f97316"; el.style.color = "#fff"; }
+  renderBugReports();
+}
+
+function openBugModal() {
+  document.getElementById("bug-modal-overlay")?.remove();
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="bug-modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #f8fafc">
+          <div>
+            <div style="font-weight:800;font-size:16px;color:#0f172a">🐛 Report a Bug</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px">Describe the issue clearly so it can be fixed quickly</div>
+          </div>
+          <button onclick="document.getElementById('bug-modal-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:18px;color:#64748b">✕</button>
+        </div>
+        <div style="display:grid;gap:14px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:5px">Section / Where is the bug? *</label>
+            <select id="bug-section" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+              <option value="">-- Select Section --</option>
+              <option>Dashboard</option>
+              <option>Client Data</option>
+              <option>Enquiries</option>
+              <option>Bookings</option>
+              <option>Tasks</option>
+              <option>Daily Reports</option>
+              <option>Marketing</option>
+              <option>Targets</option>
+              <option>Follow-Up Calendar</option>
+              <option>Settings</option>
+              <option>Login / Sign In</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:5px">Bug Title *</label>
+            <input id="bug-title" placeholder="e.g. Save button not working in Add Client" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:5px">Describe the Bug *</label>
+            <textarea id="bug-desc" rows="4" placeholder="What happened? What were you trying to do? Does it happen every time or sometimes?" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical"></textarea>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:5px">Priority</label>
+            <div style="display:flex;gap:8px">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:7px 14px;border:1.5px solid #e2e8f0;border-radius:8px;flex:1;justify-content:center">
+                <input type="radio" name="bug-priority" value="low" style="accent-color:#16a34a"> 🟢 Low
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:7px 14px;border:1.5px solid #e2e8f0;border-radius:8px;flex:1;justify-content:center">
+                <input type="radio" name="bug-priority" value="medium" checked style="accent-color:#d97706"> 🟡 Medium
+              </label>
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;padding:7px 14px;border:1.5px solid #e2e8f0;border-radius:8px;flex:1;justify-content:center">
+                <input type="radio" name="bug-priority" value="high" style="accent-color:#dc2626"> 🔴 High
+              </label>
+            </div>
+          </div>
+        </div>
+        <button onclick="saveBugReport()" style="width:100%;margin-top:18px;padding:12px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+          🐛 Submit Bug Report
+        </button>
+      </div>
+    </div>
+  `);
+}
+
+async function saveBugReport() {
+  const section  = document.getElementById("bug-section")?.value;
+  const title    = document.getElementById("bug-title")?.value.trim();
+  const desc     = document.getElementById("bug-desc")?.value.trim();
+  const priority = document.querySelector('input[name="bug-priority"]:checked')?.value || "medium";
+
+  if(!section) return alert("⚠️ Please select the section where the bug occurs!");
+  if(!title)   return alert("⚠️ Please enter a bug title!");
+  if(!desc)    return alert("⚠️ Please describe the bug!");
+
+  try {
+    await fbAdd("bugreports", {
+      section, title, description: desc,
+      priority, status: "open",
+      reportedBy: CURRENT_USER?.name || "Unknown",
+      reportedById: CURRENT_USER?.id || 0,
+      ownerNote: "",
+    });
+    document.getElementById("bug-modal-overlay").remove();
+    showTab("bugreports", document.querySelector("[onclick*=\"bugreports\"]"));
+    alert("✅ Bug reported! Ms. Rehana will review and fix it.");
+  } catch(err) {
+    alert("Failed to submit: " + err.message);
+  }
+}
+
+async function updateBugStatus(id, newStatus) {
+  try {
+    await fbUpdate("bugreports", id, { status: newStatus });
+  } catch(err) {
+    alert("Update failed: " + err.message);
+  }
+}
+
+async function saveBugOwnerNote(id) {
+  const note = document.getElementById("bug-note-" + id)?.value.trim();
+  if(!note) return;
+  try {
+    await fbUpdate("bugreports", id, { ownerNote: note });
+    alert("✅ Note saved!");
+  } catch(err) {
+    alert("Failed: " + err.message);
+  }
+}
+
+function renderBugReports() {
+  const el = document.getElementById("bug-list");
+  if(!el) return;
+
+  const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
+  let list = [...bugReports];
+  if(bugFilter !== "all") {
+    const map = { open:"open", progress:"in-progress", fixed:"fixed" };
+    list = list.filter(b => b.status === (map[bugFilter]||bugFilter));
+  }
+
+  if(!list.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px">
+      ${bugFilter==="all" ? "🎉 No bugs reported yet! Everything is working well." : "No bugs in this category."}
+    </div>`;
+    return;
+  }
+
+  const priorityMeta = {
+    high:   { label:"🔴 High",   bg:"#fee2e2", color:"#991b1b" },
+    medium: { label:"🟡 Medium", bg:"#fef3c7", color:"#92400e" },
+    low:    { label:"🟢 Low",    bg:"#dcfce7", color:"#166534" },
+  };
+  const statusMeta = {
+    "open":        { label:"🔴 Open",        bg:"#fee2e2", color:"#991b1b" },
+    "in-progress": { label:"🟡 In Progress", bg:"#fef3c7", color:"#92400e" },
+    "fixed":       { label:"🟢 Fixed",       bg:"#dcfce7", color:"#166534" },
+  };
+
+  el.innerHTML = list.map(b => {
+    const pm = priorityMeta[b.priority] || priorityMeta.medium;
+    const sm = statusMeta[b.status]     || statusMeta.open;
+    const date = b.createdAt ? new Date(b.createdAt).toLocaleDateString("en-IN", {day:"2-digit",month:"short",year:"numeric"}) : "";
+
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,0.05)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:4px">${b.title}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">📂 ${b.section}</span>
+            <span style="background:${pm.bg};color:${pm.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${pm.label}</span>
+            <span style="background:${sm.bg};color:${sm.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${sm.label}</span>
+          </div>
+          <div style="font-size:12px;color:#374151;background:#f8fafc;border-radius:8px;padding:10px 12px;line-height:1.6">${b.description}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:8px">Reported by <strong>${b.reportedBy}</strong> · ${date}</div>
+        </div>
+      </div>
+
+      <!-- Owner controls -->
+      ${isOwner ? `
+        <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-top:4px">
+          <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase">Owner Actions</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+            <button onclick="updateBugStatus('${b.id}','open')" style="font-size:11px;padding:4px 10px;border:1.5px solid ${b.status==='open'?'#dc2626':'#e2e8f0'};background:${b.status==='open'?'#fee2e2':'#fff'};color:${b.status==='open'?'#991b1b':'#64748b'};border-radius:8px;cursor:pointer;font-weight:600">🔴 Open</button>
+            <button onclick="updateBugStatus('${b.id}','in-progress')" style="font-size:11px;padding:4px 10px;border:1.5px solid ${b.status==='in-progress'?'#d97706':'#e2e8f0'};background:${b.status==='in-progress'?'#fef3c7':'#fff'};color:${b.status==='in-progress'?'#92400e':'#64748b'};border-radius:8px;cursor:pointer;font-weight:600">🟡 In Progress</button>
+            <button onclick="updateBugStatus('${b.id}','fixed')" style="font-size:11px;padding:4px 10px;border:1.5px solid ${b.status==='fixed'?'#16a34a':'#e2e8f0'};background:${b.status==='fixed'?'#dcfce7':'#fff'};color:${b.status==='fixed'?'#166534':'#64748b'};border-radius:8px;cursor:pointer;font-weight:600">🟢 Fixed</button>
+            <button onclick="del('bugreports','${b.id}')" style="font-size:11px;padding:4px 10px;border:1.5px solid #e2e8f0;background:#fff;color:#dc2626;border-radius:8px;cursor:pointer;font-weight:600">🗑 Delete</button>
+          </div>
+          ${b.ownerNote ? `<div style="background:#fff7ed;border-radius:8px;padding:8px 12px;font-size:12px;color:#7c3a00;margin-bottom:8px"><span style="font-weight:700">📝 Your note:</span> ${b.ownerNote}</div>` : ""}
+          <div style="display:flex;gap:8px">
+            <input id="bug-note-${b.id}" placeholder="Add a note for staff (e.g. Fixed in next update)..." value="${b.ownerNote||""}"
+              style="flex:1;padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px"/>
+            <button onclick="saveBugOwnerNote('${b.id}')" style="padding:7px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Save Note</button>
+          </div>
+        </div>` :
+        // Staff view - show owner note if exists
+        b.ownerNote ? `<div style="border-top:1px solid #f1f5f9;padding-top:10px;margin-top:4px;background:#fff7ed;border-radius:8px;padding:10px 12px;font-size:12px;color:#7c3a00"><span style="font-weight:700">📝 Owner response:</span> ${b.ownerNote}</div>` : ""
+      }
+    </div>`;
+  }).join("");
 }
 
 </script>
