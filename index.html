@@ -421,7 +421,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div class="section-title" id="bk-list-title">All Bookings</div>
         <div class="card" style="overflow:hidden">
           <table><thead><tr>
-            <th>CATEGORY</th><th>CLIENT</th><th>DESTINATION / DETAILS</th><th>PAX / APPLICANT</th><th>DATE</th><th>AMOUNT</th><th>PAID</th><th>STATUS</th><th>STAFF</th><th>ACTION</th>
+            <th>CATEGORY</th><th>CLIENT</th><th>DESTINATION / DETAILS</th><th>PAX</th><th>DATE</th><th>AMOUNT</th><th>PAID</th><th>PENDING</th><th>PAY STATUS</th><th>STATUS</th><th>STAFF</th><th>ACTION</th>
           </tr></thead><tbody id="book-tbody"></tbody></table>
         </div>
       </div>
@@ -891,18 +891,32 @@ function renderBookingList(){
     const st=CAT_STYLES[b.category]||{bg:"#f1f5f9",color:"#374151"};
     const icon=BK_CATS.find(c=>c.id===b.category)?.icon||"📁";
     const totalPax=(b.adults||0)+(b.childBed||0)+(b.childNoBed||0)+(b.infant||0)||b.pax||1;
-    const pct=b.amount?Math.round(b.paid/b.amount*100):0;
+    const totalAmt = parseFloat(b.amount)||0;
+    const paidAmt  = parseFloat(b.paid)||0;
+    const pendingAmt = Math.max(0, totalAmt - paidAmt);
+    const pct = totalAmt ? Math.round(paidAmt/totalAmt*100) : 0;
+    // Auto-derive payment status if not set
+    const payStatus = b.paymentStatus || (pct>=100?"Fully Paid": pct>0?"Partially Paid":"Pending");
+    const payBadgeColor = payStatus==="Fully Paid"?"#059669": payStatus==="Partially Paid"?"#d97706":"#dc2626";
+    const payBadgeBg    = payStatus==="Fully Paid"?"#dcfce7": payStatus==="Partially Paid"?"#fef3c7":"#fee2e2";
     return `<tr>
       <td><span class="cat-tag" style="background:${st.bg};color:${st.color}">${icon} ${b.category}</span></td>
       <td><strong>${cName(b.clientId)}</strong></td>
-      <td style="font-size:11px"><div style="font-weight:600">${b.destination}</div>${b.details?`<div style="color:#94a3b8;font-size:10px">${b.details}</div>`:""}${b.tourType?`<div style="color:#94a3b8;font-size:10px">${b.tourType}</div>`:""}</td>
-      <td style="text-align:center;font-size:11px">${totalPax}<br>${b.adults||0}A ${b.childBed||0}CB ${b.infant||0}I</td>
-      <td style="font-size:11px">${b.travelDate}</td>
-      <td style="font-size:12px;font-weight:700">${fmt(b.amount)}</td>
-      <td><div style="font-size:11px">${fmt(b.paid)}</div><div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div><div style="font-size:9px;color:${pct>=100?"#059669":"#f97316"}">${pct}%</div></td>
+      <td style="font-size:11px"><div style="font-weight:600">${b.destination||"—"}</div>${b.tourType?`<div style="color:#94a3b8;font-size:10px">${b.tourType}</div>`:""}</td>
+      <td style="text-align:center;font-size:11px">${totalPax}<br><span style="color:#94a3b8">${b.adults||0}A ${b.childBed||0}C ${b.infant||0}I</span></td>
+      <td style="font-size:11px">${b.travelDate||"—"}</td>
+      <td style="font-size:12px;font-weight:700;color:#0f172a">${fmt(totalAmt)}</td>
+      <td>
+        <div style="font-size:12px;font-weight:600;color:#16a34a">${fmt(paidAmt)}</div>
+        <div class="progress-bar" style="margin-top:3px"><div class="progress-fill" style="width:${pct}%"></div></div>
+        <div style="font-size:9px;color:${pct>=100?"#059669":"#f97316"};margin-top:1px">${pct}%</div>
+      </td>
+      <td style="font-size:12px;font-weight:700;color:${pendingAmt>0?"#dc2626":"#059669"}">${pendingAmt>0?fmt(pendingAmt):'<span style="color:#059669">✅ Nil</span>'}</td>
+      <td><span style="background:${payBadgeBg};color:${payBadgeColor};padding:3px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap">${payStatus}</span></td>
       <td>${sBadge(b.status||"Confirmed")}</td>
       <td style="font-size:11px">${sName(b.staffId)}</td>
-      <td><div style="display:flex;gap:3px">
+      <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+        <button class="btn" style="font-size:9px;padding:3px 6px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;white-space:nowrap" onclick="openAddPayment('${b.id}')">💰 Pay</button>
         <button class="btn" style="font-size:9px;padding:3px 6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openFollowUpPopup(null,'${b.clientId}')">📅</button>
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 6px" onclick="editBk('${b.id}')">✏️</button>
         <button class="btn btn-warn" style="font-size:9px;padding:3px 6px" onclick="delBk('${b.id}')">✕</button>
@@ -1728,6 +1742,9 @@ async function saveBooking(isEdit) {
     amount: gi("b-amt"),
     paid: gi("b-paid"),
     status: gv("b-status") || "Confirmed",
+    paymentStatus: gv("b-pay-status") || "Pending",
+    pendingAmount: Math.max(0, (parseFloat(document.getElementById("b-amt")?.value)||0) - (parseFloat(document.getElementById("b-paid")?.value)||0)),
+    paymentHistory: [],
     staffId: document.getElementById("b-staff")?.value || (CURRENT_USER?.id||0),
     notes: gv("b-notes"),
     // tour fields
@@ -2393,6 +2410,178 @@ async function importClientExcel(event) {
     document.getElementById("import-overlay")?.remove();
     console.error("Import error:", err);
     alert("❌ Import failed: " + err.message + "\n\nMake sure the file is a valid .xls or .xlsx file.");
+  }
+}
+
+
+// ═══════════════════════════════════════════════
+//  PAYMENT SYSTEM
+// ═══════════════════════════════════════════════
+
+// Auto-calculate pending amount in booking form
+function calcPending() {
+  const total   = parseFloat(document.getElementById("b-amt")?.value)   || 0;
+  const paid    = parseFloat(document.getElementById("b-paid")?.value)  || 0;
+  const pending = Math.max(0, total - paid);
+  const pendEl  = document.getElementById("b-pending");
+  const payEl   = document.getElementById("b-pay-status");
+  if(pendEl) pendEl.value = pending;
+  if(payEl) {
+    if(paid >= total && total > 0)    payEl.value = "Fully Paid";
+    else if(paid > 0)                 payEl.value = "Partially Paid";
+    else                              payEl.value = "Pending";
+  }
+}
+
+// Add Payment popup — records a new payment entry without editing whole booking
+function openAddPayment(bookingId) {
+  const b = allBookings.find(x => x.id === bookingId);
+  if(!b) return;
+  document.getElementById("add-payment-overlay")?.remove();
+
+  const totalAmt   = parseFloat(b.amount)  || 0;
+  const paidSoFar  = parseFloat(b.paid)    || 0;
+  const pendingAmt = Math.max(0, totalAmt - paidSoFar);
+  const history    = b.paymentHistory || [];
+
+  const historyHtml = history.length ? `
+    <div style="margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Payment History</div>
+      ${history.map((p,i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px">
+          <span style="color:#64748b">${p.date} · ${p.method||"Cash"}</span>
+          <span style="font-weight:700;color:#16a34a">+${fmt(p.amount)}</span>
+        </div>`).join("")}
+    </div>` : "";
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="add-payment-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:440px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+
+        <!-- Header -->
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid #f8fafc">
+          <div>
+            <div style="font-weight:800;font-size:16px;color:#0f172a">💰 Add Payment</div>
+            <div style="font-size:12px;color:#64748b;margin-top:3px">${cName(b.clientId)} · ${b.destination||b.category}</div>
+          </div>
+          <button onclick="document.getElementById('add-payment-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:18px;color:#64748b">✕</button>
+        </div>
+
+        <!-- Summary cards -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+          <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Total</div>
+            <div style="font-size:14px;font-weight:800;color:#0f172a;margin-top:2px">${fmt(totalAmt)}</div>
+          </div>
+          <div style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase">Paid</div>
+            <div style="font-size:14px;font-weight:800;color:#16a34a;margin-top:2px">${fmt(paidSoFar)}</div>
+          </div>
+          <div style="background:#fee2e2;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase">Pending</div>
+            <div style="font-size:14px;font-weight:800;color:#dc2626;margin-top:2px" id="ap-pending-display">${fmt(pendingAmt)}</div>
+          </div>
+        </div>
+
+        ${historyHtml}
+
+        <!-- New Payment Form -->
+        <div style="background:#f8fafc;border-radius:12px;padding:16px;display:grid;gap:12px">
+          <div style="font-size:11px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:.06em">New Payment Entry</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Amount (₹) *</label>
+              <input type="number" id="ap-amount" placeholder="e.g. 15000" max="${pendingAmt}"
+                style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:700;box-sizing:border-box;color:#16a34a"
+                oninput="updateApPending(${totalAmt}, ${paidSoFar})"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Date</label>
+              <input type="date" id="ap-date" value="${new Date().toISOString().split('T')[0]}"
+                style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Payment Method</label>
+              <select id="ap-method" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+                <option>Cash</option>
+                <option>Bank Transfer</option>
+                <option>UPI / GPay</option>
+                <option>Cheque</option>
+                <option>Card</option>
+                <option>Online</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Reference / Note</label>
+              <input type="text" id="ap-ref" placeholder="e.g. UTR/Cheque no"
+                style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="saveAddPayment('${bookingId}')"
+          style="width:100%;margin-top:16px;padding:12px;background:linear-gradient(135deg,#16a34a,#059669);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+          💰 Save Payment
+        </button>
+      </div>
+    </div>
+  `);
+}
+
+// Live update pending display in Add Payment popup
+function updateApPending(totalAmt, paidSoFar) {
+  const newPayment = parseFloat(document.getElementById("ap-amount")?.value) || 0;
+  const newPending = Math.max(0, totalAmt - paidSoFar - newPayment);
+  const el = document.getElementById("ap-pending-display");
+  if(el) el.textContent = fmt(newPending);
+}
+
+// Save the new payment
+async function saveAddPayment(bookingId) {
+  const newAmt = parseFloat(document.getElementById("ap-amount")?.value) || 0;
+  if(newAmt <= 0) return alert("⚠️ Please enter a valid payment amount!");
+
+  const b = allBookings.find(x => x.id === bookingId);
+  if(!b) return;
+
+  const date   = document.getElementById("ap-date")?.value   || new Date().toISOString().split("T")[0];
+  const method = document.getElementById("ap-method")?.value || "Cash";
+  const ref    = document.getElementById("ap-ref")?.value    || "";
+
+  const totalAmt   = parseFloat(b.amount) || 0;
+  const newPaid    = (parseFloat(b.paid) || 0) + newAmt;
+  const newPending = Math.max(0, totalAmt - newPaid);
+  const newPayStatus = newPaid >= totalAmt ? "Fully Paid" : newPaid > 0 ? "Partially Paid" : "Pending";
+
+  // Append to payment history
+  const history = b.paymentHistory || [];
+  history.push({
+    amount: newAmt,
+    date, method, ref,
+    addedBy: CURRENT_USER?.name || "Staff",
+    addedAt: new Date().toISOString(),
+  });
+
+  try {
+    await fbUpdate("bookings", bookingId, {
+      paid: newPaid,
+      pendingAmount: newPending,
+      paymentStatus: newPayStatus,
+      paymentHistory: history,
+    });
+    // Update local
+    b.paid = newPaid;
+    b.pendingAmount = newPending;
+    b.paymentStatus = newPayStatus;
+    b.paymentHistory = history;
+
+    document.getElementById("add-payment-overlay").remove();
+    renderBookingList();
+    alert(`✅ Payment of ${fmt(newAmt)} saved!\nPaid: ${fmt(newPaid)} · Pending: ${fmt(newPending)}\nStatus: ${newPayStatus}`);
+  } catch(err) {
+    alert("Save failed: " + err.message);
   }
 }
 
