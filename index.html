@@ -916,11 +916,68 @@ function renderReports(){
   if(to)list=list.filter(r=>r.date<=to);
   document.getElementById("reports-list").innerHTML=list.map(r=>{
     const s=STAFF.find(x=>x.id===r.staffId);
-    return `<div class="report-card">
-      <div class="report-staff"><div class="avatar" style="width:26px;height:26px;font-size:9px">${s?s.initials:"?"}</div>${s?s.name:"Unknown"}<span style="font-size:10px;color:#94a3b8">${s?s.role:""}</span><span style="margin-left:auto;font-size:11px;color:#94a3b8">📅 ${r.date}</span></div>
-      <div class="report-metrics"><div class="metric-box"><div class="metric-val">${r.salesCalls}</div><div class="metric-lbl">Sales Calls</div></div><div class="metric-box"><div class="metric-val">${r.enquiriesNew}</div><div class="metric-lbl">New Enq</div></div><div class="metric-box"><div class="metric-val">${r.enquiriesOld}</div><div class="metric-lbl">Old Enq</div></div><div class="metric-box"><div class="metric-val">${r.bookingsConfirmed}</div><div class="metric-lbl">Tours Booking</div></div><div class="metric-box"><div class="metric-val">${r.visaApps}</div><div class="metric-lbl">Visa Apps</div></div></div>
-      ${r.entries&&r.entries.length?`<div style="margin-bottom:8px"><div style="font-size:10px;color:#64748b;font-weight:700;margin-bottom:5px;letter-spacing:.08em;text-transform:uppercase">Enquiry Entries</div>${r.entries.map(e=>`<div style="font-size:12px;color:#374151;padding:3px 0;border-bottom:1px solid #f1f5f9">${e.clientName} × ${e.pax} pax → ${e.destination}</div>`).join("")}</div>`:""}
-      ${r.otherWork?`<div style="font-size:11px;color:#64748b">📝 ${r.otherWork}</div>`:""}
+    const staffName = s ? s.name : "Unknown";
+    const staffInitials = s ? s.initials : "?";
+    const staffRole = s ? s.role : "";
+
+    // Build detailed metric rows with staff attribution
+    const metricDetails = [
+      {label:"Sales Calls", val:r.salesCalls, icon:"📞"},
+      {label:"New Enquiries", val:r.enquiriesNew, icon:"🆕"},
+      {label:"Old Enquiries Follow-up", val:r.enquiriesOld, icon:"🔄"},
+      {label:"Bookings Confirmed", val:r.bookingsConfirmed, icon:"✅"},
+      {label:"Visa Applications", val:r.visaApps, icon:"🛂"},
+    ].filter(m=>m.val>0);
+
+    return `<div class="report-card" style="border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:12px;background:#fff">
+      <!-- Staff Header -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid #f8fafc">
+        <div class="avatar" style="width:36px;height:36px;font-size:11px;flex-shrink:0">${staffInitials}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px;color:#0f172a">${staffName}</div>
+          <div style="font-size:11px;color:#94a3b8">${staffRole}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;font-weight:600;color:#f97316">📅 ${r.date}</div>
+          <div style="font-size:10px;color:#94a3b8">Daily Report</div>
+        </div>
+      </div>
+
+      <!-- Metric Summary -->
+      <div class="report-metrics" style="margin-bottom:${metricDetails.length||r.entries?.length||r.otherWork?'12px':'0'}">
+        <div class="metric-box"><div class="metric-val">${r.salesCalls}</div><div class="metric-lbl">Sales Calls</div></div>
+        <div class="metric-box"><div class="metric-val">${r.enquiriesNew}</div><div class="metric-lbl">New Enq</div></div>
+        <div class="metric-box"><div class="metric-val">${r.enquiriesOld}</div><div class="metric-lbl">Old Enq</div></div>
+        <div class="metric-box"><div class="metric-val">${r.bookingsConfirmed}</div><div class="metric-lbl">Bookings</div></div>
+        <div class="metric-box"><div class="metric-val">${r.visaApps}</div><div class="metric-lbl">Visa Apps</div></div>
+      </div>
+
+      <!-- Detailed Breakdown with staff name -->
+      ${metricDetails.length ? `<div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Activity by ${staffName}</div>
+        ${metricDetails.map(m=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0;border-bottom:1px solid #e2e8f0">
+            <span style="font-size:12px;color:#374151">${m.icon} ${m.label}</span>
+            <span style="font-size:12px;font-weight:700;color:#f97316;background:#fff7ed;padding:2px 8px;border-radius:6px">${m.val}</span>
+          </div>`).join("")}
+      </div>` : ""}
+
+      <!-- Enquiry Entries -->
+      ${r.entries&&r.entries.length ? `<div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Enquiry Details — Added by ${staffName}</div>
+        ${r.entries.map((e,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9">
+            <span style="font-size:10px;color:#94a3b8;width:16px">${i+1}.</span>
+            <span style="font-size:12px;color:#0f172a;font-weight:600;flex:1">${e.clientName}</span>
+            <span style="font-size:11px;color:#64748b">${e.pax} pax</span>
+            <span style="font-size:11px;color:#f97316;font-weight:600">→ ${e.destination}</span>
+          </div>`).join("")}
+      </div>` : ""}
+
+      <!-- Other Work -->
+      ${r.otherWork ? `<div style="background:#fff7ed;border-radius:8px;padding:8px 12px;font-size:12px;color:#7c3a00">
+        <span style="font-weight:700">📝 Notes by ${staffName}:</span> ${r.otherWork}
+      </div>` : ""}
     </div>`;
   }).join("")||`<div class="empty">No reports found</div>`;
 }
@@ -1016,7 +1073,7 @@ function openModal(type){
     const ex=isEdit?enquiries.find(x=>x.id===eid):null;
     const preClient=window._prefilledClientId||"";
     const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Lost","Confirmed Booking"];
-    const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa"];
+    const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa","Passport"];
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Client</label><select id="e-client">${cOpts()}</select></div><div class="fg"><label>Enquiry Type</label><select id="e-type">${ENQ_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>Enquiry Source</label><select id="e-source" onchange="updateSourceSub()">${SOURCES.map(s=>`<option>${s}</option>`).join("")}</select></div><div class="fg" id="e-source-sub" style="display:none"><label id="e-sub-label">Reference Name</label><input id="e-subval" placeholder="Enter name..."/></div></div>
@@ -1049,8 +1106,7 @@ function openModal(type){
       </div>
     </div>
     <div class="form-grid"><div class="fg"><label>Budget</label><input id="e-budget" placeholder="e.g. ₹50,000"/></div><div class="fg"><label>Hotel Preference</label><select id="e-hotel"><option>5 Star</option><option>4 Star</option><option>3 Star</option><option>Budget</option><option>Any</option></select></div></div>
-    <!-- Follow-up -->
-    <div class="form-grid"><div class="fg"><label>Follow-up Date</label><input type="date" id="e-fudate"/></div><div class="fg"><label>Follow-up Status</label><select id="e-fustatus">${FU_STATUSES.map(s=>`<option>${s}</option>`).join("")}</select></div></div>
+    <!-- Follow-up moved to separate popup -->
     <div class="form-grid"><div class="fg"><label>Status</label><select id="e-status"><option>Active</option><option>Lost</option><option>Booked</option><option>Junk</option></select></div><div class="fg"><label>Assigned Staff</label><select id="e-staff">${sOpts()}</select></div></div>
     <div class="form-grid g1"><div class="fg"><label>Notes</label><textarea id="e-notes" rows="2" placeholder="Any details..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEnquiry(${isEdit})">Save Enquiry</button>`;
@@ -1122,16 +1178,16 @@ function openModal(type){
   } else if(type==="visa"){
     mb.innerHTML=`<div class="modal-title">Add Visa Application <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Client</label><select id="v-client">${cOpts()}</select></div><div class="fg"><label>Passport No</label><input id="v-pass" placeholder="e.g. Z1234567"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Country</label><input id="v-country" placeholder="e.g. UAE"/></div><div class="fg"><label>Visa Type</label><select id="v-type"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option></select></div></div>
+    <div class="form-grid"><div class="fg"><label>Country</label><select id="v-country"><option value="">-- Select Country --</option><option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Antigua and Barbuda">Antigua and Barbuda</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahamas">Bahamas</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Barbados">Barbados</option><option value="Belarus">Belarus</option><option value="Belgium">Belgium</option><option value="Belize">Belize</option><option value="Benin">Benin</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option><option value="Botswana">Botswana</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Burkina Faso">Burkina Faso</option><option value="Burundi">Burundi</option><option value="Cabo Verde">Cabo Verde</option><option value="Cambodia">Cambodia</option><option value="Cameroon">Cameroon</option><option value="Canada">Canada</option><option value="Central African Republic">Central African Republic</option><option value="Chad">Chad</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Comoros">Comoros</option><option value="Congo">Congo</option><option value="Costa Rica">Costa Rica</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Djibouti">Djibouti</option><option value="Dominica">Dominica</option><option value="Dominican Republic">Dominican Republic</option><option value="Ecuador">Ecuador</option><option value="Egypt">Egypt</option><option value="El Salvador">El Salvador</option><option value="Equatorial Guinea">Equatorial Guinea</option><option value="Eritrea">Eritrea</option><option value="Estonia">Estonia</option><option value="Eswatini">Eswatini</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Gabon">Gabon</option><option value="Gambia">Gambia</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Grenada">Grenada</option><option value="Guatemala">Guatemala</option><option value="Guinea">Guinea</option><option value="Guinea-Bissau">Guinea-Bissau</option><option value="Guyana">Guyana</option><option value="Haiti">Haiti</option><option value="Honduras">Honduras</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kiribati">Kiribati</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lesotho">Lesotho</option><option value="Liberia">Liberia</option><option value="Libya">Libya</option><option value="Liechtenstein">Liechtenstein</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Madagascar">Madagascar</option><option value="Malawi">Malawi</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Mali">Mali</option><option value="Malta">Malta</option><option value="Marshall Islands">Marshall Islands</option><option value="Mauritania">Mauritania</option><option value="Mauritius">Mauritius</option><option value="Mexico">Mexico</option><option value="Micronesia">Micronesia</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Montenegro">Montenegro</option><option value="Morocco">Morocco</option><option value="Mozambique">Mozambique</option><option value="Myanmar">Myanmar</option><option value="Namibia">Namibia</option><option value="Nauru">Nauru</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nicaragua">Nicaragua</option><option value="Niger">Niger</option><option value="Nigeria">Nigeria</option><option value="North Korea">North Korea</option><option value="North Macedonia">North Macedonia</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palau">Palau</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Papua New Guinea">Papua New Guinea</option><option value="Paraguay">Paraguay</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Rwanda">Rwanda</option><option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option><option value="Saint Lucia">Saint Lucia</option><option value="Saint Vincent">Saint Vincent</option><option value="Samoa">Samoa</option><option value="San Marino">San Marino</option><option value="Sao Tome and Principe">Sao Tome and Principe</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Senegal">Senegal</option><option value="Serbia">Serbia</option><option value="Seychelles">Seychelles</option><option value="Sierra Leone">Sierra Leone</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="Solomon Islands">Solomon Islands</option><option value="Somalia">Somalia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="South Sudan">South Sudan</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Suriname">Suriname</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Tajikistan">Tajikistan</option><option value="Tanzania">Tanzania</option><option value="Thailand">Thailand</option><option value="Timor-Leste">Timor-Leste</option><option value="Togo">Togo</option><option value="Tonga">Tonga</option><option value="Trinidad and Tobago">Trinidad and Tobago</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="Turkmenistan">Turkmenistan</option><option value="Tuvalu">Tuvalu</option><option value="Uganda">Uganda</option><option value="Ukraine">Ukraine</option><option value="United Arab Emirates">United Arab Emirates</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Vanuatu">Vanuatu</option><option value="Vatican City">Vatican City</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zambia">Zambia</option><option value="Zimbabwe">Zimbabwe</option></select></div><div class="fg"><label>Visa Type</label><select id="v-type"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option></select></div></div>
     <div class="form-grid"><div class="fg"><label>Applied Date</label><input type="date" id="v-applied"/></div><div class="fg"><label>Expected Date</label><input type="date" id="v-expect"/></div></div>
     <div class="form-grid"><div class="fg"><label>Status</label><select id="v-status">${VISA_STATUS.map(s=>`<option>${s}</option>`).join("")}</select></div><div class="fg"><label>Notes</label><input id="v-notes" placeholder="Any notes..."/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveVisa()">Save Application</button>`;
   } else if(type==="task"){
     mb.innerHTML=`<div class="modal-title">Add Task <button class="x" onclick="closeOverlay()">✕</button></div>
-    <div class="form-grid g1"><div class="fg"><label>Task Description</label><input id="t-title" placeholder="e.g. Send itinerary to client"/></div></div>
     <div class="form-grid"><div class="fg"><label>Assign To</label><select id="t-to">${sOpts()}</select></div><div class="fg"><label>Assigned By</label><select id="t-by">${sOpts()}</select></div></div>
     <div class="form-grid"><div class="fg"><label>Client (optional)</label><select id="t-client"><option value="0">-- None --</option>${cOpts()}</select></div><div class="fg"><label>Due Date</label><input type="date" id="t-due"/></div></div>
     <div class="form-grid g1"><div class="fg"><label>Priority</label><select id="t-pri"><option>High</option><option>Medium</option><option>Low</option></select></div></div>
+    <div class="form-grid g1"><div class="fg"><label>Task Title / Description <span style="color:#dc2626">*</span></label><input id="t-title" placeholder="e.g. Send itinerary to client — required"/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveTask()">Save Task</button>`;
   } else if(type==="report"){
     mb.innerHTML=`<div class="modal-title">Submit Daily Report <button class="x" onclick="closeOverlay()">✕</button></div>
@@ -1322,16 +1378,19 @@ function renderFollowUpCalendar(){
 function showFUDay(dateStr){
   const dayEnqs=enquiries.filter(e=>e.followUpDate===dateStr);
   const det=document.getElementById("fu-day-details");
-  if(!dayEnqs.length){det.innerHTML="";return;}
-  det.innerHTML=`<div class="section-title">Follow-ups on ${dateStr}</div>`+dayEnqs.map(e=>`
-    <div class="task-item" style="border-left:3px solid ${FU_COLORS[e.followUpStatus]||"#94a3b8"}">
+  if(!dayEnqs.length){det.innerHTML=`<div style="color:#94a3b8;font-size:13px;padding:12px">No follow-ups on this date.</div>`;return;}
+  det.innerHTML=`<div class="section-title" style="margin-bottom:10px">📅 Follow-ups on ${dateStr} (${dayEnqs.length})</div>`+dayEnqs.map(e=>`
+    <div class="task-item" style="border-left:3px solid ${FU_COLORS[e.followUpStatus]||"#94a3b8"};margin-bottom:8px;padding:10px 12px;border-radius:8px;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.06)">
       <div style="flex:1">
-        <div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)} — ${e.destination}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">Category: ${e.category} · Rating: ${e.rating} · ${e.budget}</div>
-        <div style="font-size:11px;margin-top:3px"><span style="background:${FU_COLORS[e.followUpStatus]};color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${e.followUpStatus}</span></div>
+        <div style="font-weight:700;font-size:13px;color:#0f172a">${cName(e.clientId)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">✈️ ${e.destination} · ${e.pax||1} pax · ${e.budget||"Budget N/A"}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Category: ${e.category} · Rating: <strong>${e.rating}</strong> · Staff: ${sName(e.staffId)}</div>
+        <div style="font-size:11px;margin-top:5px"><span style="background:${FU_COLORS[e.followUpStatus]||"#94a3b8"};color:#fff;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${e.followUpStatus||"New Enquiry"}</span></div>
+        ${e.notes?`<div style="margin-top:6px;background:#f8fafc;border-radius:6px;padding:6px 10px;font-size:11px;color:#374151"><span style="font-weight:700;color:#f97316">💬 Remarks:</span> ${e.notes}</div>`:""}
       </div>
-      <div style="display:flex;gap:4px">
+      <div style="display:flex;flex-direction:column;gap:4px;margin-left:8px">
         <button class="btn btn-ghost" style="font-size:10px" onclick="openEditEnq('${e.id}')">✏️ Edit</button>
+        <button class="btn" style="font-size:10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openFollowUpPopup('${e.id}')">📅 Update</button>
       </div>
     </div>`).join("");
 }
@@ -1535,7 +1594,9 @@ async function fbDelete(col, id) {
 // ── Override save functions ──────────────────────
 async function saveClient() {
   const fn = document.getElementById("c-fn").value.trim();
-  if(!fn) return alert("Please enter first name");
+  const mob = document.getElementById("c-mob").value.trim();
+  if(!fn) return alert("⚠️ First Name is required!");
+  if(!mob) return alert("⚠️ Mobile Number is required!");
   const data = {
     firstName:fn, lastName:document.getElementById("c-ln").value,
     gender:document.getElementById("c-gen").value,
@@ -1556,6 +1617,8 @@ async function saveClient() {
 }
 
 async function saveEnquiry(isEdit) {
+  const clientSel = document.getElementById("e-client");
+  if(!clientSel || !clientSel.value || clientSel.value==="0") return alert("⚠️ Please select a Client!");
   const activeTab = document.getElementById("dtab-intl")?.classList.contains("active")?"International":"Domestic";
   const destCustom= document.getElementById("e-dest-custom")?.value.trim()||"";
   const destIntl  = document.getElementById("e-dest-intl")?.value||"";
@@ -1742,6 +1805,78 @@ async function delBk(id) {
     await fbDelete("bookings",id);
     allBookings=allBookings.filter(x=>x.id!==id); renderBookings();
   } catch(e) { alert("Delete failed: "+e.message); }
+}
+
+
+// ═══════════════════════════════════════════════
+//  FOLLOW-UP POPUP SYSTEM
+// ═══════════════════════════════════════════════
+function openFollowUpPopup(enqId) {
+  const e = enquiries.find(x => x.id === enqId);
+  if (!e) return;
+  window._fuEnqId = enqId;
+
+  // Remove existing popup if any
+  document.getElementById("fu-popup-overlay")?.remove();
+
+  const FU_STATUSES = ["New Enquiry","Follow-up Pending","Quotation Sent","Lost","Confirmed Booking"];
+  const today = new Date().toISOString().split("T")[0];
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="fu-popup-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div>
+            <div style="font-weight:800;font-size:16px;color:#0f172a">📅 Add Follow-Up</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px">${cName(e.clientId)} — ${e.destination}</div>
+          </div>
+          <button onclick="document.getElementById('fu-popup-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:16px;color:#64748b">✕</button>
+        </div>
+        <div style="display:grid;gap:12px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Follow-up Date</label>
+            <input type="date" id="fu-popup-date" value="${e.followUpDate||today}" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Status</label>
+            <select id="fu-popup-status" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+              ${FU_STATUSES.map(s=>`<option value="${s}" ${e.followUpStatus===s?"selected":""}>${s}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Remarks / Notes</label>
+            <textarea id="fu-popup-notes" rows="3" placeholder="Add remarks about this follow-up..." style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${e.notes||""}</textarea>
+          </div>
+        </div>
+        <button onclick="saveFollowUpPopup()" style="width:100%;margin-top:16px;padding:11px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Save Follow-Up</button>
+      </div>
+    </div>
+  `);
+}
+
+async function saveFollowUpPopup() {
+  const enqId = window._fuEnqId;
+  const e = enquiries.find(x => x.id === enqId);
+  if (!e) return;
+
+  const date   = document.getElementById("fu-popup-date").value;
+  const status = document.getElementById("fu-popup-status").value;
+  const notes  = document.getElementById("fu-popup-notes").value.trim();
+
+  if (!date) return alert("Please select a follow-up date!");
+
+  try {
+    await fbUpdate("enquiries", enqId, { followUpDate: date, followUpStatus: status, notes });
+    e.followUpDate   = date;
+    e.followUpStatus = status;
+    e.notes          = notes;
+    document.getElementById("fu-popup-overlay").remove();
+    renderEnquiries();
+    renderFollowUpCalendar();
+    alert("✅ Follow-up saved!");
+  } catch(err) {
+    alert("Save failed: " + err.message);
+  }
 }
 
 </script>
