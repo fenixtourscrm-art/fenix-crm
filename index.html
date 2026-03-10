@@ -257,6 +257,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 .fb-login-error { color:#dc2626;font-size:12px;margin-top:12px;display:none; }
 .fb-login-loading { color:#64748b;font-size:13px;margin-top:12px;display:none; }
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -342,6 +343,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div class="section-title" style="margin:0">All Clients</div>
         <button class="btn btn-primary" onclick="openModal('client')">+ Add Client</button>
+        <button class="btn" style="background:#16a34a;color:#fff;gap:6px" onclick="document.getElementById('excel-import-input').click()">📥 Import Excel</button>
+        <input type="file" id="excel-import-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importClientExcel(event)"/>
       </div>
       <div class="card"><table><thead><tr>
         <th>NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
@@ -2258,6 +2261,138 @@ function updateBkForm() {
       <div class="form-grid"><div class="fg"><label>Cabin Type</label><select id="b-cabin"><option>Interior</option><option>Ocean View</option><option>Balcony</option><option>Suite</option></select></div>
       <div class="fg"><label>Booking Ref</label><input id="b-ref" placeholder="Booking reference"/></div></div>
       ${paxFields}${amtFields}`;
+  }
+}
+
+
+// ═══════════════════════════════════════════════
+//  IMPORT CLIENTS FROM EXCEL
+//  Reads: Account Name, Under, Phone, Mobile, e-mail, City, KYC Date, PAN No., GST No.
+// ═══════════════════════════════════════════════
+async function importClientExcel(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  event.target.value = ""; // reset so same file can be re-imported
+
+  // Show progress overlay
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="import-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+      <div style="background:#fff;border-radius:16px;padding:28px 36px;text-align:center;min-width:300px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="font-size:24px;margin-bottom:8px">📥</div>
+        <div style="font-weight:800;font-size:16px;color:#0f172a;margin-bottom:6px">Importing Clients...</div>
+        <div id="import-progress-text" style="font-size:13px;color:#64748b;margin-bottom:14px">Reading file...</div>
+        <div style="background:#f1f5f9;border-radius:99px;height:10px;width:100%;overflow:hidden">
+          <div id="import-progress-bar" style="height:100%;background:linear-gradient(90deg,#f97316,#dc2626);border-radius:99px;width:0%;transition:width 0.3s"></div>
+        </div>
+        <div id="import-count" style="font-size:12px;color:#94a3b8;margin-top:8px">0 / 0</div>
+      </div>
+    </div>
+  `);
+
+  const setProgress = (pct, text, count) => {
+    const bar = document.getElementById("import-progress-bar");
+    const txt = document.getElementById("import-progress-text");
+    const cnt = document.getElementById("import-count");
+    if(bar) bar.style.width = pct + "%";
+    if(txt) txt.textContent = text;
+    if(cnt && count) cnt.textContent = count;
+  };
+
+  try {
+    // Read file as ArrayBuffer
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    if(!rows.length) {
+      document.getElementById("import-overlay")?.remove();
+      return alert("⚠️ No data found in the Excel file!");
+    }
+
+    setProgress(10, `Found ${rows.length} rows. Processing...`, `0 / ${rows.length}`);
+
+    // Build set of existing mobiles to skip duplicates
+    const existingMobiles = new Set(clients.map(c => String(c.mobile||"").replace(/\D/g,"")));
+
+    let imported = 0, skipped = 0, errors = 0;
+    const BATCH = 10;
+
+    for(let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+
+      // Read columns - handle both exact and case-insensitive matches
+      const getCol = (...keys) => {
+        for(const k of keys) {
+          const found = Object.keys(row).find(r => r.toLowerCase().trim() === k.toLowerCase());
+          if(found && row[found] !== undefined && row[found] !== "") return String(row[found]).trim();
+        }
+        return "";
+      };
+
+      const accountName = getCol("Account Name", "Name", "account name");
+      const mobile      = getCol("Mobile", "mobile", "Mobile No", "Mobile Number");
+      const phone       = getCol("Phone", "phone", "Phone No");
+      const email       = getCol("e-mail", "Email", "email", "E-mail", "E Mail");
+      const city        = getCol("City", "city");
+      const pan         = getCol("PAN No.", "PAN No", "PAN", "pan");
+      const gst         = getCol("GST No.", "GST No", "GST", "gst");
+      const kycDate     = getCol("KYC Date", "kyc date");
+
+      // Skip empty rows
+      if(!accountName) { skipped++; continue; }
+
+      // Split name: first word = firstName, rest = lastName
+      const nameParts = accountName.trim().split(/\s+/);
+      const firstName = nameParts[0] || accountName;
+      const lastName  = nameParts.slice(1).join(" ") || "";
+
+      // Clean mobile - use mobile first, fallback to phone
+      const cleanMobile = String(mobile||phone).replace(/\D/g,"").slice(-10);
+
+      // Skip duplicate mobiles
+      if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
+      if(cleanMobile) existingMobiles.add(cleanMobile);
+
+      // Save to Firestore
+      try {
+        const data = {
+          firstName, lastName,
+          mobile: cleanMobile || mobile || phone || "",
+          phone: phone || "",
+          email: email || "",
+          city: city || "",
+          state: "", area: "", pincode: "", country: "India",
+          gender: "Male", occupation: "",
+          panNo: pan || "",
+          gstNo: gst || "",
+          kycDate: kycDate || "",
+          importedFrom: file.name,
+        };
+        await fbAdd("clients", data);
+        imported++;
+      } catch(err) {
+        errors++;
+        console.warn("Row error:", err, row);
+      }
+
+      // Update progress
+      const pct = Math.round(((i+1) / rows.length) * 90) + 10;
+      setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+
+      // Batch delay to avoid Firebase rate limits
+      if((i+1) % BATCH === 0) await new Promise(r => setTimeout(r, 200));
+    }
+
+    setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
+    await new Promise(r => setTimeout(r, 1500));
+    document.getElementById("import-overlay")?.remove();
+    alert(`✅ Import complete!\n\n• ${imported} clients imported\n• ${skipped} skipped (duplicates or empty)\n• ${errors} errors`);
+
+  } catch(err) {
+    document.getElementById("import-overlay")?.remove();
+    console.error("Import error:", err);
+    alert("❌ Import failed: " + err.message + "\n\nMake sure the file is a valid .xls or .xlsx file.");
   }
 }
 
