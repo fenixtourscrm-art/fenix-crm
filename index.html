@@ -1114,7 +1114,7 @@ function openModal(type){
     <div id="enq-dynamic-fields"></div>
     <div class="form-grid">
       <div class="fg"><label>Lead Rating</label><select id="e-rating">${RATINGS.map(r=>`<option ${ex&&ex.rating===r?"selected":""}>${r}</option>`).join("")}</select></div>
-      <div class="fg"><label>Enquiry Status</label><select id="e-status">${ENQ_STATUSES.map(s=>`<option ${ex&&ex.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="fg"><label>Enquiry Status</label><select id="e-status">${["Active","Lost","Booked","Junk"].map(s=>`<option ${ex&&ex.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
     </div>
     <div class="form-grid">
       <div class="fg"><label>Enquiry Type</label><select id="e-type">${ENQ_TYPES.map(t=>`<option ${ex&&ex.type===t?"selected":""}>${t}</option>`).join("")}</select></div>
