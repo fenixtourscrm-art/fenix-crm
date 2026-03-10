@@ -873,7 +873,7 @@ function renderBookingList(){
     </tr>`;
   }).join("")||`<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
 }
-function delBk(id){if(!confirm("Delete this booking?"))return;allBookings=allBookings.filter(x=>x.id!==id);renderBookings();}
+
 function editBk(id){window._editBkId=id;openModal("editbooking");}
 function renderVisa(){} // Merged into Bookings
 
@@ -893,7 +893,7 @@ function renderTasks(){
     <button class="btn btn-warn" onclick="del('tasks',${t.id})">✕</button>
   </div>`).join("")||`<div class="empty">No tasks</div>`;
 }
-function toggleTask(id){const t=tasks.find(x=>x.id===id);if(t){t.done=!t.done;renderAll();}}
+
 
 // REPORTS
 function clearReportFilter(){document.getElementById("report-from").value="";document.getElementById("report-to").value="";renderReports();}
@@ -1211,54 +1211,8 @@ function addReportEntry(){
 }
 
 // SAVES
-function saveClient(){
-  const fn=document.getElementById("c-fn").value.trim();if(!fn)return alert("Please enter first name");
-  clients.push({id:nxt.client++,firstName:fn,lastName:document.getElementById("c-ln").value,gender:document.getElementById("c-gen").value,mobile:document.getElementById("c-mob").value,email:document.getElementById("c-email").value,occupation:document.getElementById("c-occ").value,country:document.getElementById("c-country").value,state:document.getElementById("c-state").value,city:document.getElementById("c-city").value,area:document.getElementById("c-area").value,pincode:document.getElementById("c-pin").value});
-  closeOverlay();renderAll();
-}
-function saveEnquiry(isEdit){
-  const activeTab=document.getElementById("dtab-intl")?.classList.contains("active")?"International":"Domestic";
-  const destIntl=document.getElementById("e-dest-intl")?.value||"";
-  const destDom=document.getElementById("e-dest-dom")?.value||"";
-  const destCustom=document.getElementById("e-dest-custom")?.value.trim()||"";
-  const dest=destCustom||(activeTab==="International"?destIntl:destDom)||"Unknown";
-  const intentions=[...document.querySelectorAll("#e-intentions .chip.selected")].map(c=>c.textContent);
-  const src=document.getElementById("e-source").value;
-  const subVal=document.getElementById("e-subval")?.value||"";
-  const isInfluencer=src==="Influencer Reference"||src.startsWith("Social Media");
-  const adults=parseInt(document.getElementById("e-adults")?.value)||0;
-  const childBed=parseInt(document.getElementById("e-childbed")?.value)||0;
-  const childNoBed=parseInt(document.getElementById("e-childnobed")?.value)||0;
-  const infant=parseInt(document.getElementById("e-infant")?.value)||0;
-  const data={
-    clientId:parseInt(document.getElementById("e-client").value),
-    type:document.getElementById("e-type").value,
-    source:src,
-    influencerName:isInfluencer?subVal:"",
-    refName:(!isInfluencer&&subVal)?subVal:"",
-    destination:dest,
-    destType:activeTab,
-    category:document.getElementById("e-category")?.value||activeTab+" Tours",
-    intentions,
-    startDate:document.getElementById("e-start").value,
-    endDate:document.getElementById("e-end").value,
-    adults,childBed,childNoBed,infant,
-    pax:adults+childBed+childNoBed+infant||1,
-    budget:document.getElementById("e-budget").value,
-    hotelPref:document.getElementById("e-hotel")?.value||"Any",
-    rating:document.getElementById("e-rating").value,
-    followUpDate:document.getElementById("e-fudate")?.value||"",
-    followUpStatus:document.getElementById("e-fustatus")?.value||"New Enquiry",
-    status:document.getElementById("e-status").value,
-    staffId:parseInt(document.getElementById("e-staff").value),
-    lostReason:"",
-    notes:document.getElementById("e-notes").value,
-  };
-  if(isEdit){const e=enquiries.find(x=>x.id===window._editEnqId);if(e)Object.assign(e,data);}
-  else{enquiries.push({id:nxt.enq++,...data});}
-  window._prefilledClientId=null;
-  closeOverlay();renderAll();
-}
+
+
 function updateBkForm(){
   const cat=document.getElementById("b-cat")?.value||"";
   const w=document.getElementById("b-extra-wrap");
@@ -1271,36 +1225,7 @@ function updateBkForm(){
     w.innerHTML="";
   }
 }
-function saveBooking(isEdit){
-  const dest=document.getElementById("b-dest").value.trim();if(!dest)return alert("Please enter destination");
-  const cat=document.getElementById("b-cat").value;
-  const passport=document.getElementById("b-passport")?.value||"";
-  const visaType=document.getElementById("b-visatype")?.value||"";
-  const tourType=document.getElementById("b-tourtype")?.value||"";
-  const adults=parseInt(document.getElementById("b-adults").value)||0;
-  const childBed=parseInt(document.getElementById("b-childbed").value)||0;
-  const childNoBed=parseInt(document.getElementById("b-childnobed").value)||0;
-  const infant=parseInt(document.getElementById("b-infant").value)||0;
-  const data={
-    category:cat,
-    clientId:parseInt(document.getElementById("b-client").value),
-    destination:dest,
-    details:passport?`Passport: ${passport} · ${visaType} Visa`:"",
-    tourType,
-    travelDate:document.getElementById("b-date").value,
-    adults,childBed,childNoBed,infant,
-    pax:adults+childBed+childNoBed+infant||1,
-    amount:parseInt(document.getElementById("b-amt").value)||0,
-    paid:parseInt(document.getElementById("b-paid").value)||0,
-    status:document.getElementById("b-status").value,
-    staffId:parseInt(document.getElementById("b-staff").value),
-    notes:document.getElementById("b-notes").value
-  };
-  if(isEdit){const b=allBookings.find(x=>x.id===window._editBkId);if(b)Object.assign(b,data);}
-  else{allBookings.push({id:nxtBk++,...data});}
-  window._bkPreCat=null;
-  closeOverlay();renderAll();renderCalendar("book");
-}
+
 function saveVisa(){
   // Visa modal kept for quick visa add — adds to allBookings as Visa category
   const clientId=parseInt(document.getElementById("v-client").value);
@@ -1310,28 +1235,10 @@ function saveVisa(){
   allBookings.push({id:nxtBk++,category:"Visa",clientId,destination:country,details:`Passport: ${passportNo} · ${visaType} Visa`,tourType:"",travelDate:document.getElementById("v-applied").value,adults:1,childBed:0,childNoBed:0,infant:0,pax:1,amount:0,paid:0,status:document.getElementById("v-status").value,staffId:3,notes:document.getElementById("v-notes").value});
   closeOverlay();renderAll();renderCalendar("book");
 }
-function saveTask(){
-  const title=document.getElementById("t-title").value.trim();if(!title)return alert("Please enter task");
-  tasks.push({id:nxt.task++,title,assignedTo:parseInt(document.getElementById("t-to").value),assignedBy:parseInt(document.getElementById("t-by").value),clientId:parseInt(document.getElementById("t-client").value),dueDate:document.getElementById("t-due").value,priority:document.getElementById("t-pri").value,done:false});
-  closeOverlay();renderAll();
-}
-function saveReport(){
-  const entries=[];
-  document.getElementById("r-entries").querySelectorAll("div").forEach((row,i)=>{
-    const n=row.querySelector(`[id^="re-n"]`),p=row.querySelector(`[id^="re-p"]`),d=row.querySelector(`[id^="re-d"]`);
-    if(n&&n.value.trim())entries.push({clientName:n.value,pax:parseInt(p?.value)||1,destination:d?.value||""});
-  });
-  reports.push({id:nxt.report++,staffId:parseInt(document.getElementById("r-staff").value),date:document.getElementById("r-date").value,salesCalls:parseInt(document.getElementById("r-calls").value)||0,enquiriesNew:parseInt(document.getElementById("r-enqn").value)||0,enquiriesOld:parseInt(document.getElementById("r-enqo").value)||0,bookingsConfirmed:parseInt(document.getElementById("r-book").value)||0,visaApps:parseInt(document.getElementById("r-visa").value)||0,entries,otherWork:document.getElementById("r-other").value});
-  closeOverlay();renderAll();
-}
-function saveMarketing(){
-  marketing.push({id:nxt.mkt++,date:document.getElementById("m-date").value,staffId:parseInt(document.getElementById("m-staff").value),calls:parseInt(document.getElementById("m-calls").value)||0,newClients:parseInt(document.getElementById("m-clients").value)||0,notes:document.getElementById("m-notes").value,clientId:null});
-  closeOverlay();renderAll();
-}
-function saveMktCall(){
-  marketing.push({id:nxt.mkt++,date:document.getElementById("mc-date").value,staffId:parseInt(document.getElementById("mc-staff").value),calls:parseInt(document.getElementById("mc-calls").value)||1,newClients:parseInt(document.getElementById("mc-clients").value)||0,notes:document.getElementById("mc-notes").value,clientId:window._mktClientId||null});
-  window._mktClientId=null;closeOverlay();renderAll();
-}
+
+
+
+
 function saveNewStaff(){
   const name=document.getElementById("ns-name").value.trim();
   if(!name)return alert("Please enter a name");
@@ -1366,25 +1273,10 @@ function switchDestTab(tab){
   document.getElementById("dtab-"+tab).classList.add("active");
   document.getElementById("dcontent-"+tab).classList.add("active");
 }
-function saveTarget(){
-  const staffId=parseInt(document.getElementById("tg-staff").value);
-  const month=document.getElementById("tg-month").value;
-  const ex=targets.find(t=>t.staffId===staffId&&t.month===month);
-  const data={staffId,month,bookings:parseInt(document.getElementById("tg-book").value)||0,bookingsAchieved:parseInt(document.getElementById("tg-abook").value)||0,mktCalls:parseInt(document.getElementById("tg-calls").value)||0,mktCallsAchieved:parseInt(document.getElementById("tg-acalls").value)||0,newClients:parseInt(document.getElementById("tg-clients").value)||0,newClientsAchieved:parseInt(document.getElementById("tg-aclients").value)||0};
-  if(ex){Object.assign(ex,data);}else{targets.push({id:nxt.target++,...data});}
-  closeOverlay();renderAll();renderChart();
-}
+
 
 // DELETE
-function del(arr,id){
-  if(!confirm("Delete this record?"))return;
-  if(arr==="clients")clients=clients.filter(x=>x.id!==id);
-  else if(arr==="enquiries")enquiries=enquiries.filter(x=>x.id!==id);
-  else if(arr==="bookings")allBookings=allBookings.filter(x=>x.id!==id);
-  else if(arr==="tasks")tasks=tasks.filter(x=>x.id!==id);
-  else if(arr==="marketing")marketing=marketing.filter(x=>x.id!==id);
-  renderAll();
-}
+
 // ── FOLLOW-UP CALENDAR ──
 calState.fu={y:new Date().getFullYear(),m:new Date().getMonth()};
 const FU_COLORS={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
