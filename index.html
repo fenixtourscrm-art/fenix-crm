@@ -538,6 +538,14 @@ let STAFF = [
 let mktCalls=[];
 let nxtStaff=10;
 
+// ── Global vars declared early to avoid init errors ──
+let CURRENT_USER = null;
+let USER_PERMS   = null;
+let auth         = null;
+let db           = null;
+let _unsubscribers = [];
+let _saving      = false;
+
 const BK_CATS=[
   {id:"all",        label:"All Bookings",    icon:"📁", di:"all"},
   {id:"International Tours",  label:"Intl Tours",     icon:"✈️",  di:"international"},
@@ -905,6 +913,7 @@ function renderVisa(){} // Merged into Bookings
 function renderTasks(){
   // Owner sees all tasks, staff sees only their assigned tasks
   const isOwner = CURRENT_USER && (CURRENT_USER.id === 1);
+  if(!CURRENT_USER) return; // not logged in yet
   const visibleTasks = isOwner
     ? [...tasks]
     : tasks.filter(t => t.assignedTo === CURRENT_USER?.id);
@@ -1480,12 +1489,12 @@ const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansa
 const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
 
 firebase.initializeApp(FIREBASE_CONFIG);
-const auth = firebase.auth();
-const db   = firebase.firestore();
-
-let CURRENT_USER = null;
-let USER_PERMS   = null;
-let _unsubscribers = [];
+// auth and db initialized here, but variables already declared at top
+_auth = firebase.auth();
+_db   = firebase.firestore();
+auth = _auth;
+db   = _db;
+_unsubscribers = [];
 
 // ── Sign In ──────────────────────────────────────
 function fbSignIn() {
@@ -1612,7 +1621,6 @@ function loadFromFirestore() {
 }
 
 // ── Save helpers (replace old save functions) ────
-let _saving = false;
 async function fbAdd(col, data) {
   data.createdAt = new Date().toISOString();
   data.createdBy = CURRENT_USER ? CURRENT_USER.id : 0;
