@@ -1706,8 +1706,9 @@ async function saveEnquiry(isEdit) {
 
 async function saveBooking(isEdit) {
   if(_saving) return;
-  const clientId = parseInt(document.getElementById("b-client")?.value)||0;
-  if(!clientId) return alert("⚠️ Please select a Client!");
+  const clientEl = document.getElementById("b-client");
+  const clientId = clientEl ? clientEl.value : "";
+  if(!clientId || clientId === "0" || clientId === "") return alert("⚠️ Please select a Client!");
   const gv = id => document.getElementById(id)?.value || "";
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
   // Destination: could be select (b-dest) or input depending on category
@@ -1715,7 +1716,7 @@ async function saveBooking(isEdit) {
   const adults=gi("b-adults"), childBed=gi("b-childbed"), childNoBed=gi("b-childnobed"), infant=gi("b-infant");
   const data = {
     category: gv("b-cat") || "International Tours",
-    clientId,
+    clientId: clientId,
     destination: dest,
     travelDate: gv("b-date"),
     returnDate: gv("b-return-date"),
@@ -1724,7 +1725,7 @@ async function saveBooking(isEdit) {
     amount: gi("b-amt"),
     paid: gi("b-paid"),
     status: gv("b-status") || "Confirmed",
-    staffId: gi("b-staff") || (CURRENT_USER?.id||0),
+    staffId: document.getElementById("b-staff")?.value || (CURRENT_USER?.id||0),
     notes: gv("b-notes"),
     // tour fields
     tourType: gv("b-tourtype"),
