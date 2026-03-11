@@ -1769,16 +1769,36 @@ auth.onAuthStateChanged(function(user) {
 // ── Load Data ────────────────────────────────────
 function loadFromFirestore() {
   const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets"];
-  const loadedSet = new Set(); // track which collections have loaded
+  const loadedSet = new Set();
   let initialRenderDone = false;
 
   // Unsubscribe previous listeners
   _unsubscribers.forEach(fn => fn());
   _unsubscribers = [];
 
+  function doInitialRender() {
+    if(initialRenderDone) return;
+    initialRenderDone = true;
+    try {
+      renderAll();
+      renderCalendar("book");
+      renderFollowUpCalendar();
+      renderStaff();
+      showTab("dashboard");
+      const td = document.getElementById("topbar-date");
+      if(td) td.textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
+      console.log("✅ Rendered! clients="+clients.length+" enquiries="+enquiries.length);
+    } catch(e) { console.error("Render error:", e); }
+  }
+
+  // Safety fallback: if not all collections load within 5s, render anyway
+  const fallbackTimer = setTimeout(() => {
+    console.warn("⚠️ Fallback render triggered");
+    doInitialRender();
+  }, 5000);
+
   collections.forEach(col => {
     const unsub = db.collection(col).onSnapshot(snap => {
-      // Update the data array
       const docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
       if(col==="clients")   clients    = docs;
       if(col==="enquiries") enquiries  = docs;
@@ -1790,26 +1810,27 @@ function loadFromFirestore() {
 
       loadedSet.add(col);
 
-      // Only do initial full render once ALL collections are loaded
-      if(!initialRenderDone && loadedSet.size >= collections.length) {
-        initialRenderDone = true;
-        try {
-          renderAll();
-          renderCalendar("book");
-          renderFollowUpCalendar();
-          renderStaff();
-          showTab("dashboard");
-          const td = document.getElementById("topbar-date");
-          if(td) td.textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",year:"numeric",month:"long",day:"numeric"});
-          console.log("✅ All data loaded! clients=" + clients.length + " enquiries=" + enquiries.length);
-        } catch(renderErr) {
-          console.error("Render error:", renderErr);
+      if(!initialRenderDone) {
+        // Render as soon as clients + enquiries loaded (most critical)
+        const coreLoaded = loadedSet.has("clients") && loadedSet.has("enquiries");
+        // OR render when all collections loaded
+        const allLoaded = loadedSet.size >= collections.length;
+        if(coreLoaded || allLoaded) {
+          clearTimeout(fallbackTimer);
+          doInitialRender();
         }
-      } else if(initialRenderDone) {
-        // For real-time updates after initial load — just re-render current tab
+      } else {
+        // Real-time update after initial render
         try { renderAll(); } catch(e) {}
       }
-    }, err => console.error("Firestore error on " + col + ":", err));
+    }, err => {
+      console.error("Firestore error on " + col + ":", err);
+      loadedSet.add(col); // Count errored collections so we don't block forever
+      if(loadedSet.size >= collections.length) {
+        clearTimeout(fallbackTimer);
+        doInitialRender();
+      }
+    });
     _unsubscribers.push(unsub);
   });
 }
