@@ -2954,93 +2954,86 @@ function openAddPayment(bookingId) {
   if(!b) return;
   document.getElementById("add-payment-overlay")?.remove();
 
-  const totalAmt   = parseFloat(b.amount) || 0;
-  const paidSoFar  = parseFloat(b.paid)   || 0;
-  const pendingAmt = Math.max(0, totalAmt - paidSoFar);
-  const history    = b.paymentHistory || [];
+  // Always recalculate paid from history to avoid stale b.paid
+  const history   = b.paymentHistory || [];
+  const histPaid  = history.reduce((s,p) => s + (parseFloat(p.amount)||0), 0);
+  const totalAmt  = parseFloat(b.amount) || 0;
+  const pending   = Math.max(0, totalAmt - histPaid);
 
-  const historyHtml = history.length ? `
-    <div style="margin-bottom:14px">
-      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">
-        Payment History (${history.length} entries)
-      </div>
-      ${history.map((p,i) => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;margin-bottom:4px;background:#f8fafc;border-radius:8px;font-size:12px">
-          <div>
-            <span style="color:#0f172a;font-weight:600">${p.date}</span>
-            <span style="color:#64748b"> · ${p.method||"Cash"}${p.ref?" · "+p.ref:""}</span>
-          </div>
-          <span style="font-weight:800;color:#16a34a">+${fmt(p.amount)}</span>
-        </div>`).join("")}
-    </div>` : "";
+  const histHtml = history.length ? history.map(p => `
+    <div style="display:flex;justify-content:space-between;padding:7px 10px;background:#f8fafc;border-radius:8px;margin-bottom:4px;font-size:12px">
+      <span style="color:#64748b">${p.date} · <strong>${p.method||"Cash"}</strong>${p.ref ? " · "+p.ref : ""}</span>
+      <span style="font-weight:800;color:#16a34a">+${fmt(p.amount)}</span>
+    </div>`).join("") : `<div style="color:#94a3b8;font-size:12px;text-align:center;padding:8px">No payments recorded yet</div>`;
 
   document.body.insertAdjacentHTML("beforeend", `
-    <div id="add-payment-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
-      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
+    <div id="add-payment-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+      <div style="background:#fff;border-radius:16px;padding:22px;width:100%;max-width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.25)">
 
         <!-- Header -->
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid #f8fafc">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div>
-            <div style="font-weight:800;font-size:16px;color:#0f172a">💰 Payment Manager</div>
-            <div style="font-size:12px;color:#64748b;margin-top:3px">${cName(b.clientId)} · ${b.destination||b.category}</div>
+            <div style="font-weight:800;font-size:15px;color:#0f172a">💰 Payment</div>
+            <div style="font-size:11px;color:#64748b">${cName(b.clientId)} · ${b.destination||b.category}</div>
           </div>
-          <button onclick="document.getElementById('add-payment-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:18px;color:#64748b">✕</button>
+          <button onclick="document.getElementById('add-payment-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:16px;color:#64748b">✕</button>
         </div>
 
-        <!-- Editable Total + Summary Row -->
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
-          <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">Total Amount ₹</div>
-            <input type="number" id="ap-total-edit" value="${totalAmt}" min="0"
-              style="width:100%;padding:4px 4px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;font-weight:800;color:#0f172a;text-align:center;box-sizing:border-box;background:#fff"
-              oninput="apRefresh()"/>
+        <!-- 3 stat boxes -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">
+          <div style="background:#f1f5f9;border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase">Total</div>
+            <div style="font-size:14px;font-weight:800;color:#0f172a;margin-top:3px">${fmt(totalAmt)}</div>
           </div>
           <div style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:9px;color:#166534;font-weight:700;text-transform:uppercase">Paid</div>
-            <div style="font-size:15px;font-weight:800;color:#16a34a;margin-top:6px" id="ap-paid-display">${fmt(paidSoFar)}</div>
+            <div style="font-size:9px;font-weight:700;color:#166534;text-transform:uppercase">Paid</div>
+            <div style="font-size:14px;font-weight:800;color:#16a34a;margin-top:3px">${fmt(histPaid)}</div>
           </div>
-          <div style="background:#fee2e2;border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:9px;color:#991b1b;font-weight:700;text-transform:uppercase">Pending</div>
-            <div style="font-size:15px;font-weight:800;color:#dc2626;margin-top:6px" id="ap-pending-display">${fmt(pendingAmt)}</div>
+          <div style="background:${pending>0?"#fee2e2":"#dcfce7"};border-radius:10px;padding:10px;text-align:center">
+            <div style="font-size:9px;font-weight:700;color:${pending>0?"#991b1b":"#166534"};text-transform:uppercase">Pending</div>
+            <div style="font-size:14px;font-weight:800;color:${pending>0?"#dc2626":"#16a34a"};margin-top:3px">${pending>0?fmt(pending):"✅ Nil"}</div>
           </div>
         </div>
 
-        ${historyHtml}
+        <!-- History -->
+        <div style="margin-bottom:14px">
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:6px">History</div>
+          ${histHtml}
+        </div>
 
-        <!-- New Payment Entry -->
-        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:16px;display:grid;gap:12px">
-          <div style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.06em">+ New Payment Entry</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <!-- New Entry -->
+        <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:#166534;text-transform:uppercase;margin-bottom:10px">+ Add New Payment</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
             <div>
-              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Amount (₹) *</label>
-              <input type="number" id="ap-amount" placeholder="0" min="0"
-                style="width:100%;padding:8px 12px;border:1.5px solid #86efac;border-radius:8px;font-size:15px;font-weight:800;box-sizing:border-box;color:#16a34a;background:#fff"
-                oninput="apRefresh()"/>
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Amount ₹ *</label>
+              <input type="number" id="ap-amount" placeholder="0" min="1" max="${pending}"
+                style="width:100%;padding:9px 10px;border:2px solid #86efac;border-radius:8px;font-size:15px;font-weight:800;color:#16a34a;box-sizing:border-box"/>
             </div>
             <div>
-              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Date</label>
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Date</label>
               <input type="date" id="ap-date" value="${new Date().toISOString().split('T')[0]}"
-                style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+                style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
             </div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div>
-              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Payment Method</label>
-              <select id="ap-method" style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
-                <option>Cash</option><option>Bank Transfer</option><option>UPI / GPay</option>
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Method</label>
+              <select id="ap-method" style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+                <option>Cash</option><option>UPI / GPay</option><option>Bank Transfer</option>
                 <option>Cheque</option><option>Card</option><option>Online</option>
               </select>
             </div>
             <div>
-              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Reference / Note</label>
-              <input type="text" id="ap-ref" placeholder="e.g. UTR / Cheque no"
-                style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Reference</label>
+              <input type="text" id="ap-ref" placeholder="UTR / Cheque no"
+                style="width:100%;padding:9px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
             </div>
           </div>
         </div>
 
         <button onclick="saveAddPayment('${bookingId}')"
-          style="width:100%;margin-top:16px;padding:13px;background:linear-gradient(135deg,#16a34a,#059669);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">
+          style="width:100%;margin-top:14px;padding:13px;background:linear-gradient(135deg,#16a34a,#059669);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;letter-spacing:.02em">
           💰 Save Payment
         </button>
       </div>
@@ -3048,48 +3041,34 @@ function openAddPayment(bookingId) {
   `);
 }
 
-// Live recalculate: Paid = existing paid + new entry amount; Pending = Total - Paid
-function apRefresh() {
-  const total      = parseFloat(document.getElementById("ap-total-edit")?.value) || 0;
-  const existing   = parseFloat(document.getElementById("ap-paid-display")?.textContent?.replace(/[^0-9.]/g,"")) || 0;
-  const newEntry   = parseFloat(document.getElementById("ap-amount")?.value) || 0;
-  const totalPaid  = existing + newEntry;
-  const pending    = Math.max(0, total - totalPaid);
-  const paidEl     = document.getElementById("ap-paid-display");
-  const pendEl     = document.getElementById("ap-pending-display");
-  if(paidEl) paidEl.textContent  = fmt(totalPaid);
-  if(pendEl) pendEl.textContent  = fmt(pending);
-}
-
-// Save payment — appends entry to history, updates paid/pending/status
+// Save payment — strictly adds new entry to history, recalculates totals from history
 async function saveAddPayment(bookingId) {
   const newAmt = parseFloat(document.getElementById("ap-amount")?.value) || 0;
-  if(newAmt <= 0) return alert("⚠️ Please enter a payment amount!");
+  if(newAmt <= 0) return alert("⚠️ Enter a valid amount!");
 
   const b = allBookings.find(x => x.id === bookingId);
   if(!b) return;
 
-  const date    = document.getElementById("ap-date")?.value   || new Date().toISOString().split("T")[0];
-  const method  = document.getElementById("ap-method")?.value || "Cash";
-  const ref     = document.getElementById("ap-ref")?.value    || "";
-  const newTotal= parseFloat(document.getElementById("ap-total-edit")?.value) || parseFloat(b.amount) || 0;
-
-  const newPaid    = (parseFloat(b.paid) || 0) + newAmt;
-  const newPending = Math.max(0, newTotal - newPaid);
-  const newStatus  = newPaid >= newTotal && newTotal > 0 ? "Fully Paid" : newPaid > 0 ? "Partially Paid" : "Pending";
+  const date   = document.getElementById("ap-date")?.value   || new Date().toISOString().split("T")[0];
+  const method = document.getElementById("ap-method")?.value || "Cash";
+  const ref    = document.getElementById("ap-ref")?.value    || "";
 
   const history = [...(b.paymentHistory || [])];
   history.push({ amount: newAmt, date, method, ref, addedBy: CURRENT_USER?.name||"Staff", addedAt: new Date().toISOString() });
 
+  // Recalculate paid strictly from history — single source of truth
+  const totalAmt  = parseFloat(b.amount) || 0;
+  const newPaid   = history.reduce((s,p) => s + (parseFloat(p.amount)||0), 0);
+  const newPending= Math.max(0, totalAmt - newPaid);
+  const newStatus = newPaid >= totalAmt && totalAmt > 0 ? "Fully Paid" : newPaid > 0 ? "Partially Paid" : "Pending";
+
   try {
     await fbUpdate("bookings", bookingId, {
-      amount: newTotal,
       paid: newPaid,
       pendingAmount: newPending,
       paymentStatus: newStatus,
       paymentHistory: history,
     });
-    b.amount = newTotal;
     b.paid = newPaid;
     b.pendingAmount = newPending;
     b.paymentStatus = newStatus;
@@ -3097,12 +3076,10 @@ async function saveAddPayment(bookingId) {
 
     document.getElementById("add-payment-overlay")?.remove();
     renderBookings();
-    alert(`✅ Payment of ${fmt(newAmt)} saved!\nTotal Paid: ${fmt(newPaid)} · Pending: ${fmt(newPending)}\nStatus: ${newStatus}`);
   } catch(err) {
     alert("Save failed: " + err.message);
   }
 }
-
 
 // ═══════════════════════════════════════════════════════
 //  TRAVEL QUIZ & LEARNING SYSTEM
