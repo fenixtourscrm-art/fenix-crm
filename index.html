@@ -895,11 +895,7 @@ async function markBooked(id){
       await fbUpdate("enquiries",id,{status:"Booked"});
       e.status="Booked";
       const bkData={category:e.destType==="Domestic"?"Domestic Tours":"International Tours",clientId:e.clientId,destination:e.destination,details:"",tourType:"",travelDate:e.startDate,adults:e.adults||e.pax||1,childBed:e.childBed||0,childNoBed:e.childNoBed||0,infant:e.infant||0,pax:e.pax||1,amount:0,paid:0,status:"Confirmed",staffId:e.staffId,notes:"From enquiry"};
-      const bkId=await fbAdd("bookings",bkData);
-      bkData.id=bkId;
-      allBookings.push(bkData);
-      window._suppressBkSnapshot=true;
-      setTimeout(()=>{ window._suppressBkSnapshot=false; },3000);
+      await fbAdd("bookings",bkData);
       renderAll(); alert("✅ Moved to Bookings!");
     } catch(err){ alert("Failed: "+err.message); }
   }
@@ -1836,9 +1832,9 @@ function loadFromFirestore() {
         }
         return {id: d.id, ...data};
       });
-      if(col==="clients") { if(window._suppressClientSnapshot) return; clients = docs; }
-      if(col==="enquiries") { if(window._suppressEnqSnapshot) return; enquiries = docs; }
-      if(col==="bookings") { if(window._suppressBkSnapshot) return; allBookings= docs; }
+      if(col==="clients")   clients    = docs;
+      if(col==="enquiries") enquiries  = docs;
+      if(col==="bookings")  allBookings= docs;
       if(col==="tasks")     tasks      = docs;
       if(col==="reports")   reports    = docs;
       if(col==="marketing") marketing  = docs;
@@ -1915,13 +1911,8 @@ async function saveClient() {
   };
   _saving = true;
   try {
-    const newId = await fbAdd("clients", data);
-    data.id = newId;
-    clients.push(data);
+    await fbAdd("clients", data);
     closeOverlay();
-    renderClients();
-    window._suppressClientSnapshot = true;
-    setTimeout(()=>{ window._suppressClientSnapshot=false; }, 3000);
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
 }
@@ -2034,14 +2025,9 @@ async function saveEnquiry(isEdit) {
       if(_saving) return;
       _saving = true;
       try {
-        const newEnqId = await fbAdd("enquiries", data);
-        data.id = newEnqId;
-        enquiries.push(data);
-        window._suppressEnqSnapshot = true;
-        setTimeout(()=>{ window._suppressEnqSnapshot=false; },3000);
+        await fbAdd("enquiries", data);
         window._prefilledClientId=null;
         closeOverlay();
-        renderEnquiries();
       } finally { _saving = false; }
     }
   } catch(e) { alert("Save failed: "+e.message); }
@@ -2112,13 +2098,8 @@ async function saveBooking(isEdit) {
       await fbUpdate("bookings",b.id,data); Object.assign(b,data);
       closeOverlay(); renderBookings();
     } else {
-      const newBkId = await fbAdd("bookings",data);
-      data.id = newBkId;
-      allBookings.push(data);
+      await fbAdd("bookings",data);
       closeOverlay();
-      renderBookings();
-      window._suppressBkSnapshot = true;
-      setTimeout(()=>{ window._suppressBkSnapshot=false; }, 3000);
     }
     window._bkPreCat=null; renderCalendar("book");
   } catch(e) { alert("Save failed: "+e.message); }
