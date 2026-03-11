@@ -295,10 +295,10 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('reports',this)"><span class="nav-icon">📊</span>Daily Reports</div>
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
-    <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
+    <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
   </nav>
   <div class="sidebar-footer">
     <div class="agent-row">
@@ -1588,7 +1588,7 @@ renderStaff();
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
-const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
+const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
 
 firebase.initializeApp(FIREBASE_CONFIG);
 // auth and db initialized here, but variables already declared at top
