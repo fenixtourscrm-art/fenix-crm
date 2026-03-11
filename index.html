@@ -3119,7 +3119,7 @@ function finishQuiz() {
 function renderResultCard(score, total) {
   const pct   = Math.round((score / total) * 100);
   const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '🎉' : pct >= 40 ? '👍' : '📚';
-  const msg   = pct >= 80 ? 'Outstanding! You're a travel expert!' : pct >= 60 ? 'Great work! Keep learning!' : pct >= 40 ? 'Good effort! Review the tips below.' : 'Keep practising — you'll improve!';
+  const msg   = pct >= 80 ? "Outstanding! You're a travel expert!" : pct >= 60 ? "Great work! Keep learning!" : pct >= 40 ? "Good effort! Review the tips below." : "Keep practising — you'll improve!";
 
   return `
     <div style="background:#fff;border-radius:16px;border:1.5px solid #e2e8f0;padding:28px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
