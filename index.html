@@ -295,9 +295,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('reports',this)"><span class="nav-icon">📊</span>Daily Reports</div>
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
+    <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
-    <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
   </nav>
   <div class="sidebar-footer">
@@ -2673,9 +2673,10 @@ let _bugUnsub    = null;
 function loadBugReports() {
   if(_bugUnsub) _bugUnsub();
   _bugUnsub = db.collection("bugreports")
-    .orderBy("createdAt", "desc")
     .onSnapshot(snap => {
-      bugReports = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      // Sort client-side to avoid needing Firestore index
+      bugReports = snap.docs.map(d => ({id: d.id, ...d.data()}))
+        .sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
       renderBugReports();
       // Update badge — count open bugs for owner
       const openCount = bugReports.filter(b => b.status === "open").length;
