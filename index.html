@@ -350,7 +350,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <input type="file" id="excel-import-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importClientExcel(event)"/>
       </div>
       <div class="card"><table><thead><tr>
-        <th>NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
+        <th>COMPANY NAME</th><th>NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
       </tr></thead><tbody id="clients-tbody"></tbody></table></div>
     </div>
 
@@ -851,6 +851,7 @@ function renderDashboard(){
 // CLIENTS
 function renderClients(){
   document.getElementById("clients-tbody").innerHTML=clients.map(c=>`<tr>
+    <td style="font-size:12px;font-weight:700;color:#0f172a;max-width:140px">${c.companyName?`<div style="font-weight:800;color:#0369a1">${c.companyName}</div>`:'<span style="color:#cbd5e1;font-size:11px">—</span>'}</td>
     <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:9px">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
       <div>
         <strong>${c.firstName} ${c.lastName}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316;margin-left:4px">🔒</span>':""}
@@ -870,7 +871,7 @@ function renderClients(){
         <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
       </div>
     </td>
-  </tr>`).join("")||`<tr><td colspan="9" class="empty">No clients yet</td></tr>`;
+  </tr>`).join("")||`<tr><td colspan="10" class="empty">No clients yet</td></tr>`;
 }
 function toggleActionMenu(id){
   document.querySelectorAll(".action-dropdown").forEach(d=>{
@@ -1277,7 +1278,7 @@ function globalSearch(q){
   const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source}`.toLowerCase().includes(ql));
   const fb=bookings.filter(b=>`${cName(b.clientId)} ${b.destination}`.toLowerCase().includes(ql));
   document.getElementById("search-results").innerHTML=`
-    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div><div class="card"><table><thead><tr><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>ACTION</th></tr></thead><tbody>${fc.map(c=>`<tr><td><strong>${c.firstName} ${c.lastName}</strong></td><td>${c.mobile}</td><td>${c.email}</td><td>${c.city}</td><td><button class="btn" style="font-size:10px;padding:3px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button></td></tr>`).join("")}</tbody></table></div>`:""}
+    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div><div class="card"><table><thead><tr><th>COMPANY</th><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>ACTION</th></tr></thead><tbody>${fc.map(c=>`<tr><td style="font-size:11px;font-weight:700;color:#0369a1">${c.companyName||"—"}</td><td><strong>${c.firstName} ${c.lastName}</strong></td><td>${c.mobile}</td><td>${c.email}</td><td>${c.city}</td><td><button class="btn" style="font-size:10px;padding:3px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button></td></tr>`).join("")}</tbody></table></div>`:""}
     ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>RATING</th><th>STATUS</th><th>TYPE</th></tr></thead><tbody>${fe.map(e=>`<tr><td>${cName(e.clientId)}</td><td>${e.destination}</td><td>${rBadge(e.rating)}</td><td>${sBadge(e.status)}</td><td>${tBadge(e.type)}</td></tr>`).join("")}</tbody></table></div>`:""}
     ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th></tr></thead><tbody>${fb.map(b=>`<tr><td>${cName(b.clientId)}</td><td>${b.destination}</td><td>${b.travelDate}</td><td>${fmt(b.amount)}</td></tr>`).join("")}</tbody></table></div>`:""}
     ${!fc.length&&!fe.length&&!fb.length?`<div class="empty">No results found for "${q}"</div>`:""}`;
