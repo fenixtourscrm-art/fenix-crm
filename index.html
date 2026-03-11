@@ -1279,30 +1279,66 @@ function openModal(type){
     </div>
     <div id="b-extra-wrap" style="margin-top:4px"></div>
     <div class="form-grid">
-      <div class="fg"><label>Status</label><select id="b-status"><option>Confirmed</option><option>Pending</option><option>Cancelled</option></select></div>
+      <div class="fg"><label>Booking Status</label><select id="b-status"><option>Confirmed</option><option>Pending</option><option>Cancelled</option></select></div>
+      <div class="fg"><label>Payment Status</label><select id="b-pay-status"><option>Pending</option><option>Partially Paid</option><option>Fully Paid</option></select></div>
+    </div>
+    <div class="form-grid">
       <div class="fg"><label>Assigned Staff</label><select id="b-staff">${sOpts()}</select></div>
     </div>
     <div class="form-grid g1"><div class="fg"><label>Notes</label><textarea id="b-notes" rows="2" placeholder="Any additional information..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveBooking(${isEditBk})">Save Booking</button>`;
     setTimeout(()=>{
       const catEl=document.getElementById("b-cat");
-      if(catEl&&!isEditBk)catEl.value=preCat;
-      if(exBk){
-        catEl.value=exBk.category;
-        document.getElementById("b-client").value=exBk.clientId;
-        document.getElementById("b-dest").value=exBk.destination;
-        document.getElementById("b-date").value=exBk.travelDate;
-        document.getElementById("b-adults").value=exBk.adults||exBk.pax||1;
-        document.getElementById("b-childbed").value=exBk.childBed||0;
-        document.getElementById("b-childnobed").value=exBk.childNoBed||0;
-        document.getElementById("b-infant").value=exBk.infant||0;
-        document.getElementById("b-amt").value=exBk.amount;
-        document.getElementById("b-paid").value=exBk.paid;
-        document.getElementById("b-status").value=exBk.status||"Confirmed";
-        document.getElementById("b-staff").value=exBk.staffId;
-        document.getElementById("b-notes").value=exBk.notes||"";
+      if(!isEditBk && catEl) catEl.value=preCat;
+      if(isEditBk && exBk && catEl) {
+        // Step 1: Set category first
+        catEl.value = exBk.category || "International Tours";
+        // Step 2: Render dynamic fields for this category
+        updateBkForm();
+        // Step 3: Now fill all dynamic fields (they exist now)
+        const sv = (id, val) => { const el=document.getElementById(id); if(el && val!==undefined && val!==null) el.value=val; };
+        sv("b-client",   exBk.clientId);
+        sv("b-dest",     exBk.destination);
+        sv("b-date",     exBk.travelDate);
+        sv("b-return-date", exBk.returnDate);
+        sv("b-adults",   exBk.adults || exBk.pax || 1);
+        sv("b-childbed", exBk.childBed || 0);
+        sv("b-childnobed", exBk.childNoBed || 0);
+        sv("b-infant",   exBk.infant || 0);
+        sv("b-amt",      exBk.amount);
+        sv("b-paid",     exBk.paid);
+        sv("b-status",   exBk.status || "Confirmed");
+        sv("b-staff",    exBk.staffId);
+        sv("b-notes",    exBk.notes || "");
+        // Category-specific fields
+        sv("b-tourtype",      exBk.tourType);
+        sv("b-hotel",         exBk.hotelCategory);
+        sv("b-from-city",     exBk.fromCity);
+        sv("b-airline",       exBk.airline);
+        sv("b-class",         exBk.flightClass);
+        sv("b-pnr",           exBk.pnr);
+        sv("b-ticket-status", exBk.ticketStatus);
+        sv("b-hotel-name",    exBk.hotelName);
+        sv("b-checkout",      exBk.checkOut);
+        sv("b-room",          exBk.roomType);
+        sv("b-meal",          exBk.mealPlan);
+        sv("b-rooms",         exBk.rooms);
+        sv("b-nights",        exBk.nights);
+        sv("b-visa-type",     exBk.visaType);
+        sv("b-visa-status",   exBk.visaStatus);
+        sv("b-applicant",     exBk.applicantName);
+        sv("b-passport",      exBk.passportNo);
+        sv("b-passport-type", exBk.passportType);
+        sv("b-passport-status", exBk.passportStatus);
+        sv("b-insurer",       exBk.insurerName);
+        sv("b-policy",        exBk.policyNo);
+        sv("b-port",          exBk.departurePort);
+        sv("b-cabin",         exBk.cabinType);
+        sv("b-ref",           exBk.bookingRef);
+        sv("b-pay-status",    exBk.paymentStatus);
+      } else {
+        updateBkForm();
       }
-      updateBkForm();
     },50);
   } else if(type==="visa"){
     mb.innerHTML=`<div class="modal-title">Add Visa Application <button class="x" onclick="closeOverlay()">✕</button></div>
@@ -1797,9 +1833,9 @@ function loadFromFirestore() {
         }
         return {id: d.id, ...data};
       });
-      if(col==="clients")   clients    = docs;
+      if(col==="clients") { if(window._suppressClientSnapshot) return; clients = docs; }
       if(col==="enquiries") enquiries  = docs;
-      if(col==="bookings")  allBookings= docs;
+      if(col==="bookings") { if(window._suppressBkSnapshot) return; allBookings= docs; }
       if(col==="tasks")     tasks      = docs;
       if(col==="reports")   reports    = docs;
       if(col==="marketing") marketing  = docs;
@@ -1881,6 +1917,8 @@ async function saveClient() {
     clients.push(data);
     closeOverlay();
     renderClients();
+    window._suppressClientSnapshot = true;
+    setTimeout(()=>{ window._suppressClientSnapshot=false; }, 3000);
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
 }
@@ -2070,6 +2108,8 @@ async function saveBooking(isEdit) {
       allBookings.push(data);
       closeOverlay();
       renderBookings();
+      window._suppressBkSnapshot = true;
+      setTimeout(()=>{ window._suppressBkSnapshot=false; }, 3000);
     }
     window._bkPreCat=null; renderCalendar("book");
   } catch(e) { alert("Save failed: "+e.message); }
