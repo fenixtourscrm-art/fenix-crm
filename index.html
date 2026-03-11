@@ -18,6 +18,17 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;font-size:12px;font-weight:600;color:#64748b;transition:all .15s;border-left:3px solid transparent;margin-bottom:1px;border-radius:0 8px 8px 0;margin-right:8px}
 .nav-item:hover{background:#fff7ed;color:#ea580c;border-left-color:rgba(249,115,22,0.4)}
 .nav-item.active{background:#fff7ed;color:#ea580c;border-left-color:#f97316}
+.ai-msg{display:flex;align-items:flex-start;gap:10px}
+.ai-msg-user{flex-direction:row-reverse}
+.ai-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;margin-top:2px}
+.ai-bubble{max-width:75%;padding:12px 16px;border-radius:16px;font-size:13px;line-height:1.6;word-wrap:break-word}
+.ai-bubble-bot{background:#fff;border:1.5px solid #e2e8f0;border-radius:4px 16px 16px 16px;color:#1e293b}
+.ai-bubble-user{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;border-radius:16px 4px 16px 16px}
+.ai-typing{display:flex;align-items:center;gap:5px;padding:12px 16px;background:#fff;border:1.5px solid #e2e8f0;border-radius:4px 16px 16px 16px;width:fit-content}
+.ai-typing span{width:7px;height:7px;background:#94a3b8;border-radius:50%;animation:aiDot 1.2s infinite}
+.ai-typing span:nth-child(2){animation-delay:.2s}
+.ai-typing span:nth-child(3){animation-delay:.4s}
+@keyframes aiDot{0%,80%,100%{transform:scale(0.6);opacity:.4}40%{transform:scale(1);opacity:1}}
 .nav-icon{font-size:15px;width:18px;text-align:center}
 .nav-badge{margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:1px 6px}
 .nav-badge.o{background:#f97316}
@@ -294,6 +305,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
     <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🧠</span>Travel Quiz<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
+    <div class="nav-item" onclick="showTab('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -569,6 +581,65 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
     </div>
 
+
+    <!-- AI ASSISTANT TAB -->
+    <div class="tab" id="tab-ai">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="section-title" style="margin:0">🤖 AI Travel Assistant</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:2px">Powered by Claude · Travel questions only</div>
+        </div>
+        <button class="btn btn-ghost" onclick="clearAIChat()" style="font-size:12px">🗑️ Clear Chat</button>
+      </div>
+
+      <!-- Chat window -->
+      <div id="ai-chat-window" style="
+        background:#f8fafc;
+        border:1.5px solid #e2e8f0;
+        border-radius:16px;
+        height:520px;
+        overflow-y:auto;
+        padding:20px;
+        display:flex;
+        flex-direction:column;
+        gap:14px;
+        scroll-behavior:smooth;
+      ">
+        <!-- Welcome message -->
+        <div class="ai-msg ai-msg-bot">
+          <div class="ai-avatar">✈️</div>
+          <div class="ai-bubble ai-bubble-bot">
+            <strong>Namaste! I'm Fenix AI ✈️</strong><br>
+            I'm your travel expert assistant. Ask me anything about:<br>
+            <span style="color:#f97316">🛂 Visas &amp; documents</span> · <span style="color:#0ea5e9">🏖️ Destinations</span> · <span style="color:#8b5cf6">📕 Passports</span><br>
+            <span style="color:#10b981">🏨 Hotels &amp; packages</span> · <span style="color:#f59e0b">🛳️ Cruises</span> · <span style="color:#ef4444">✈️ Flights &amp; airlines</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Input area -->
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:flex-end">
+        <div style="flex:1;position:relative">
+          <textarea id="ai-input" rows="2" placeholder="Ask a travel question… e.g. What documents do I need for a Dubai visa?"
+            style="width:100%;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 16px;font-size:13px;font-family:inherit;resize:none;outline:none;transition:border-color .2s;line-height:1.5;box-sizing:border-box;"
+            onfocus="this.style.borderColor='#f97316'"
+            onblur="this.style.borderColor='#e2e8f0'"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAIMessage()}"
+          ></textarea>
+        </div>
+        <button id="ai-send-btn" onclick="sendAIMessage()" style="
+          background:linear-gradient(135deg,#f97316,#ea580c);
+          color:#fff;border:none;border-radius:12px;
+          padding:0 22px;height:52px;font-size:15px;
+          cursor:pointer;transition:opacity .2s;font-weight:700;
+          display:flex;align-items:center;gap:6px;white-space:nowrap;
+        ">Send ➤</button>
+      </div>
+      <div style="text-align:center;font-size:11px;color:#cbd5e1;margin-top:8px">
+        Fenix AI only answers travel-related questions · Powered by Anthropic Claude
+      </div>
+    </div>
+
     <!-- BUG REPORTS TAB -->
     <div class="tab" id="tab-bugreports">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -717,7 +788,7 @@ const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🧠 Travel Quiz"};
+const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🧠 Travel Quiz",ai:"🤖 AI Travel Assistant"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -1704,7 +1775,7 @@ renderStaff();
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
-const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz", "quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
+const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
 
 firebase.initializeApp(FIREBASE_CONFIG);
 // auth and db initialized here, but variables already declared at top
@@ -2225,6 +2296,112 @@ async function saveTarget() {
     else   { await fbAdd("targets",data); }
     closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
+}
+
+// ── AI ASSISTANT ──
+let aiHistory = [];
+
+function clearAIChat() {
+  aiHistory = [];
+  const win = document.getElementById('ai-chat-window');
+  win.innerHTML = `<div class="ai-msg ai-msg-bot">
+    <div class="ai-avatar">✈️</div>
+    <div class="ai-bubble ai-bubble-bot">
+      <strong>Chat cleared! Ready for new questions ✈️</strong><br>
+      Ask me anything about visas, destinations, passports, hotels, cruises or flights.
+    </div>
+  </div>`;
+}
+
+async function sendAIMessage() {
+  const input = document.getElementById('ai-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  const win = document.getElementById('ai-chat-window');
+  const btn = document.getElementById('ai-send-btn');
+
+  // Append user bubble
+  win.innerHTML += `<div class="ai-msg ai-msg-user">
+    <div class="ai-avatar" style="background:#fff7ed">👤</div>
+    <div class="ai-bubble ai-bubble-user">${escHtml(msg)}</div>
+  </div>`;
+
+  input.value = '';
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  // Typing indicator
+  const typingId = 'ai-typing-' + Date.now();
+  win.innerHTML += `<div class="ai-msg ai-msg-bot" id="${typingId}">
+    <div class="ai-avatar">✈️</div>
+    <div class="ai-typing"><span></span><span></span><span></span></div>
+  </div>`;
+  win.scrollTop = win.scrollHeight;
+
+  // Add to history
+  aiHistory.push({ role: 'user', content: msg });
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: `You are Fenix AI, a travel expert assistant for Fenix Tours & Travels Pvt Ltd based in Ahmedabad, India.
+
+STRICT RULES:
+1. ONLY answer questions related to travel — visas, destinations, passports, hotels, meal plans, cruises, flights, airlines, travel insurance, travel documents, currencies, best seasons to visit, travel tips, Indian travel industry, tour packages, airport procedures, immigration, customs, etc.
+2. If the user asks ANYTHING not related to travel (sports, coding, general knowledge unrelated to travel, cooking, politics, health, math, etc.) — politely decline and redirect them to ask a travel question.
+3. Keep answers concise, practical and relevant to Indian travellers.
+4. Format responses clearly. Use short bullet points or numbered lists when helpful.
+5. When mentioning prices, use Indian Rupees (₹) or relevant foreign currency.
+6. Be friendly, professional and helpful. You represent Fenix Tours & Travels.`,
+        messages: aiHistory
+      })
+    });
+
+    const data = await response.json();
+    const reply = data.content && data.content[0] ? data.content[0].text : 'Sorry, I could not get a response. Please try again.';
+
+    // Remove typing indicator
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+
+    // Format reply (convert **bold** and newlines)
+    const formatted = escHtml(reply)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/
+/g, '<br>');
+
+    win.innerHTML += `<div class="ai-msg ai-msg-bot">
+      <div class="ai-avatar">✈️</div>
+      <div class="ai-bubble ai-bubble-bot">${formatted}</div>
+    </div>`;
+
+    // Add assistant reply to history
+    aiHistory.push({ role: 'assistant', content: reply });
+
+    // Keep history to last 10 messages (5 turns) to save tokens
+    if (aiHistory.length > 10) aiHistory = aiHistory.slice(-10);
+
+  } catch (err) {
+    const typingEl = document.getElementById(typingId);
+    if (typingEl) typingEl.remove();
+    win.innerHTML += `<div class="ai-msg ai-msg-bot">
+      <div class="ai-avatar">✈️</div>
+      <div class="ai-bubble ai-bubble-bot" style="color:#ef4444">⚠️ Error connecting to AI. Please check your internet and try again.</div>
+    </div>`;
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  win.scrollTop = win.scrollHeight;
+}
+
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 async function del(arr,id) {
