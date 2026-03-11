@@ -1936,7 +1936,6 @@ async function saveEnquiry(isEdit) {
     data.passportNo    = gv("e-passport");
     data.passportExpiry= gv("e-pass-expiry");
     data.ecrType       = gv("e-ecr-type");
-    data.dropBox       = gv("e-dropbox");
     data.startDate     = gv("e-start");
     data.numApplicants = gi("e-num-applicants") || 1;
   }
@@ -2487,28 +2486,46 @@ function updateEnqForm(ex) {
         </div>
         <div class="fg"><label>Travel Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
       </div>
-      <div class="form-grid g1" id="e-dropbox-wrap" style="display:none">
-        <div class="fg"><label>🇺🇸 Drop Box (US Visa Only)</label>
-          <select id="e-dropbox">
-            <option value="">-- Select --</option>
-            <option ${ex?.dropBox==="Yes – Drop Box Eligible"?"selected":""}>Yes – Drop Box Eligible</option>
-            <option ${ex?.dropBox==="No – Appointment Required"?"selected":""}>No – Appointment Required</option>
-          </select>
-        </div>
-      </div>
       <div class="form-grid">
         <div class="fg"><label>No. of Applicants</label><input type="number" id="e-num-applicants" min="1" value="${ex?.numApplicants||1}"/></div>
       </div>
       ${paxBlock}`;
     setTimeout(()=>{
-      const sel=document.getElementById("e-dest-custom");
-      if(sel && ex?.destination) {
-        sel.value=ex.destination;
-        if(ex.destination==="United States") { const dw=document.getElementById("e-dropbox-wrap"); if(dw) dw.style.display=""; }
+      const countrySel = document.getElementById("e-dest-custom");
+      const visaTypeSel = document.getElementById("e-visa-type");
+
+      // Standard visa type options
+      const standardOpts = `
+        <option value="Tourist">Tourist</option>
+        <option value="Business">Business</option>
+        <option value="Transit">Transit</option>
+        <option value="Student">Student</option>
+        <option value="Work">Work</option>
+        <option value="Medical">Medical</option>`;
+
+      // USA-specific visa type options
+      const usaOpts = `
+        <option value="USA - New Visa">🇺🇸 USA – New Visa</option>
+        <option value="USA - Drop Box">📦 USA – Drop Box</option>`;
+
+      function updateVisaTypeOpts(country) {
+        if(!visaTypeSel) return;
+        const isUSA = country === "United States";
+        visaTypeSel.innerHTML = isUSA ? usaOpts : standardOpts;
+        // Restore saved value if editing
+        if(isUSA && (ex?.visaType==="USA - New Visa" || ex?.visaType==="USA - Drop Box")) {
+          visaTypeSel.value = ex.visaType;
+        } else if(!isUSA && ex?.visaType) {
+          visaTypeSel.value = ex.visaType;
+        }
       }
-      if(sel) sel.addEventListener("change",function(){
-        const dw=document.getElementById("e-dropbox-wrap");
-        if(dw) dw.style.display=this.value==="United States"?"":"none";
+
+      if(countrySel && ex?.destination) {
+        countrySel.value = ex.destination;
+        updateVisaTypeOpts(ex.destination);
+      }
+      if(countrySel) countrySel.addEventListener("change", function() {
+        updateVisaTypeOpts(this.value);
       });
     },10);
   }
