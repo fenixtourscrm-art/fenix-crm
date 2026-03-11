@@ -727,6 +727,8 @@ let CURRENT_USER = null;
 let USER_PERMS   = null;
 let auth         = null;
 let db           = null;
+let _auth        = null;
+let _db          = null;
 let _unsubscribers = [];
 let _saving      = false;
 
@@ -1777,16 +1779,20 @@ const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","aut
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
 const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
 
-firebase.initializeApp(FIREBASE_CONFIG);
-// auth and db initialized here, but variables already declared at top
-_auth = firebase.auth();
-_db   = firebase.firestore();
-auth = _auth;
-db   = _db;
+try {
+  firebase.initializeApp(FIREBASE_CONFIG);
+  _auth = firebase.auth();
+  _db   = firebase.firestore();
+  auth  = _auth;
+  db    = _db;
+} catch(e) {
+  console.error("Firebase init failed:", e);
+}
 _unsubscribers = [];
 
 // ── Sign In ──────────────────────────────────────
 function fbSignIn() {
+  if (!auth) { alert("App is still loading, please wait a moment and try again."); return; }
   document.getElementById("fb-loading").style.display = "block";
   document.getElementById("fb-err").style.display = "none";
   const provider = new firebase.auth.GoogleAuthProvider();
@@ -2370,10 +2376,7 @@ STRICT RULES:
     if (typingEl) typingEl.remove();
 
     // Format reply (convert **bold** and newlines)
-    const formatted = escHtml(reply)
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/
-/g, '<br>');
+    const formatted = escHtml(reply).split('\n').join('<br>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
     win.innerHTML += `<div class="ai-msg ai-msg-bot">
       <div class="ai-avatar">✈️</div>
