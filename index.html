@@ -296,6 +296,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
     <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🧠</span>Travel Quiz<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
+    <div class="nav-item" onclick="showTab('quotes',this)"><span class="nav-icon">📋</span>Quotations<span class="nav-badge" id="quote-badge" style="display:none;background:#0ea5e9;color:#fff">0</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -523,6 +524,59 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <!-- SEARCH -->
     
 
+    <!-- QUOTATIONS TAB -->
+    <div class="tab" id="tab-quotes">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="section-title" style="margin:0">📋 Quotations</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Create and manage professional travel quotations for clients.</div>
+        </div>
+        <button class="btn btn-primary" onclick="openQuoteForm({})">+ Create Quote</button>
+      </div>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:20px">
+        <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center">
+          <div id="qs-total-ct" style="font-size:22px;font-weight:800;color:#0f172a">0</div>
+          <div style="font-size:10px;color:#64748b;font-weight:600;margin-top:2px">Total Quotes</div>
+        </div>
+        <div style="background:#fef3c7;border:1.5px solid #fcd34d;border-radius:12px;padding:14px;text-align:center">
+          <div id="qs-pending-ct" style="font-size:22px;font-weight:800;color:#92400e">0</div>
+          <div style="font-size:10px;color:#92400e;font-weight:600;margin-top:2px">Pending</div>
+        </div>
+        <div style="background:#dbeafe;border:1.5px solid #93c5fd;border-radius:12px;padding:14px;text-align:center">
+          <div id="qs-sent-ct" style="font-size:22px;font-weight:800;color:#1e40af">0</div>
+          <div style="font-size:10px;color:#1e40af;font-weight:600;margin-top:2px">Sent</div>
+        </div>
+        <div style="background:#dcfce7;border:1.5px solid #86efac;border-radius:12px;padding:14px;text-align:center">
+          <div id="qs-confirmed-ct" style="font-size:22px;font-weight:800;color:#166534">0</div>
+          <div style="font-size:10px;color:#166534;font-weight:600;margin-top:2px">Confirmed</div>
+        </div>
+        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px;text-align:center">
+          <div id="qs-value-ct" style="font-size:18px;font-weight:800;color:#166534">₹0</div>
+          <div style="font-size:10px;color:#166534;font-weight:600;margin-top:2px">Total Value</div>
+        </div>
+      </div>
+
+      <!-- Filters + Search -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <input id="quote-search" placeholder="🔍 Search by client or destination..." oninput="renderQuotes()"
+          style="flex:1;min-width:180px;padding:8px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px"/>
+        <select id="quote-filter-status" onchange="renderQuotes()"
+          style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff">
+          <option value="all">All Status</option>
+          <option value="Draft">Draft</option>
+          <option value="Sent">Sent</option>
+          <option value="Confirmed">Confirmed</option>
+          <option value="Expired">Expired</option>
+        </select>
+      </div>
+
+      <!-- Quotes list -->
+      <div id="quotes-list"></div>
+    </div>
+
+
     <!-- TRAVEL QUIZ TAB -->
     <div class="tab" id="tab-quiz">
       <!-- Header -->
@@ -730,7 +784,7 @@ const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🧠 Travel Quiz"};
+const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🧠 Travel Quiz",quotes:"📋 Quotations"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -745,6 +799,7 @@ function showTab(tab,el){
   if(tab==="settings"){renderStaff();}
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
+  if(tab==="quotes"){renderQuotes();}
 }
 
 function renderAll(){renderDashboard();renderClients();renderEnquiries();renderBookings();renderTasks();renderReports();renderMktCalls();renderTargets();updateBadges();}
@@ -808,6 +863,7 @@ function renderClients(){
         <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
         <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.12);min-width:180px;display:none">
           <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
+          <div class="action-dropdown-item" onclick="openQuoteForm({clientId:'${c.id}',clientName:'${c.firstName} ${c.lastName}',mobile:'${c.mobile}',email:'${c.email}'})">📋 Create Quote</div>
           <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
         </div>
         <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
@@ -871,6 +927,7 @@ function renderEnquiries(){
     <td>
       <div style="display:flex;gap:3px;flex-wrap:wrap">
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq('${e.id}')">✏️</button>
+        <button class="btn" style="font-size:9px;padding:3px 7px;background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd" onclick="openQuoteForm({enquiryId:'${e.id}',clientId:'${e.clientId}',destination:'${e.destination}',pax:${e.pax||1}})">📋 Quote</button>
         ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked('${e.id}')">Book</button>
         <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="markLost('${e.id}')">Lost</button>
         <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk('${e.id}')">Junk</button>`:""}
@@ -1651,7 +1708,7 @@ renderStaff();
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
-const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
+const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz", "quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
 
 firebase.initializeApp(FIREBASE_CONFIG);
 // auth and db initialized here, but variables already declared at top
@@ -1739,6 +1796,7 @@ auth.onAuthStateChanged(function(user) {
 
 // ── Load Data ────────────────────────────────────
 function loadFromFirestore() {
+  loadQuotes();
   const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets"];
   const loadedSet = new Set(); // track which collections have loaded
   let initialRenderDone = false;
@@ -2760,6 +2818,592 @@ async function saveAddPayment(bookingId) {
   } catch(err) {
     alert("Save failed: " + err.message);
   }
+}
+
+
+
+
+// ═══════════════════════════════════════════════════════
+//  AUTO QUOTE GENERATOR SYSTEM
+// ═══════════════════════════════════════════════════════
+let allQuotes = [];
+let _quoteUnsub = null;
+
+// ── Load quotes from Firestore ──
+function loadQuotes() {
+  if(_quoteUnsub) _quoteUnsub();
+  _quoteUnsub = db.collection("quotes").orderBy("createdAt","desc")
+    .onSnapshot(snap => {
+      allQuotes = snap.docs.map(d => ({id:d.id,...d.data()}));
+      renderQuotes();
+      updateQuoteBadge();
+    }, err => console.error("Quotes error:", err));
+}
+
+function updateQuoteBadge() {
+  const pending = allQuotes.filter(q => q.status === "Pending" || q.status === "Draft").length;
+  const badge = document.getElementById("quote-badge");
+  if(badge) { badge.textContent = pending; badge.style.display = pending > 0 ? "inline-flex" : "none"; }
+}
+
+// ── Render quotes list ──
+function renderQuotes() {
+  if(!allQuotes.length && !_quoteUnsub) { loadQuotes(); return; }
+  const el = document.getElementById("quotes-list");
+  if(!el) return;
+
+  const search = (document.getElementById("quote-search")?.value || "").toLowerCase();
+  const statusF = document.getElementById("quote-filter-status")?.value || "all";
+
+  let list = [...allQuotes];
+  if(search) list = list.filter(q =>
+    (q.clientName||"").toLowerCase().includes(search) ||
+    (q.destination||"").toLowerCase().includes(search)
+  );
+  if(statusF !== "all") list = list.filter(q => q.status === statusF);
+
+  // Update stats
+  const setN = (id,v) => { const e=document.getElementById(id); if(e) e.textContent=v; };
+  setN("qs-total-ct", allQuotes.length);
+  setN("qs-pending-ct", allQuotes.filter(q=>q.status==="Pending"||q.status==="Draft").length);
+  setN("qs-sent-ct", allQuotes.filter(q=>q.status==="Sent").length);
+  setN("qs-confirmed-ct", allQuotes.filter(q=>q.status==="Confirmed").length);
+  const totalVal = allQuotes.reduce((s,q)=>s+(q.finalPrice||0),0);
+  setN("qs-value-ct", "₹" + totalVal.toLocaleString("en-IN"));
+
+  if(!list.length) {
+    el.innerHTML = `<div class="empty" style="padding:40px">
+      ${search||statusF!=="all" ? "No quotes match your filter." : "No quotations yet. Click + Create Quote to get started."}
+    </div>`;
+    return;
+  }
+
+  const statusColors = {
+    Draft:    {bg:"#f1f5f9",color:"#475569"},
+    Pending:  {bg:"#fef3c7",color:"#92400e"},
+    Sent:     {bg:"#dbeafe",color:"#1e40af"},
+    Confirmed:{bg:"#dcfce7",color:"#166534"},
+    Expired:  {bg:"#fee2e2",color:"#991b1b"},
+  };
+
+  el.innerHTML = list.map(q => {
+    const sm = statusColors[q.status] || statusColors.Draft;
+    const date = q.createdAt ? new Date(q.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}) : "";
+    const services = (q.services||[]).join(" · ");
+    return `<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:10px;box-shadow:0 1px 6px rgba(0,0,0,0.04)">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="font-weight:800;font-size:15px;color:#0f172a">${q.destination}</div>
+            <span style="background:${sm.bg};color:${sm.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${q.status}</span>
+          </div>
+          <div style="font-size:12px;color:#64748b;margin-bottom:4px">👤 ${q.clientName} &nbsp;·&nbsp; 👥 ${q.pax||1} travellers &nbsp;·&nbsp; 📅 ${q.travelDate||"TBD"}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:6px">🗓️ ${q.duration||""} &nbsp;·&nbsp; Created: ${date} &nbsp;·&nbsp; By: ${q.createdByName||""}</div>
+          ${services ? `<div style="font-size:11px;color:#475569;background:#f8fafc;border-radius:6px;padding:4px 8px;display:inline-block">${services}</div>` : ""}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:22px;font-weight:900;color:#0f172a">₹${(q.finalPrice||0).toLocaleString("en-IN")}</div>
+          ${q.discount ? `<div style="font-size:11px;color:#16a34a;font-weight:600">Discount: ₹${q.discount.toLocaleString("en-IN")}</div>` : ""}
+          ${q.totalPrice && q.discount ? `<div style="font-size:10px;color:#94a3b8;text-decoration:line-through">₹${q.totalPrice.toLocaleString("en-IN")}</div>` : ""}
+        </div>
+      </div>
+      <div style="border-top:1px solid #f1f5f9;margin-top:12px;padding-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="previewQuote('${q.id}')" style="padding:5px 12px;background:#0ea5e9;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">👁 Preview</button>
+        <button onclick="downloadQuotePDF('${q.id}')" style="padding:5px 12px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">⬇️ PDF</button>
+        <button onclick="shareQuoteWhatsApp('${q.id}')" style="padding:5px 12px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">💬 WhatsApp</button>
+        <button onclick="openQuoteForm({editId:'${q.id}'})" style="padding:5px 12px;background:#f1f5f9;color:#374151;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">✏️ Edit</button>
+        ${q.status !== "Confirmed" ? `<button onclick="markQuoteStatus('${q.id}','Sent')" style="padding:5px 12px;background:#dbeafe;color:#1e40af;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📤 Mark Sent</button>
+        <button onclick="convertQuoteToBooking('${q.id}')" style="padding:5px 12px;background:#dcfce7;color:#166534;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">✅ Convert to Booking</button>` : `<span style="font-size:11px;color:#16a34a;font-weight:700;padding:5px 8px">✅ Booking Confirmed</span>`}
+        <button onclick="del('quotes','${q.id}')" style="padding:5px 10px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── Open Quote Form Modal ──
+function openQuoteForm(prefill) {
+  prefill = prefill || {};
+  const editId = prefill.editId || null;
+  const q = editId ? allQuotes.find(x=>x.id===editId) : null;
+  const isEdit = !!q;
+
+  // Populate client dropdown options
+  const clientOpts = clients.map(c =>
+    `<option value="${c.id}" data-name="${c.firstName} ${c.lastName}" data-mob="${c.mobile||""}" data-email="${c.email||""}" ${(prefill.clientId===c.id||(q&&q.clientId===c.id))?"selected":""}>${c.firstName} ${c.lastName} – ${c.mobile||""}</option>`
+  ).join("");
+
+  const sv = (field, fallback="") => q ? (q[field]||fallback) : (prefill[field]||fallback);
+  const checked = (svc) => (q?.services||[]).includes(svc) ? "checked" : "";
+
+  const html = `
+  <div id="quote-form-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:720px;box-shadow:0 24px 80px rgba(0,0,0,0.2);margin:auto">
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:18px 18px 0 0;padding:20px 24px;color:#fff;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-weight:900;font-size:18px">${isEdit ? "✏️ Edit Quotation" : "📋 Create New Quotation"}</div>
+          <div style="font-size:12px;opacity:.85;margin-top:2px">Fenix Tours & Travels — Professional Quote Generator</div>
+        </div>
+        <button onclick="document.getElementById('quote-form-overlay').remove()" style="background:rgba(255,255,255,.2);border:none;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:16px">✕</button>
+      </div>
+
+      <div style="padding:24px;display:grid;gap:20px">
+
+        <!-- CLIENT DETAILS -->
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#0ea5e9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">👤 Client Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Select Client *</label>
+              <select id="qf-client" onchange="fillQuoteClient(this)" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px">
+                <option value="">-- Select Client --</option>
+                ${clientOpts}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Client Name *</label>
+              <input id="qf-name" value="${sv('clientName',prefill.clientName||'')}" placeholder="Full Name" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Mobile</label>
+              <input id="qf-mobile" value="${sv('mobile',prefill.mobile||'')}" placeholder="Mobile Number" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Email</label>
+              <input id="qf-email" value="${sv('email',prefill.email||'')}" placeholder="Email Address" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- TRAVEL DETAILS -->
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#0ea5e9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">✈️ Travel Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Destination *</label>
+              <input id="qf-dest" value="${sv('destination',prefill.destination||'')}" placeholder="e.g. Kashmir, Dubai, Bali" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">No. of Travellers *</label>
+              <input id="qf-pax" type="number" min="1" value="${sv('pax',prefill.pax||2)}" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Travel Date</label>
+              <input id="qf-date" type="date" value="${sv('travelDate','')}" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Duration</label>
+              <input id="qf-duration" value="${sv('duration','')}" placeholder="e.g. 5 Days / 4 Nights" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- SERVICES -->
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#0ea5e9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">✅ Services Included</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px">
+            ${["International Tour","Domestic Tour","Flight Tickets","Hotel","Visa","Travel Insurance","Cruise","Airport Transfers","Sightseeing","Breakfast"].map(svc =>
+              `<label style="display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;color:#374151;background:#fafafa">
+                <input type="checkbox" name="qf-svc" value="${svc}" ${(q?.services||[]).includes(svc)?"checked":""} style="accent-color:#0ea5e9;width:14px;height:14px"> ${svc}
+              </label>`
+            ).join("")}
+          </div>
+        </div>
+
+        <!-- PACKAGE DETAILS -->
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#0ea5e9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">🏨 Package Details</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Hotel Name</label>
+              <input id="qf-hotel" value="${sv('hotelName','')}" placeholder="e.g. The Lalit Grand, Kashmir" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Hotel Category</label>
+              <select id="qf-hotel-cat" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px">
+                <option value="">-- Select --</option>
+                ${["3★ Standard","4★ Superior","5★ Luxury","Boutique","Heritage"].map(c=>`<option ${sv('hotelCategory','')==c?"selected":""}>${c}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Departure City</label>
+              <input id="qf-dep-city" value="${sv('departureCity','')}" placeholder="e.g. Ahmedabad" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Airline (optional)</label>
+              <input id="qf-airline" value="${sv('airline','')}" placeholder="e.g. IndiGo, Emirates" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Activities / Sightseeing</label>
+              <textarea id="qf-activities" rows="2" placeholder="e.g. Dal Lake shikara ride, Mughal Gardens, Gondola ride..." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${sv('activities','')}</textarea>
+            </div>
+            <div style="grid-column:1/-1">
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Special Notes / Inclusions</label>
+              <textarea id="qf-notes" rows="2" placeholder="Any special notes, inclusions, or terms for this package..." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${sv('notes','')}</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- PRICING -->
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#0ea5e9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">💰 Pricing</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Total Package Price (₹) *</label>
+              <input id="qf-price" type="number" min="0" value="${sv('totalPrice','')}" placeholder="e.g. 50000" oninput="calcFinalPrice()" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Discount (₹)</label>
+              <input id="qf-discount" type="number" min="0" value="${sv('discount','')}" placeholder="e.g. 3000" oninput="calcFinalPrice()" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:700;color:#16a34a;display:block;margin-bottom:4px;font-weight:800">✅ Final Price (₹)</label>
+              <input id="qf-final" type="number" min="0" readonly value="${sv('finalPrice','')}" style="width:100%;padding:9px 12px;border:2px solid #16a34a;border-radius:8px;font-size:15px;font-weight:800;color:#166534;background:#f0fdf4;box-sizing:border-box"/>
+            </div>
+          </div>
+          <div id="qf-price-preview" style="margin-top:10px;background:#f0fdf4;border-radius:8px;padding:10px 14px;display:none">
+            <span style="font-size:12px;color:#64748b">Total: <strong id="qf-pp-total">—</strong> &nbsp;–&nbsp; Discount: <strong id="qf-pp-disc" style="color:#16a34a">—</strong> &nbsp;=&nbsp; </span>
+            <span style="font-size:16px;font-weight:900;color:#166534">₹<span id="qf-pp-final">—</span></span>
+          </div>
+        </div>
+
+        <!-- TERMS -->
+        <div>
+          <div style="font-size:11px;font-weight:800;color:#0ea5e9;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">📄 Terms & Conditions</div>
+          <textarea id="qf-terms" rows="3" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box;resize:vertical;color:#374151">${sv('terms',`• Package prices are per person based on double occupancy.\n• Airfares are subject to availability and may change.\n• Visa approval is subject to embassy discretion.\n• 25% advance required to confirm booking.\n• Cancellation charges apply as per policy.`)}</textarea>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button onclick="saveQuote('${editId||''}','Draft')" style="flex:1;padding:12px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">💾 Save Draft</button>
+          <button onclick="saveQuote('${editId||''}','Pending')" style="flex:1;padding:12px;background:linear-gradient(135deg,#0ea5e9,#0369a1);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">📋 Save & Preview Quote</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById("quote-form-overlay")?.remove();
+  document.body.insertAdjacentHTML("beforeend", html);
+  calcFinalPrice();
+}
+
+function fillQuoteClient(sel) {
+  const opt = sel.options[sel.selectedIndex];
+  if(!opt.value) return;
+  document.getElementById("qf-name").value  = opt.dataset.name || "";
+  document.getElementById("qf-mobile").value = opt.dataset.mob || "";
+  document.getElementById("qf-email").value  = opt.dataset.email || "";
+}
+
+function calcFinalPrice() {
+  const total    = parseFloat(document.getElementById("qf-price")?.value) || 0;
+  const discount = parseFloat(document.getElementById("qf-discount")?.value) || 0;
+  const final_   = Math.max(0, total - discount);
+  const el = document.getElementById("qf-final");
+  if(el) el.value = final_ || "";
+
+  const preview = document.getElementById("qf-price-preview");
+  if(total > 0 && preview) {
+    preview.style.display = "";
+    document.getElementById("qf-pp-total").textContent  = "₹" + total.toLocaleString("en-IN");
+    document.getElementById("qf-pp-disc").textContent   = discount ? "₹" + discount.toLocaleString("en-IN") : "₹0";
+    document.getElementById("qf-pp-final").textContent  = final_.toLocaleString("en-IN");
+  }
+}
+
+async function saveQuote(editId, status) {
+  const name    = document.getElementById("qf-name")?.value.trim();
+  const dest    = document.getElementById("qf-dest")?.value.trim();
+  const price   = parseFloat(document.getElementById("qf-price")?.value) || 0;
+  const final_  = parseFloat(document.getElementById("qf-final")?.value) || price;
+
+  if(!name)   return alert("⚠️ Client name is required!");
+  if(!dest)   return alert("⚠️ Destination is required!");
+  if(!price)  return alert("⚠️ Total package price is required!");
+
+  const services = [...document.querySelectorAll('input[name="qf-svc"]:checked')].map(c=>c.value);
+
+  const data = {
+    clientId:       document.getElementById("qf-client")?.value || "",
+    clientName:     name,
+    mobile:         document.getElementById("qf-mobile")?.value.trim() || "",
+    email:          document.getElementById("qf-email")?.value.trim() || "",
+    destination:    dest,
+    pax:            parseInt(document.getElementById("qf-pax")?.value) || 1,
+    travelDate:     document.getElementById("qf-date")?.value || "",
+    duration:       document.getElementById("qf-duration")?.value.trim() || "",
+    services,
+    hotelName:      document.getElementById("qf-hotel")?.value.trim() || "",
+    hotelCategory:  document.getElementById("qf-hotel-cat")?.value || "",
+    departureCity:  document.getElementById("qf-dep-city")?.value.trim() || "",
+    airline:        document.getElementById("qf-airline")?.value.trim() || "",
+    activities:     document.getElementById("qf-activities")?.value.trim() || "",
+    notes:          document.getElementById("qf-notes")?.value.trim() || "",
+    totalPrice:     price,
+    discount:       parseFloat(document.getElementById("qf-discount")?.value) || 0,
+    finalPrice:     final_,
+    terms:          document.getElementById("qf-terms")?.value.trim() || "",
+    status,
+  };
+
+  try {
+    if(editId) {
+      await fbUpdate("quotes", editId, data);
+    } else {
+      await fbAdd("quotes", data);
+    }
+    document.getElementById("quote-form-overlay")?.remove();
+    showTab("quotes", document.querySelector("[onclick*=\"'quotes'\"]"));
+    if(status !== "Draft") {
+      setTimeout(() => {
+        const saved = allQuotes[0];
+        if(saved) previewQuote(saved.id);
+      }, 800);
+    }
+    alert(status === "Draft" ? "💾 Quote saved as draft!" : "✅ Quote saved! Preview opened.");
+  } catch(err) {
+    alert("Save failed: " + err.message);
+  }
+}
+
+async function markQuoteStatus(id, status) {
+  try {
+    await fbUpdate("quotes", id, {status});
+    const q = allQuotes.find(x=>x.id===id);
+    if(q) q.status = status;
+    renderQuotes();
+  } catch(err) { alert("Update failed: " + err.message); }
+}
+
+// ── Convert Quote → Booking ──
+async function convertQuoteToBooking(quoteId) {
+  const q = allQuotes.find(x=>x.id===quoteId);
+  if(!q) return;
+  if(!confirm(`Convert "${q.clientName} – ${q.destination}" quote to a confirmed booking?\n\nFinal Price: ₹${(q.finalPrice||0).toLocaleString("en-IN")}`)) return;
+  try {
+    const isIntl = ["International Tour","Visa","Cruise"].some(s=>(q.services||[]).includes(s));
+    const bkData = {
+      category: isIntl ? "International Tours" : "Domestic Tours",
+      clientId:    q.clientId || "",
+      destination: q.destination,
+      details:     q.activities || "",
+      tourType:    (q.services||[]).join(", "),
+      travelDate:  q.travelDate || "",
+      adults:      q.pax || 1,
+      childBed:    0, childNoBed: 0, infant: 0,
+      pax:         q.pax || 1,
+      amount:      q.finalPrice || 0,
+      paid:        0,
+      pendingAmount: q.finalPrice || 0,
+      paymentStatus: "Pending",
+      status:      "Confirmed",
+      staffId:     CURRENT_USER?.id || 0,
+      notes:       `Converted from Quote. Hotel: ${q.hotelName||"TBD"}. ${q.notes||""}`,
+      quoteId,
+    };
+    const bkId = await fbAdd("bookings", bkData);
+    bkData.id = bkId;
+    allBookings.push(bkData);
+    await fbUpdate("quotes", quoteId, {status:"Confirmed", bookingId: bkId});
+    renderAll();
+    alert(`✅ Booking created!\nClient: ${q.clientName}\nDestination: ${q.destination}\nAmount: ₹${(q.finalPrice||0).toLocaleString("en-IN")}`);
+    showTab("bookings", document.querySelector("[onclick*=\"'bookings'\"]"));
+  } catch(err) { alert("Convert failed: " + err.message); }
+}
+
+// ── Preview Quote (beautiful printable layout) ──
+function previewQuote(quoteId) {
+  const q = allQuotes.find(x=>x.id===quoteId);
+  if(!q) return;
+
+  const services = (q.services||[]);
+  const date = q.travelDate ? new Date(q.travelDate).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) : "To be confirmed";
+  const createdDate = q.createdAt ? new Date(q.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"long",year:"numeric"}) : "";
+  const quoteNum = "FTT-" + (q.createdAt ? new Date(q.createdAt).getFullYear() : new Date().getFullYear()) + "-" + quoteId.slice(-4).toUpperCase();
+
+  const html = `
+  <div id="quote-preview-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto">
+    <div style="width:100%;max-width:700px;margin:auto">
+      <!-- Toolbar -->
+      <div style="display:flex;gap:8px;margin-bottom:12px;justify-content:flex-end;flex-wrap:wrap">
+        <button onclick="printQuote()" style="padding:8px 16px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">🖨️ Print / Save PDF</button>
+        <button onclick="shareQuoteWhatsApp('${quoteId}')" style="padding:8px 16px;background:#16a34a;color:#fff;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">💬 WhatsApp</button>
+        <button onclick="document.getElementById('quote-preview-overlay').remove()" style="padding:8px 16px;background:#f1f5f9;color:#374151;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">✕ Close</button>
+      </div>
+
+      <!-- Quote Document -->
+      <div id="quote-printable" style="background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.2)">
+        <!-- Header / Branding -->
+        <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:28px 32px;color:#fff">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+            <div>
+              <div style="font-size:24px;font-weight:900;letter-spacing:-.5px">🦅 Fenix Tours & Travels</div>
+              <div style="font-size:12px;opacity:.7;margin-top:3px">Professional Travel Quotation</div>
+            </div>
+            <div style="text-align:right">
+              <div style="background:rgba(255,255,255,.15);padding:8px 16px;border-radius:10px;display:inline-block">
+                <div style="font-size:10px;opacity:.7;text-transform:uppercase;letter-spacing:.1em">Quote Number</div>
+                <div style="font-size:16px;font-weight:800;color:#f97316">${quoteNum}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orange accent strip + client info -->
+        <div style="background:#f97316;padding:4px 0"></div>
+        <div style="background:#fff7ed;padding:20px 32px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:.1em">Prepared For</div>
+            <div style="font-size:18px;font-weight:800;color:#0f172a;margin-top:2px">${q.clientName}</div>
+            ${q.mobile ? `<div style="font-size:12px;color:#64748b">📞 ${q.mobile}</div>` : ""}
+            ${q.email  ? `<div style="font-size:12px;color:#64748b">✉️ ${q.email}</div>`  : ""}
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:.1em">Quote Date</div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px">${createdDate}</div>
+            ${q.travelDate ? `<div style="font-size:10px;font-weight:700;color:#9a3412;text-transform:uppercase;letter-spacing:.1em;margin-top:8px">Travel Date</div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a">${date}</div>` : ""}
+          </div>
+        </div>
+
+        <div style="padding:28px 32px">
+          <!-- Trip Summary -->
+          <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:14px;padding:20px;color:#fff;margin-bottom:24px">
+            <div style="font-size:20px;font-weight:900;margin-bottom:8px">📍 ${q.destination}</div>
+            <div style="display:flex;gap:24px;flex-wrap:wrap">
+              ${q.duration ? `<div><div style="font-size:10px;opacity:.7;text-transform:uppercase">Duration</div><div style="font-weight:700">${q.duration}</div></div>` : ""}
+              <div><div style="font-size:10px;opacity:.7;text-transform:uppercase">Travellers</div><div style="font-weight:700">${q.pax} ${q.pax===1?"Person":"Persons"}</div></div>
+              ${q.departureCity ? `<div><div style="font-size:10px;opacity:.7;text-transform:uppercase">Departure</div><div style="font-weight:700">${q.departureCity}</div></div>` : ""}
+              ${q.hotelCategory ? `<div><div style="font-size:10px;opacity:.7;text-transform:uppercase">Hotel</div><div style="font-weight:700">${q.hotelCategory}</div></div>` : ""}
+            </div>
+          </div>
+
+          <!-- Package Includes -->
+          ${services.length ? `
+          <div style="margin-bottom:24px">
+            <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+              <div style="width:3px;height:16px;background:#f97316;border-radius:2px"></div>
+              Package Includes
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+              ${services.map(s => `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;font-size:12px;font-weight:600;color:#166534">
+                <span style="color:#16a34a">✓</span> ${s}
+              </div>`).join("")}
+            </div>
+          </div>` : ""}
+
+          <!-- Hotel -->
+          ${q.hotelName ? `
+          <div style="margin-bottom:24px">
+            <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+              <div style="width:3px;height:16px;background:#f97316;border-radius:2px"></div>
+              Accommodation
+            </div>
+            <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:28px">🏨</span>
+              <div>
+                <div style="font-weight:700;font-size:14px;color:#0f172a">${q.hotelName}</div>
+                ${q.hotelCategory ? `<div style="font-size:12px;color:#64748b">${q.hotelCategory}</div>` : ""}
+              </div>
+            </div>
+          </div>` : ""}
+
+          <!-- Flights -->
+          ${(q.airline || q.departureCity) ? `
+          <div style="margin-bottom:24px">
+            <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+              <div style="width:3px;height:16px;background:#f97316;border-radius:2px"></div>
+              Flights
+            </div>
+            <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+              <span style="font-size:28px">✈️</span>
+              <div>
+                ${q.departureCity ? `<div style="font-weight:700;font-size:14px;color:#0f172a">${q.departureCity} → ${q.destination}</div>` : ""}
+                ${q.airline ? `<div style="font-size:12px;color:#64748b">Airline: ${q.airline}</div>` : ""}
+              </div>
+            </div>
+          </div>` : ""}
+
+          <!-- Activities -->
+          ${q.activities ? `
+          <div style="margin-bottom:24px">
+            <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+              <div style="width:3px;height:16px;background:#f97316;border-radius:2px"></div>
+              Activities & Sightseeing
+            </div>
+            <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 16px;font-size:13px;color:#374151;line-height:1.7">${q.activities.replace(/\n/g,"<br>")}</div>
+          </div>` : ""}
+
+          <!-- Pricing Box -->
+          <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:14px;padding:22px;color:#fff;margin-bottom:24px">
+            <div style="font-size:13px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">💰 Package Pricing</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+              <div>
+                ${q.discount ? `<div style="font-size:12px;opacity:.6;text-decoration:line-through">Total: ₹${(q.totalPrice||0).toLocaleString("en-IN")}</div>
+                <div style="font-size:12px;color:#86efac">Discount: ₹${q.discount.toLocaleString("en-IN")}</div>` : ""}
+                <div style="font-size:12px;opacity:.7;margin-top:4px">For ${q.pax} ${q.pax===1?"person":"persons"} · ${q.duration||""}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:11px;opacity:.6;text-transform:uppercase">Total Package Price</div>
+                <div style="font-size:36px;font-weight:900;color:#f97316">₹${(q.finalPrice||0).toLocaleString("en-IN")}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Terms -->
+          ${q.terms ? `
+          <div style="margin-bottom:16px">
+            <div style="font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Terms & Conditions</div>
+            <div style="font-size:11px;color:#94a3b8;line-height:1.8">${q.terms.replace(/\n/g,"<br>")}</div>
+          </div>` : ""}
+        </div>
+
+        <!-- Footer -->
+        <div style="background:#f8fafc;border-top:1px solid #e2e8f0;padding:16px 32px;text-align:center">
+          <div style="font-size:12px;color:#64748b">🦅 <strong>Fenix Tours & Travels Pvt. Ltd.</strong></div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">This quotation is valid for 7 days from the date of issue. Prices subject to availability.</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById("quote-preview-overlay")?.remove();
+  document.body.insertAdjacentHTML("beforeend", html);
+}
+
+function printQuote() {
+  const el = document.getElementById("quote-printable");
+  if(!el) return;
+  const win = window.open("","_blank","width=800,height=900");
+  win.document.write(`<!DOCTYPE html><html><head><title>Fenix Tours – Quotation</title>
+    <style>
+      body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+      @media print{@page{margin:0;size:A4}}
+    </style></head><body>${el.outerHTML}
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+function downloadQuotePDF(quoteId) {
+  const q = allQuotes.find(x=>x.id===quoteId);
+  if(!q) return;
+  previewQuote(quoteId);
+  setTimeout(() => {
+    printQuote();
+  }, 300);
+}
+
+function shareQuoteWhatsApp(quoteId) {
+  const q = allQuotes.find(x=>x.id===quoteId);
+  if(!q) return;
+  const quoteNum = "FTT-" + (q.createdAt ? new Date(q.createdAt).getFullYear() : new Date().getFullYear()) + "-" + quoteId.slice(-4).toUpperCase();
+  const msg = `✈️ *Fenix Tours & Travels*\n*Travel Quotation*\n\nDear ${q.clientName},\n\nThank you for your interest! Here is your travel quote:\n\n📍 *Destination:* ${q.destination}\n👥 *Travellers:* ${q.pax}\n${q.duration?"📅 *Duration:* "+q.duration+"\n":""}${q.travelDate?"🗓️ *Travel Date:* "+q.travelDate+"\n":""}\n*Package Includes:*\n${(q.services||[]).map(s=>"✓ "+s).join("\n")}\n\n💰 *Total Package Price: ₹${(q.finalPrice||0).toLocaleString("en-IN")}*\n${q.discount?"(Discount applied: ₹"+q.discount.toLocaleString("en-IN")+")\n":""}\n*Quote Ref:* ${quoteNum}\n\nTo confirm your booking, please pay 25% advance.\n\nFor queries: Call/WhatsApp Fenix Tours & Travels\n\n_This quote is valid for 7 days._`;
+  const phone = q.mobile ? q.mobile.replace(/\D/g,"") : "";
+  const url = phone
+    ? `https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(url, "_blank");
 }
 
 
