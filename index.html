@@ -630,7 +630,7 @@ const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar"};
+const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -643,6 +643,7 @@ function showTab(tab,el){
   if(tab==="targets")renderChart();
   if(tab==="followup"){renderFollowUpCalendar();}
   if(tab==="settings"){renderStaff();}
+  if(tab==="bugreports"){loadBugReports();}
 }
 
 function renderAll(){renderDashboard();renderClients();renderEnquiries();renderBookings();renderTasks();renderReports();renderMktCalls();renderTargets();updateBadges();}
@@ -1235,12 +1236,41 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Other Work / Notes</label><textarea id="r-other" rows="2" placeholder="Any other work..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveReport()">Submit Report</button>`;
     addReportEntry();
-  } else if(type==="marketing"){
-    mb.innerHTML=`<div class="modal-title">Add Marketing Entry <button class="x" onclick="closeOverlay()">✕</button></div>
-    <div class="form-grid"><div class="fg"><label>Date</label><input type="date" id="m-date" value="${today()}"/></div><div class="fg"><label>Staff Member</label><select id="m-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("")}</select></div></div>
-    <div class="form-grid"><div class="fg"><label>Marketing Calls Made</label><input type="number" id="m-calls" value="0" min="0"/></div><div class="fg"><label>New Clients Added</label><input type="number" id="m-clients" value="0" min="0"/></div></div>
-    <div class="form-grid g1"><div class="fg"><label>Notes</label><input id="m-notes" placeholder="e.g. LinkedIn outreach, flyer event..."/></div></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMarketing()">Save Entry</button>`;
+  } else if(type==="marketing"||type==="editmarketing"){
+    const isEditM = type==="editmarketing";
+    const exM = isEditM ? marketing.find(x=>x.id===window._editMktId) : null;
+    const isOwner = CURRENT_USER && CURRENT_USER.id===1;
+    mb.innerHTML=`<div class="modal-title">${isEditM?"Edit":"Add"} Marketing Entry <button class="x" onclick="closeOverlay()">✕</button></div>
+    <div class="form-grid">
+      <div class="fg"><label>Date</label><input type="date" id="m-date" value="${exM?exM.date:today()}"/></div>
+      <div class="fg"><label>Staff Member</label>
+        <select id="m-staff">
+          ${STAFF.slice(1).map(s=>`<option value="${s.id}" ${exM&&exM.staffId==s.id?"selected":""}>${s.name}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <div class="form-grid g1">
+      <div class="fg"><label>Client Name</label>
+        <select id="m-client">
+          <option value="">-- Select Client (optional) --</option>
+          ${clients.map(c=>`<option value="${c.id}" ${exM&&exM.clientId===c.id?"selected":""}>${c.firstName} ${c.lastName} ${c.mobile?"· "+c.mobile:""}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <div class="form-grid">
+      <div class="fg"><label>Marketing Calls Made</label><input type="number" id="m-calls" value="${exM?exM.calls:0}" min="0"/></div>
+      <div class="fg"><label>New Clients Added</label><input type="number" id="m-clients" value="${exM?exM.newClients:0}" min="0"/></div>
+    </div>
+    <div class="form-grid g1"><div class="fg"><label>Notes / Remarks</label>
+      <textarea id="m-notes" rows="2" placeholder="e.g. Called about Dubai package, interested...">${exM?exM.notes:""}</textarea>
+    </div></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMarketing(${isEditM})">
+      ${isEditM?"💾 Update Entry":"+ Add Entry"}
+    </button>`;
+    if(!isOwner && !isEditM){
+      const staffSel = document.getElementById("m-staff");
+      if(staffSel) staffSel.value = CURRENT_USER?.id || "";
+    }
   } else if(type==="target"){
     mb.innerHTML=`<div class="modal-title">Set Monthly Target <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Staff Member</label><select id="tg-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("")}</select></div><div class="fg"><label>Month</label><input type="month" id="tg-month" value="${thisMonth()}"/></div></div>
@@ -1492,7 +1522,12 @@ function renderMktCalls(){
       <td style="text-align:center;font-weight:700;color:#f97316">${m.calls}</td>
       <td style="text-align:center;font-weight:700;color:#059669">${m.newClients}</td>
       <td style="font-size:11px;max-width:200px">${m.notes}</td>
-      <td><button class="btn btn-warn" onclick="del('marketing','${m.id}')">✕</button></td></tr>`;
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="editMarketing('${m.id}')">✏️</button>
+          <button class="btn btn-warn" style="font-size:10px;padding:3px 8px" onclick="del('marketing','${m.id}')">✕</button>
+        </div>
+      </td></tr>`;
   }).join("")||`<tr><td colspan="7" class="empty">No marketing entries</td></tr>`;
 }
 
@@ -1874,18 +1909,35 @@ async function saveReport() {
   } catch(e) { alert("Save failed: "+e.message); }
 }
 
-async function saveMarketing() {
+async function saveMarketing(isEdit) {
+  if(_saving) return;
+  const clientVal = document.getElementById("m-client")?.value || "";
   const data = {
-    date:document.getElementById("m-date").value,
-    staffId:parseInt(document.getElementById("m-staff").value),
-    calls:parseInt(document.getElementById("m-calls").value)||0,
-    newClients:parseInt(document.getElementById("m-clients").value)||0,
-    notes:document.getElementById("m-notes").value, clientId:null,
+    date: document.getElementById("m-date").value,
+    staffId: parseInt(document.getElementById("m-staff").value),
+    calls: parseInt(document.getElementById("m-calls").value)||0,
+    newClients: parseInt(document.getElementById("m-clients").value)||0,
+    notes: document.getElementById("m-notes").value,
+    clientId: clientVal || null,
   };
+  _saving = true;
   try {
-    const id=await fbAdd("marketing",data); data.id=id; marketing.push(data);
-    closeOverlay(); renderMarketing();
+    if(isEdit) {
+      const m = marketing.find(x=>x.id===window._editMktId);
+      await fbUpdate("marketing", m.id, data);
+      Object.assign(m, data);
+      closeOverlay(); renderMarketing();
+    } else {
+      await fbAdd("marketing", data);
+      closeOverlay();
+    }
   } catch(e) { alert("Save failed: "+e.message); }
+  finally { _saving = false; }
+}
+
+function editMarketing(id) {
+  window._editMktId = id;
+  openModal("editmarketing");
 }
 
 async function saveMktCall() {
