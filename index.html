@@ -1277,7 +1277,7 @@ function globalSearch(q){
   const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source}`.toLowerCase().includes(ql));
   const fb=bookings.filter(b=>`${cName(b.clientId)} ${b.destination}`.toLowerCase().includes(ql));
   document.getElementById("search-results").innerHTML=`
-    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div><div class="card"><table><thead><tr><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th></tr></thead><tbody>${fc.map(c=>`<tr><td><strong>${c.firstName} ${c.lastName}</strong></td><td>${c.mobile}</td><td>${c.email}</td><td>${c.city}</td></tr>`).join("")}</tbody></table></div>`:""}
+    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div><div class="card"><table><thead><tr><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>ACTION</th></tr></thead><tbody>${fc.map(c=>`<tr><td><strong>${c.firstName} ${c.lastName}</strong></td><td>${c.mobile}</td><td>${c.email}</td><td>${c.city}</td><td><button class="btn" style="font-size:10px;padding:3px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button></td></tr>`).join("")}</tbody></table></div>`:""}
     ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>RATING</th><th>STATUS</th><th>TYPE</th></tr></thead><tbody>${fe.map(e=>`<tr><td>${cName(e.clientId)}</td><td>${e.destination}</td><td>${rBadge(e.rating)}</td><td>${sBadge(e.status)}</td><td>${tBadge(e.type)}</td></tr>`).join("")}</tbody></table></div>`:""}
     ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th></tr></thead><tbody>${fb.map(b=>`<tr><td>${cName(b.clientId)}</td><td>${b.destination}</td><td>${b.travelDate}</td><td>${fmt(b.amount)}</td></tr>`).join("")}</tbody></table></div>`:""}
     ${!fc.length&&!fe.length&&!fb.length?`<div class="empty">No results found for "${q}"</div>`:""}`;
@@ -1291,6 +1291,7 @@ function openModal(type){
   const mb=document.getElementById("modal-body");
   if(type==="client"){
     mb.innerHTML=`<div class="modal-title">Add Client <button class="x" onclick="closeOverlay()">✕</button></div>
+    <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional – for corporate clients)</span></label><input id="c-company" placeholder="e.g. ABC Pvt. Ltd."/></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="c-fn" placeholder="e.g. Rahul"/></div><div class="fg"><label>Last Name</label><input id="c-ln" placeholder="e.g. Sharma"/></div></div>
     <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No</label><input id="c-mob" placeholder="9876543210"/></div></div>
     <div class="form-grid"><div class="fg"><label>Email ID</label><input id="c-email" placeholder="email@example.com"/></div><div class="fg"><label>Occupation</label><input id="c-occ" placeholder="e.g. Businessman"/></div></div>
@@ -1458,12 +1459,31 @@ function openModal(type){
   } else if(type==="editclient"){
     const c=clients.find(x=>x.id===window._editClientId);
     if(!c)return;
-    mb.innerHTML=`<div class="modal-title">✏️ Edit Client (Owner Only) <button class="x" onclick="closeOverlay()">✕</button></div>
-    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;margin-bottom:14px;font-size:11px;color:#92400e">🔒 Only Ms. Rehana can edit client details</div>
+    mb.innerHTML=`<div class="modal-title">✏️ Edit Client <button class="x" onclick="closeOverlay()">✕</button></div>
+    <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional)</span></label><input id="ec-company" value="${c.companyName||""}"/></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="ec-fn" value="${c.firstName}"/></div><div class="fg"><label>Last Name</label><input id="ec-ln" value="${c.lastName}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Mobile</label><input id="ec-mob" value="${c.mobile}"/></div><div class="fg"><label>Email</label><input id="ec-email" value="${c.email}"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Occupation</label><input id="ec-occ" value="${c.occupation}"/></div><div class="fg"><label>City</label><input id="ec-city" value="${c.city}"/></div></div>
-    <div class="form-grid"><div class="fg"><label>State</label><select id="ec-state">${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Occupation</label><input id="ec-occ" value="${c.occupation||""}"/></div><div class="fg"><label>City</label><input id="ec-city" value="${c.city||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>State</label><select id="ec-state">${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Data Type / Lead Source</label>
+      <select id="ec-datatype" onchange="toggleCustomDataType(this)">
+        <option value="">-- Select Source --</option>
+        <option value="Exhibition"${c.dataType==="Exhibition"?" selected":""}>Exhibition</option>
+        <option value="Social Media"${c.dataType==="Social Media"?" selected":""}>Social Media</option>
+        <option value="Purchased Data"${c.dataType==="Purchased Data"?" selected":""}>Purchased Data</option>
+        <option value="Newspaper"${c.dataType==="Newspaper"?" selected":""}>Newspaper</option>
+        <option value="Radio Mirchi"${c.dataType==="Radio Mirchi"?" selected":""}>Radio Mirchi</option>
+        <option value="Regular Walk-in Client"${c.dataType==="Regular Walk-in Client"?" selected":""}>Regular Walk-in Client</option>
+        <option value="Reference"${c.dataType==="Reference"?" selected":""}>Reference</option>
+        <option value="Sponsorship"${c.dataType==="Sponsorship"?" selected":""}>Sponsorship</option>
+        <option value="NRI Client"${c.dataType==="NRI Client"?" selected":""}>NRI Client</option>
+        <option value="Events"${c.dataType==="Events"?" selected":""}>Events</option>
+        <option value="Other"${c.dataType==="Other"||(!["Exhibition","Social Media","Purchased Data","Newspaper","Radio Mirchi","Regular Walk-in Client","Reference","Sponsorship","NRI Client","Events",""].includes(c.dataType||""))?" selected":""}>Other (specify below)</option>
+      </select>
+    </div></div>
+    <div class="form-grid g1" id="ec-custom-dt-wrap" style="display:${(!["Exhibition","Social Media","Purchased Data","Newspaper","Radio Mirchi","Regular Walk-in Client","Reference","Sponsorship","NRI Client","Events",""].includes(c.dataType||""))?"":"none"}">
+      <div class="fg"><label>Custom Lead Source</label><input id="ec-custom-datatype" value="${(!["Exhibition","Social Media","Purchased Data","Newspaper","Radio Mirchi","Regular Walk-in Client","Reference","Sponsorship","NRI Client","Events",""].includes(c.dataType||""))?c.dataType||"":""}" placeholder="e.g. College Seminar, Travel Expo, Friend Referral"/></div>
+    </div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEditClient()">Save Changes</button>`;
   }
   document.getElementById("overlay").classList.add("open");
@@ -1545,18 +1565,28 @@ function saveEditStaff(){
   s.initials=document.getElementById("es-init").value.toUpperCase();
   closeOverlay();renderAll();renderStaff();
 }
+function toggleCustomDataType(sel) {
+  const wrap = document.getElementById("ec-custom-dt-wrap");
+  if(wrap) wrap.style.display = sel.value === "Other" ? "" : "none";
+}
+
 async function saveEditClient(){
   const c=clients.find(x=>x.id===window._editClientId);
   if(!c)return;
+  const dtSel = document.getElementById("ec-datatype")?.value||"";
+  const dtCustom = document.getElementById("ec-custom-datatype")?.value.trim()||"";
+  const dataType = dtSel === "Other" ? (dtCustom||"Other") : dtSel;
   const data = {
-    firstName:document.getElementById("ec-fn").value,
-    lastName:document.getElementById("ec-ln").value,
+    companyName:document.getElementById("ec-company")?.value.trim()||"",
+    firstName:toTitleCase(document.getElementById("ec-fn").value),
+    lastName:toTitleCase(document.getElementById("ec-ln").value),
     mobile:document.getElementById("ec-mob").value,
     email:document.getElementById("ec-email").value,
-    occupation:document.getElementById("ec-occ").value,
-    city:document.getElementById("ec-city").value,
-    state:document.getElementById("ec-state").value,
-    pincode:document.getElementById("ec-pin").value,
+    occupation:document.getElementById("ec-occ")?.value||"",
+    city:document.getElementById("ec-city")?.value||"",
+    state:document.getElementById("ec-state")?.value||"",
+    pincode:document.getElementById("ec-pin")?.value||"",
+    dataType,
   };
   try {
     await fbUpdate("clients", c.id, data);
@@ -1863,6 +1893,9 @@ async function fbDelete(col, id) {
 }
 
 // ── Override save functions ──────────────────────
+
+const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase()).trim();
+
 async function saveClient() {
   if(_saving) return;
   const fn = document.getElementById("c-fn").value.trim();
@@ -1870,7 +1903,7 @@ async function saveClient() {
   if(!fn) return alert("⚠️ First Name is required!");
   if(!mob) return alert("⚠️ Mobile Number is required!");
   const data = {
-    firstName:fn, lastName:document.getElementById("c-ln").value.trim(),
+    firstName:toTitleCase(fn), lastName:toTitleCase(document.getElementById("c-ln").value.trim()),
     gender:document.getElementById("c-gen").value,
     mobile:mob,
     email:document.getElementById("c-email").value.trim(),
@@ -1880,6 +1913,7 @@ async function saveClient() {
     city:document.getElementById("c-city").value.trim(),
     area:document.getElementById("c-area").value.trim(),
     pincode:document.getElementById("c-pin").value.trim(),
+    companyName:document.getElementById("c-company")?.value.trim()||"",
   };
   _saving = true;
   try {
@@ -2369,14 +2403,35 @@ function updateEnqForm(ex) {
         <div class="fg"><label>Passport Expiry</label><input type="date" id="e-pass-expiry" value="${ex?.passportExpiry||""}"/></div>
       </div>
       <div class="form-grid">
+        <div class="fg"><label>ECR / Non-ECR</label>
+          <select id="e-ecr-type"><option value="">-- Select --</option><option>ECR Passport</option><option>Non-ECR Passport</option></select>
+        </div>
         <div class="fg"><label>Travel Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
-        <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹8,000" value="${ex?.budget||""}"/></div>
       </div>
+      <div class="form-grid g1" id="e-dropbox-wrap" style="display:none">
+        <div class="fg"><label>Drop Box</label>
+          <select id="e-dropbox"><option value="">-- Select --</option><option>Yes – Drop Box Eligible</option><option>No – Appointment Required</option></select>
+        </div>
+      </div>
+      <div class="form-grid g1"><div class="fg"><label>No. of Applicants</label><input type="number" id="e-num-applicants" min="1" value="${ex?.numApplicants||1}" placeholder="e.g. 2"/></div></div>
       ${paxFields}`;
     if(ex?.destination) {
       const sel = document.getElementById("e-dest-custom");
-      if(sel) sel.value = ex.destination;
+      if(sel) {
+        sel.value = ex.destination;
+        // Show Drop Box field for US visa
+        if(ex.destination === "United States") {
+          const dw = document.getElementById("e-dropbox-wrap");
+          if(dw) dw.style.display = "";
+        }
+      }
     }
+    // Wire up country change to show/hide drop box
+    const csel = document.getElementById("e-dest-custom");
+    if(csel) csel.addEventListener("change", function() {
+      const dw = document.getElementById("e-dropbox-wrap");
+      if(dw) dw.style.display = this.value === "United States" ? "" : "none";
+    });
   }
   else if(cat==="Passport") {
     wrap.innerHTML = `
@@ -2386,7 +2441,7 @@ function updateEnqForm(ex) {
       </div>
       <div class="form-grid">
         <div class="fg"><label>Date of Birth</label><input type="date" id="e-dob" value="${ex?.dob||""}"/></div>
-        <div class="fg"><label>Appointment Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
+        <div class="fg"><label>Submission Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
       </div>
       <div class="form-grid g1">
         <div class="fg"><label>Current Passport No (if renewal)</label><input id="e-passport" placeholder="Leave blank for fresh" value="${ex?.passportNo||""}"/></div>
@@ -2400,9 +2455,22 @@ function updateEnqForm(ex) {
         </div>
         <div class="fg"><label>Insurance Type</label><select id="e-ins-type"><option>Single Trip</option><option>Multi Trip</option><option>Family</option><option>Senior Citizen</option></select></div>
       </div>
+      <div class="form-grid">
+        <div class="fg"><label>Age Criteria</label>
+          <select id="e-age-criteria">
+            <option value="">-- Select Age Group --</option>
+            <option value="1-40">1 – 40 years</option>
+            <option value="41-60">41 – 60 years</option>
+            <option value="61-70">61 – 70 years</option>
+            <option value="71-75">71 – 75 years</option>
+            <option value="76-80">76 – 80 years</option>
+            <option value="81+">Above 81 years (Premium Insurance)</option>
+          </select>
+        </div>
+        <div class="fg"><label>Sum Insured</label><select id="e-sum-insured"><option>$50,000</option><option>$100,000</option><option>$250,000</option><option>$500,000</option></select></div>
+      </div>
       ${dateFields}
       <div class="form-grid">
-        <div class="fg"><label>Sum Insured</label><select id="e-sum-insured"><option>$50,000</option><option>$100,000</option><option>$250,000</option><option>$500,000</option></select></div>
         <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹2,000" value="${ex?.budget||""}"/></div>
       </div>
       ${paxFields}`;
@@ -2410,7 +2478,7 @@ function updateEnqForm(ex) {
   else if(cat==="Cruise") {
     wrap.innerHTML = `
       <div class="form-grid">
-        <div class="fg"><label>Cruise Line / Ship</label><input id="e-dest-custom" placeholder="e.g. Costa Cruise - Dubai" value="${ex?.destination||""}"/></div>
+        <div class="fg"><label>Country for Cruising</label><input id="e-dest-custom" placeholder="e.g. Dubai, Mediterranean, Caribbean" value="${ex?.destination||""}"/></div>
         <div class="fg"><label>Cruise Type</label><select id="e-cruise-type"><option>International</option><option>Domestic</option></select></div>
       </div>
       ${dateFields}
@@ -2485,6 +2553,7 @@ function updateBkForm() {
       <div class="form-grid"><div class="fg"><label>Visa Country <span style="color:#dc2626">*</span></label>
         <select id="b-dest"><option value="">Select Country...</option>$<option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
       </div><div class="fg"><label>Visa Type</label><select id="b-visa-type"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option></select></div></div>
+      <div style="font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 4px">📘 Passport Details</div>
       <div class="form-grid"><div class="fg"><label>Applicant Name</label><input id="b-applicant" placeholder="Name on passport"/></div>
       <div class="fg"><label>Passport No</label><input id="b-passport" placeholder="e.g. Z1234567"/></div></div>
       <div class="form-grid"><div class="fg"><label>Submission Date</label><input type="date" id="b-date"/></div>
@@ -2492,6 +2561,7 @@ function updateBkForm() {
       ${paxFields}${amtFields}`;
   } else if(cat==="Passport") {
     wrap.innerHTML = `
+      <div style="font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.05em;margin:4px 0 6px">📘 Passport Details</div>
       <div class="form-grid"><div class="fg"><label>Applicant Name</label><input id="b-dest" placeholder="Full name"/></div>
       <div class="fg"><label>Passport Type</label><select id="b-passport-type"><option>Fresh Application</option><option>Renewal</option><option>Tatkal</option></select></div></div>
       <div class="form-grid"><div class="fg"><label>Application Date</label><input type="date" id="b-date"/></div>
