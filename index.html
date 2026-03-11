@@ -295,6 +295,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('reports',this)"><span class="nav-icon">📊</span>Daily Reports</div>
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
+    <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🧠</span>Travel Quiz<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -521,6 +522,67 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
     <!-- SEARCH -->
     
+
+    <!-- TRAVEL QUIZ TAB -->
+    <div class="tab" id="tab-quiz">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="section-title" style="margin:0">🧠 Travel Quiz & Learning</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Learn something new every day. Compete with your team!</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button id="quiz-mode-btn" class="btn" onclick="setQuizMode('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
+          <button id="learn-mode-btn" class="btn" onclick="setQuizMode('learn')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">📖 Learn Mode</button>
+        </div>
+      </div>
+
+      <!-- Personal Stats Bar -->
+      <div id="quiz-stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-today" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">Today's Score</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#f97316,#dc2626);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-month" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">This Month</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-streak" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">🔥 Streak</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-rank" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">🏆 Team Rank</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-total" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">Total Points</div>
+        </div>
+      </div>
+
+      <!-- QUIZ MODE PANEL -->
+      <div id="quiz-panel">
+        <div id="quiz-loading" style="text-align:center;padding:40px;color:#64748b">
+          <div style="font-size:40px;margin-bottom:12px">🧠</div>
+          <div style="font-weight:600">Loading today's quiz...</div>
+        </div>
+        <div id="quiz-content" style="display:none"></div>
+        <div id="quiz-result" style="display:none"></div>
+      </div>
+
+      <!-- LEARN MODE PANEL -->
+      <div id="learn-panel" style="display:none">
+        <div id="learn-content"></div>
+      </div>
+
+      <!-- LEADERBOARD (always visible below) -->
+      <div style="margin-top:24px">
+        <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">🏆 Team Leaderboard — This Month</div>
+        <div id="quiz-leaderboard"></div>
+      </div>
+    </div>
+
     <!-- BUG REPORTS TAB -->
     <div class="tab" id="tab-bugreports">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -668,7 +730,7 @@ const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports"};
+const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🧠 Travel Quiz"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -682,6 +744,7 @@ function showTab(tab,el){
   if(tab==="followup"){renderFollowUpCalendar();}
   if(tab==="settings"){renderStaff();}
   if(tab==="bugreports"){loadBugReports();}
+  if(tab==="quiz"){initQuiz();}
 }
 
 function renderAll(){renderDashboard();renderClients();renderEnquiries();renderBookings();renderTasks();renderReports();renderMktCalls();renderTargets();updateBadges();}
@@ -1588,7 +1651,7 @@ renderStaff();
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
-const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
+const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
 
 firebase.initializeApp(FIREBASE_CONFIG);
 // auth and db initialized here, but variables already declared at top
@@ -2698,6 +2761,524 @@ async function saveAddPayment(bookingId) {
     alert("Save failed: " + err.message);
   }
 }
+
+
+
+// ═══════════════════════════════════════════════════════
+//  TRAVEL QUIZ & LEARNING SYSTEM
+// ═══════════════════════════════════════════════════════
+
+// ── Question Bank (50 questions, rotated by day-of-year) ──
+const QUIZ_BANK = [
+  // Visa & Documents
+  { q:"Which countries are covered under the Schengen Visa?", opts:["Only France","Multiple European countries","Only Germany","Only Italy"], ans:1, exp:"The Schengen Visa allows travel to 26+ European countries including France, Germany, Italy, Spain, and more — all without border checks between member states.", cat:"Visa" },
+  { q:"How many working days does a Dubai tourist visa typically take to process?", opts:["1–2 days","3–5 days","10–15 days","1 month"], ans:1, exp:"Dubai (UAE) tourist visa processing typically takes 3–5 working days when applied through an airline or authorized agent.", cat:"Visa" },
+  { q:"Which document is mandatory for all international travellers?", opts:["Driving Licence","Aadhar Card","Passport","PAN Card"], ans:2, exp:"A valid passport is the primary mandatory travel document for international travel from India.", cat:"Documents" },
+  { q:"How long is an Indian passport valid for adults?", opts:["5 years","10 years","15 years","20 years"], ans:1, exp:"An Indian adult passport (for those aged 18 and above) is valid for 10 years from the date of issue.", cat:"Documents" },
+  { q:"What does OCI stand for in Indian travel documents?", opts:["Overseas Citizen of India","Official Country Identity","Overseas Country Immigration","Outside Citizen Index"], ans:0, exp:"OCI stands for Overseas Citizen of India. It is a long-term multi-purpose visa for foreign nationals of Indian origin.", cat:"Documents" },
+  { q:"Which visa is required for business travel to the USA?", opts:["B-1 visa","B-2 visa","F-1 visa","H-1B visa"], ans:0, exp:"The B-1 visa is for business travel to the USA (attending meetings, conferences). B-2 is for tourism.", cat:"Visa" },
+  { q:"Which country offers a Visa on Arrival to Indian passport holders at a major hub?", opts:["USA","UK","Thailand","Australia"], ans:2, exp:"Thailand offers Visa on Arrival to Indian passport holders at Suvarnabhumi Airport, valid for 30 days.", cat:"Visa" },
+  { q:"What is the minimum passport validity recommended for most international travel?", opts:["1 month","3 months","6 months","1 year"], ans:2, exp:"Most countries require at least 6 months of passport validity beyond your travel dates. Always renew early!", cat:"Documents" },
+  // Destinations
+  { q:"Which city is known as the 'City of Love'?", opts:["Rome","Venice","Paris","Vienna"], ans:2, exp:"Paris, France is famously called the 'City of Love' and is one of the world's most visited tourist destinations.", cat:"Destinations" },
+  { q:"The Burj Khalifa is located in which city?", opts:["Abu Dhabi","Riyadh","Doha","Dubai"], ans:3, exp:"The Burj Khalifa in Dubai, UAE is the world's tallest building at 828 metres. It's a must-visit landmark.", cat:"Destinations" },
+  { q:"Which country is home to the Great Barrier Reef?", opts:["New Zealand","South Africa","Brazil","Australia"], ans:3, exp:"The Great Barrier Reef, the world's largest coral reef system, is located off the coast of Queensland, Australia.", cat:"Destinations" },
+  { q:"The Colosseum is located in which city?", opts:["Athens","Rome","Istanbul","Madrid"], ans:1, exp:"The Colosseum (Flavian Amphitheatre) is in Rome, Italy — built in 70–80 AD and one of the world's most iconic monuments.", cat:"Destinations" },
+  { q:"Machu Picchu is an ancient city located in which country?", opts:["Mexico","Colombia","Bolivia","Peru"], ans:3, exp:"Machu Picchu is a 15th-century Inca citadel located in the Andes Mountains of Peru at an altitude of 2,430 metres.", cat:"Destinations" },
+  { q:"Which island nation is known as the 'Pearl of the Indian Ocean'?", opts:["Maldives","Mauritius","Sri Lanka","Seychelles"], ans:2, exp:"Sri Lanka is often called the 'Pearl of the Indian Ocean' due to its teardrop shape, biodiversity, and cultural heritage.", cat:"Destinations" },
+  { q:"The Taj Mahal is located in which Indian city?", opts:["Delhi","Jaipur","Agra","Lucknow"], ans:2, exp:"The Taj Mahal is located in Agra, Uttar Pradesh. Built by Mughal Emperor Shah Jahan in memory of his wife Mumtaz Mahal.", cat:"Destinations" },
+  { q:"Which country has the most UNESCO World Heritage Sites?", opts:["France","China","Italy","India"], ans:2, exp:"Italy leads with the most UNESCO World Heritage Sites (58 as of recent counts), followed closely by China and Germany.", cat:"Destinations" },
+  { q:"Santorini is a famous island in which country?", opts:["Italy","Spain","Turkey","Greece"], ans:3, exp:"Santorini is a volcanic island in the Cyclades group in Greece, famous for its white-washed buildings and blue domes.", cat:"Destinations" },
+  { q:"Which city is known as the 'Shopping Capital of the Middle East'?", opts:["Riyadh","Dubai","Doha","Muscat"], ans:1, exp:"Dubai is the shopping capital of the Middle East, famous for Dubai Mall (world's largest), Gold Souk, and spice markets.", cat:"Destinations" },
+  // Airlines & Aviation
+  { q:"What does IATA stand for?", opts:["International Air Transport Association","International Airline Travel Agency","Indian Air Traffic Administration","International Airway Terminal Authority"], ans:0, exp:"IATA stands for International Air Transport Association — the global trade body representing some 290 airlines worldwide.", cat:"Airlines" },
+  { q:"What is the maximum cabin baggage weight allowed on most international flights?", opts:["5 kg","7 kg","10 kg","15 kg"], ans:1, exp:"Most international airlines allow 7 kg for cabin/hand baggage, though some budget airlines may vary. Always check before flying.", cat:"Airlines" },
+  { q:"What does 'codeshare' mean in airline terminology?", opts:["Two airlines share the same airport gate","One airline sells seats on another airline's flight","Airlines that share catering","Airlines that fly the same route"], ans:1, exp:"A codeshare agreement allows one airline to sell tickets on another airline's flight under its own code, giving passengers more connectivity.", cat:"Airlines" },
+  { q:"What is the IATA code for Indira Gandhi International Airport, Delhi?", opts:["BOM","MAA","DEL","HYD"], ans:2, exp:"DEL is the IATA code for Indira Gandhi International Airport in New Delhi. BOM is Mumbai, MAA is Chennai, HYD is Hyderabad.", cat:"Airlines" },
+  { q:"What does 'Open Jaw' mean in airline booking?", opts:["A broken seat","Flying into one city and returning from another","A premium seat class","A direct non-stop flight"], ans:1, exp:"An 'open jaw' ticket lets you fly into City A and return from City B (or vice versa) — great for multi-city road trips!", cat:"Airlines" },
+  { q:"Which airline uses the IATA code 'EK'?", opts:["Etihad Airways","Emirates","Ethiopian Airlines","El Al"], ans:1, exp:"EK is the IATA code for Emirates Airlines, based in Dubai. Etihad is EY, Ethiopian is ET, El Al is LY.", cat:"Airlines" },
+  { q:"What is a 'Red Eye' flight?", opts:["A flight with red seating","An overnight flight","A budget flight","A cancelled flight"], ans:1, exp:"A 'red eye' flight departs late at night and arrives the next morning — named because passengers often arrive with tired, red eyes!", cat:"Airlines" },
+  // Hotels & Hospitality
+  { q:"What does 'AP' meal plan mean in hotels?", opts:["American Plan – includes all meals","Asian Plan – includes breakfast only","Advance Payment required","All Pools included"], ans:0, exp:"AP (American Plan) includes all meals: breakfast, lunch, and dinner. MAP includes breakfast and dinner only.", cat:"Hotels" },
+  { q:"What does 'CP' stand for in hotel booking?", opts:["Continental Plan – breakfast only","Complete Package","Custom Plan","Corporate Package"], ans:0, exp:"CP stands for Continental Plan — the room rate includes breakfast only. This is the most common booking type.", cat:"Hotels" },
+  { q:"What is the standard check-in time at most international hotels?", opts:["10:00 AM","12:00 PM","2:00 PM","4:00 PM"], ans:2, exp:"Standard hotel check-in time is 2:00 PM (14:00) at most international hotels. Early check-in may incur charges.", cat:"Hotels" },
+  { q:"What is a 'Concierge' at a hotel?", opts:["The hotel chef","The hotel security guard","A staff member who assists guests with services","The hotel accountant"], ans:2, exp:"A concierge is a hospitality professional who assists guests with tour bookings, restaurant reservations, transport, and local tips.", cat:"Hotels" },
+  { q:"What does 'ROH' mean in hotel booking?", opts:["Rate on Hold","Run of House","Room on Holiday","Rate Off Hours"], ans:1, exp:"ROH (Run of House) means the hotel allocates any available room type. The category isn't guaranteed — could be standard or superior.", cat:"Hotels" },
+  // Geography & Tourism
+  { q:"Which river flows through Egypt and is vital for its tourism?", opts:["Amazon","Congo","Nile","Zambezi"], ans:2, exp:"The Nile River, the world's longest river, flows through Egypt. It's central to Egypt's history, culture and Nile cruise tourism.", cat:"Geography" },
+  { q:"The Northern Lights (Aurora Borealis) are best viewed in which region?", opts:["Mediterranean","Sahara","Arctic Circle","Southeast Asia"], ans:2, exp:"The Aurora Borealis is best seen from countries in the Arctic Circle — Iceland, Norway, Sweden, Finland, and Canada.", cat:"Geography" },
+  { q:"Which country has the most number of islands?", opts:["Indonesia","Philippines","Norway","Sweden"], ans:3, exp:"Sweden has around 221,800 islands, making it the country with the highest number of islands in the world!", cat:"Geography" },
+  { q:"The Amazon Rainforest is primarily located in which country?", opts:["Colombia","Venezuela","Bolivia","Brazil"], ans:3, exp:"About 60% of the Amazon Rainforest is located in Brazil. It's the world's largest tropical rainforest.", cat:"Geography" },
+  { q:"Angkor Wat, the world's largest religious monument, is in which country?", opts:["Thailand","Vietnam","Myanmar","Cambodia"], ans:3, exp:"Angkor Wat is a 12th-century temple complex in Siem Reap, Cambodia. It's the world's largest religious monument and a UNESCO site.", cat:"Geography" },
+  { q:"Which country is home to the fjords?", opts:["Denmark","Sweden","Norway","Finland"], ans:2, exp:"Norway is world-famous for its fjords — deep, narrow sea inlets formed by glaciers. Geirangerfjord and Nærøyfjord are UNESCO sites.", cat:"Geography" },
+  // Travel Tips & Industry
+  { q:"What is 'Travel Insurance' primarily designed to cover?", opts:["Passport renewal fees","Trip cancellations, medical emergencies, and lost baggage","Hotel upgrades","Flight upgrades"], ans:1, exp:"Travel insurance covers trip cancellations, medical emergencies abroad, lost or stolen baggage, and flight delays — essential for all travellers.", cat:"Travel Tips" },
+  { q:"What does 'FIT' stand for in the travel industry?", opts:["Frequent Independent Traveller","Free Independent Traveller","Flight In Transit","Fixed Inclusive Tour"], ans:1, exp:"FIT stands for Free Independent Traveller — a customised itinerary for individuals or small groups, not a pre-packaged group tour.", cat:"Travel Tips" },
+  { q:"What is 'Peak Season' in tourism?", opts:["When travel prices are lowest","When fewer tourists visit","When most tourists visit and prices are highest","When airlines offer discounts"], ans:2, exp:"Peak season is when a destination sees the highest number of tourists — typically coinciding with holidays or favourable weather. Prices are highest.", cat:"Travel Tips" },
+  { q:"Which travel document is required for a minor (below 18) travelling alone internationally from India?", opts:["Only passport","Passport + NOC from parents","Only school ID","Only birth certificate"], ans:1, exp:"A minor travelling alone internationally from India needs a valid passport AND a No Objection Certificate (NOC) signed by parents/guardians.", cat:"Travel Tips" },
+  { q:"What does GDS stand for in travel booking systems?", opts:["General Distribution System","Global Distribution System","Geographic Data Service","Government Departure System"], ans:1, exp:"GDS (Global Distribution System) platforms like Amadeus, Sabre, and Galileo connect travel agents to airline, hotel, and car rental inventories.", cat:"Travel Tips" },
+  { q:"What is 'Visa on Arrival'?", opts:["A visa you must apply for 3 months in advance","A visa issued at the destination airport upon arrival","A visa for diplomats only","A free visa for students"], ans:1, exp:"Visa on Arrival (VoA) means you don't need prior approval — you get a visa stamp at the destination airport. Thailand and Indonesia offer this to Indians.", cat:"Visa" },
+  { q:"Which is the busiest airport in the world by passenger traffic?", opts:["Dubai International Airport","Heathrow Airport","Hartsfield-Jackson Atlanta Airport","Beijing Capital Airport"], ans:2, exp:"Hartsfield-Jackson Atlanta International Airport in the USA consistently ranks as the world's busiest by total passenger volume.", cat:"Airlines" },
+  { q:"What is a 'Cruise Itinerary'?", opts:["A list of foods served on a cruise","The daily schedule of ports visited by a cruise ship","A list of crew members","The ship's engine plan"], ans:1, exp:"A cruise itinerary is the schedule of ports a cruise ship will visit, including arrival/departure times and shore excursion options.", cat:"Travel Tips" },
+  { q:"In which country is Bali located?", opts:["Malaysia","Thailand","Philippines","Indonesia"], ans:3, exp:"Bali is a beautiful island province in Indonesia. It's famous for temples, rice terraces, beaches, and spiritual culture.", cat:"Destinations" },
+  { q:"What is the currency used in Japan?", opts:["Won","Yen","Yuan","Baht"], ans:1, exp:"Japan uses the Japanese Yen (JPY ¥). South Korea uses Won, China uses Yuan/Renminbi, and Thailand uses Baht.", cat:"Geography" },
+  { q:"What does 'All-Inclusive' mean at a resort?", opts:["Only breakfast included","All meals, drinks, and most activities are included in one price","Free airport transfer only","Only WiFi and breakfast included"], ans:1, exp:"All-Inclusive resorts bundle accommodation, all meals, beverages (including alcohol), and many activities into one upfront price.", cat:"Hotels" },
+  { q:"Which country has the highest number of active volcanoes?", opts:["Japan","Indonesia","Iceland","USA"], ans:1, exp:"Indonesia has over 130 active volcanoes — the most of any country — due to its location on the Pacific 'Ring of Fire'.", cat:"Geography" },
+  { q:"What is 'Honeymoon Package' typically designed for?", opts:["Group tours","Newly married couples traveling together","Budget backpackers","Senior citizens"], ans:1, exp:"Honeymoon packages are specially curated travel experiences designed for newly married couples, often including romantic add-ons like flowers, spa, and dinners.", cat:"Travel Tips" },
+  { q:"The famous 'Oktoberfest' festival takes place in which city?", opts:["Berlin","Vienna","Zurich","Munich"], ans:3, exp:"Oktoberfest is the world's largest beer festival held annually in Munich, Bavaria, Germany. It attracts over 6 million visitors each year.", cat:"Destinations" },
+];
+
+// ── Daily Tips (Learn Mode) ──
+const TRAVEL_TIPS = [
+  { icon:"✈️", cat:"Airline Tip", tip:"Always check the airline's website directly for the cheapest fares — booking fees on third-party sites can add ₹500–₹2000 per ticket.", src:"Industry Best Practice" },
+  { icon:"🛂", cat:"Visa Tip", tip:"Apply for your Schengen visa at the embassy of the country where you'll spend the most nights on your trip.", src:"Schengen Guidelines" },
+  { icon:"🏨", cat:"Hotel Tip", tip:"Always book a hotel with a 'Free Cancellation' policy when your travel dates are not confirmed. It costs nothing extra and saves you from losses.", src:"Booking.com Best Practices" },
+  { icon:"🌍", cat:"Destination Tip", tip:"The best time to visit Maldives is November to April (dry season). Monsoon season is May–October with heavy rainfall.", src:"Maldives Tourism Board" },
+  { icon:"💼", cat:"Packing Tip", tip:"Roll clothes instead of folding them — you can fit 30% more items in your bag and reduce wrinkles!", src:"Travel Hackers Guide" },
+  { icon:"🔒", cat:"Safety Tip", tip:"Always carry photocopies of your passport, visa, and travel insurance in a separate bag from the originals.", src:"Ministry of External Affairs" },
+  { icon:"💰", cat:"Money Tip", tip:"Notify your bank before international travel to avoid your card being blocked for foreign transactions. Also carry some local currency for emergencies.", src:"Banking Best Practice" },
+  { icon:"🛂", cat:"Visa Tip", tip:"Dubai tourist visa is available for 30 days (single/multiple entry) and 90 days. Most Indians prefer the 30-day visa for short trips.", src:"UAE Embassy Guidelines" },
+  { icon:"✈️", cat:"Airline Tip", tip:"Flying on Tuesdays and Wednesdays is generally cheaper than weekends. Booking 6–8 weeks in advance usually gives the best prices.", src:"IATA Fare Data" },
+  { icon:"🌍", cat:"Destination Tip", tip:"Singapore requires no visa for Indian passport holders for stays up to 30 days. It's one of the easiest international destinations!", src:"Singapore ICA" },
+  { icon:"🏨", cat:"Hotel Tip", tip:"Always request a higher floor room away from the elevator for quieter stays. Mention it at check-in — it's usually free!", src:"Hospitality Tips" },
+  { icon:"📋", cat:"Documents Tip", tip:"Your passport should have at least 2 blank pages for stamps. Some countries deny entry if you have fewer blank pages.", src:"IATA Travel Documents" },
+  { icon:"🌍", cat:"Destination Tip", tip:"Thailand's Phi Phi Islands are best visited between November and April. April and May can have strong currents making water activities risky.", src:"TAT Thailand" },
+  { icon:"💼", cat:"Travel Tip", tip:"International travel insurance must include medical coverage of at least $50,000 for Schengen visa applications.", src:"Schengen Visa Requirements" },
+  { icon:"✈️", cat:"Airline Tip", tip:"Checking in online 24–48 hours before departure often lets you pick better seats (aisle, window near front) for free!", src:"Airline Best Practices" },
+  { icon:"🛂", cat:"Visa Tip", tip:"For UK visa applications, bank statements must show consistent balance over 3–6 months. Large sudden deposits can trigger rejection.", src:"UK Visa & Immigration" },
+  { icon:"🌍", cat:"Destination Tip", tip:"Switzerland offers a rail pass called the Swiss Travel Pass — perfect for tourists wanting to explore Geneva, Zurich, Interlaken, and Lucerne by train.", src:"Switzerland Tourism" },
+  { icon:"🏨", cat:"Hotel Tip", tip:"Airbnb and villa rentals are often 40–60% cheaper than hotels for groups of 4 or more people travelling together.", src:"Accommodation Comparison Data" },
+  { icon:"💰", cat:"Money Tip", tip:"Never exchange currency at airport kiosks — the rates are 10–20% worse than banks. Use ATMs or authorized forex at the city.", src:"Forex Advisory" },
+  { icon:"📋", cat:"Documents Tip", tip:"OCI card holders from India get VOA (Visa on Arrival) or visa-free access to many countries. Always check the country-specific OCI benefits.", src:"MEA India" },
+];
+
+let quizMode       = 'quiz';   // 'quiz' | 'learn'
+let quizState      = null;     // { questions, current, answers, done }
+let quizScores     = {};       // loaded from Firestore: { userId: { date: score, ... } }
+let _quizUnsub     = null;
+
+// ── Helpers ──
+function todayStr() {
+  return new Date().toISOString().slice(0,10); // YYYY-MM-DD
+}
+function monthStr() {
+  return new Date().toISOString().slice(0,7);  // YYYY-MM
+}
+function dayOfYear() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  return Math.floor((now - start) / 86400000);
+}
+
+// ── Pick today's 8 questions (deterministic by day) ──
+function getTodaysQuestions() {
+  const seed = dayOfYear();
+  const shuffled = [...QUIZ_BANK];
+  // Fisher-Yates with seed
+  for(let i = shuffled.length - 1; i > 0; i--) {
+    const j = (seed * 31 + i * 17 + i) % (i + 1);
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled.slice(0, 8);
+}
+
+// ── Init Quiz ──
+function initQuiz() {
+  loadQuizScores();
+  setQuizMode(quizMode);
+}
+
+function setQuizMode(mode) {
+  quizMode = mode;
+  document.getElementById('quiz-panel').style.display  = mode === 'quiz'  ? '' : 'none';
+  document.getElementById('learn-panel').style.display = mode === 'learn' ? '' : 'none';
+  document.getElementById('quiz-mode-btn').style.background  = mode === 'quiz'  ? '#8b5cf6' : '#f1f5f9';
+  document.getElementById('quiz-mode-btn').style.color       = mode === 'quiz'  ? '#fff'    : '#64748b';
+  document.getElementById('learn-mode-btn').style.background = mode === 'learn' ? '#8b5cf6' : '#f1f5f9';
+  document.getElementById('learn-mode-btn').style.color      = mode === 'learn' ? '#fff'    : '#64748b';
+  if(mode === 'learn') renderLearnMode();
+  else renderQuiz();
+}
+
+// ── Load scores from Firestore ──
+function loadQuizScores() {
+  if(_quizUnsub) _quizUnsub();
+  _quizUnsub = db.collection('quizscores').onSnapshot(snap => {
+    quizScores = {};
+    snap.docs.forEach(d => { quizScores[d.id] = d.data(); });
+    updateQuizStats();
+    renderLeaderboard();
+  }, err => console.error('Quiz scores error:', err));
+}
+
+// ── Save score to Firestore ──
+async function saveQuizScore(score, total) {
+  if(!CURRENT_USER) return;
+  const userId = String(CURRENT_USER.id);
+  const today  = todayStr();
+  const month  = monthStr();
+  try {
+    const ref  = db.collection('quizscores').doc(userId);
+    const snap = await ref.get();
+    const data = snap.exists ? snap.data() : {};
+    // Store daily scores keyed by date, monthly totals keyed by month
+    const dailyKey   = 'day_' + today.replace(/-/g,'');
+    const monthKey   = 'mon_' + month.replace(/-/g,'');
+    const streakKey  = 'streak';
+    const lastKey    = 'lastDay';
+
+    // Update streak
+    const lastDay  = data[lastKey] || '';
+    const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    let streak = data[streakKey] || 0;
+    if(lastDay === yesterday) streak += 1;
+    else if(lastDay !== today) streak = 1;
+
+    const update = {
+      name: CURRENT_USER.name,
+      initials: CURRENT_USER.initials,
+      [dailyKey]: score,
+      [monthKey]: (data[monthKey] || 0) + score,
+      totalPoints: (data.totalPoints || 0) + score,
+      [streakKey]: streak,
+      [lastKey]: today,
+    };
+    await ref.set(update, { merge: true });
+  } catch(e) { console.error('Score save failed:', e); }
+}
+
+// ── Render quiz stats bar ──
+function updateQuizStats() {
+  if(!CURRENT_USER) return;
+  const userId  = String(CURRENT_USER.id);
+  const myData  = quizScores[userId] || {};
+  const today   = todayStr();
+  const month   = monthStr();
+  const dailyKey = 'day_' + today.replace(/-/g,'');
+  const monthKey = 'mon_' + month.replace(/-/g,'');
+
+  const todayScore = myData[dailyKey] !== undefined ? myData[dailyKey] + '/8' : '—';
+  const monthScore = myData[monthKey] || 0;
+  const streak     = myData.streak    || 0;
+  const total      = myData.totalPoints || 0;
+
+  // Rank: count how many users have more monthly points
+  const myMonthPts = myData[monthKey] || 0;
+  let rank = 1;
+  Object.entries(quizScores).forEach(([uid, d]) => {
+    if(uid !== userId && (d[monthKey] || 0) > myMonthPts) rank++;
+  });
+  const rankStr = rank === 1 ? '🥇 #1' : rank === 2 ? '🥈 #2' : rank === 3 ? '🥉 #3' : '#' + rank;
+
+  document.getElementById('qs-today').textContent  = todayScore;
+  document.getElementById('qs-month').textContent  = monthScore + ' pts';
+  document.getElementById('qs-streak').textContent = streak + ' days';
+  document.getElementById('qs-rank').textContent   = rankStr;
+  document.getElementById('qs-total').textContent  = total + ' pts';
+}
+
+// ── Render Quiz ──
+function renderQuiz() {
+  const loading = document.getElementById('quiz-loading');
+  const content = document.getElementById('quiz-content');
+  const result  = document.getElementById('quiz-result');
+  if(!loading || !content || !result) return;
+
+  const today   = todayStr();
+  const userId  = CURRENT_USER ? String(CURRENT_USER.id) : '0';
+  const dailyKey = 'day_' + today.replace(/-/g,'');
+  const myData  = quizScores[userId] || {};
+  const alreadyDone = myData[dailyKey] !== undefined;
+
+  if(alreadyDone) {
+    loading.style.display = 'none';
+    content.style.display = 'none';
+    result.style.display  = '';
+    result.innerHTML = renderAlreadyDone(myData[dailyKey]);
+    return;
+  }
+
+  // Start/continue quiz
+  if(!quizState || quizState.date !== today) {
+    quizState = {
+      date: today,
+      questions: getTodaysQuestions(),
+      current: 0,
+      answers: [],
+      done: false,
+    };
+  }
+
+  loading.style.display = 'none';
+  result.style.display  = 'none';
+  content.style.display = '';
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const content = document.getElementById('quiz-content');
+  if(!content || !quizState) return;
+  const q   = quizState.questions[quizState.current];
+  const num = quizState.current + 1;
+  const tot = quizState.questions.length;
+  const pct = Math.round(((num-1) / tot) * 100);
+
+  const catColors = {
+    'Visa':'#8b5cf6', 'Documents':'#0ea5e9', 'Destinations':'#f97316',
+    'Airlines':'#0369a1', 'Hotels':'#10b981', 'Geography':'#16a34a',
+    'Travel Tips':'#f59e0b',
+  };
+  const catColor = catColors[q.cat] || '#64748b';
+
+  content.innerHTML = `
+    <div style="background:#fff;border-radius:16px;border:1.5px solid #e2e8f0;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+      <!-- Progress bar -->
+      <div style="height:5px;background:#f1f5f9">
+        <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);transition:width .4s ease"></div>
+      </div>
+      <div style="padding:22px 24px">
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+          <span style="background:${catColor}20;color:${catColor};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700">${q.cat}</span>
+          <span style="font-size:12px;color:#94a3b8;font-weight:600">Question ${num} of ${tot}</span>
+        </div>
+        <!-- Question -->
+        <div style="font-size:16px;font-weight:800;color:#0f172a;line-height:1.5;margin-bottom:20px">${q.q}</div>
+        <!-- Options -->
+        <div style="display:grid;gap:10px" id="quiz-options">
+          ${q.opts.map((opt, i) => `
+            <button onclick="selectAnswer(${i})" id="quiz-opt-${i}"
+              style="text-align:left;padding:13px 16px;border:2px solid #e2e8f0;border-radius:12px;background:#fafafa;font-size:13px;font-weight:600;color:#374151;cursor:pointer;transition:all .15s;width:100%">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#f1f5f9;color:#64748b;font-size:11px;font-weight:700;margin-right:10px">${String.fromCharCode(65+i)}</span>
+              ${opt}
+            </button>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function selectAnswer(idx) {
+  if(!quizState) return;
+  const q = quizState.questions[quizState.current];
+  quizState.answers.push(idx);
+
+  // Highlight correct/wrong
+  q.opts.forEach((_, i) => {
+    const btn = document.getElementById('quiz-opt-' + i);
+    if(!btn) return;
+    btn.style.cursor = 'default';
+    btn.onclick = null;
+    if(i === q.ans) {
+      btn.style.background = '#dcfce7';
+      btn.style.border = '2px solid #16a34a';
+      btn.style.color = '#166534';
+    } else if(i === idx && idx !== q.ans) {
+      btn.style.background = '#fee2e2';
+      btn.style.border = '2px solid #dc2626';
+      btn.style.color = '#991b1b';
+    }
+  });
+
+  // Show explanation
+  const content = document.getElementById('quiz-content');
+  const expHtml = `
+    <div style="margin-top:16px;background:${idx===q.ans?'#f0fdf4':'#fff7ed'};border:1.5px solid ${idx===q.ans?'#86efac':'#fed7aa'};border-radius:12px;padding:14px 16px">
+      <div style="font-size:12px;font-weight:800;color:${idx===q.ans?'#166534':'#9a3412'};margin-bottom:4px">${idx===q.ans?'✅ Correct!':'❌ Incorrect'}</div>
+      <div style="font-size:12px;color:#374151;line-height:1.6">${q.exp}</div>
+    </div>
+    <button onclick="nextQuestion()" style="width:100%;margin-top:14px;padding:12px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+      ${quizState.current + 1 < quizState.questions.length ? 'Next Question →' : 'See My Results 🎉'}
+    </button>`;
+
+  const opts = document.getElementById('quiz-options');
+  if(opts) opts.insertAdjacentHTML('afterend', expHtml);
+}
+
+function nextQuestion() {
+  if(!quizState) return;
+  quizState.current++;
+  if(quizState.current >= quizState.questions.length) {
+    finishQuiz();
+  } else {
+    renderQuestion();
+  }
+}
+
+function finishQuiz() {
+  if(!quizState) return;
+  quizState.done = true;
+  const score = quizState.answers.filter((ans, i) => ans === quizState.questions[i].ans).length;
+  const total = quizState.questions.length;
+  saveQuizScore(score, total);
+
+  document.getElementById('quiz-content').style.display = 'none';
+  document.getElementById('quiz-result').style.display  = '';
+  document.getElementById('quiz-result').innerHTML = renderResultCard(score, total);
+}
+
+function renderResultCard(score, total) {
+  const pct   = Math.round((score / total) * 100);
+  const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '🎉' : pct >= 40 ? '👍' : '📚';
+  const msg   = pct >= 80 ? 'Outstanding! You're a travel expert!' : pct >= 60 ? 'Great work! Keep learning!' : pct >= 40 ? 'Good effort! Review the tips below.' : 'Keep practising — you'll improve!';
+
+  return `
+    <div style="background:#fff;border-radius:16px;border:1.5px solid #e2e8f0;padding:28px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,0.06)">
+      <div style="font-size:56px;margin-bottom:10px">${emoji}</div>
+      <div style="font-size:36px;font-weight:900;color:#0f172a;margin-bottom:6px">${score} / ${total}</div>
+      <div style="font-size:18px;font-weight:700;color:#8b5cf6;margin-bottom:8px">${pct}%</div>
+      <div style="font-size:14px;color:#64748b;margin-bottom:20px">${msg}</div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button onclick="setQuizMode('learn')" style="padding:10px 20px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">📖 Go to Learn Mode</button>
+        <button onclick="showQuizReview()" style="padding:10px 20px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">🔍 Review Answers</button>
+      </div>
+    </div>
+    <div id="quiz-review-area" style="margin-top:16px"></div>`;
+}
+
+function renderAlreadyDone(score) {
+  return `
+    <div style="background:#fff;border-radius:16px;border:2px solid #8b5cf6;padding:28px;text-align:center;box-shadow:0 2px 12px rgba(139,92,246,0.1)">
+      <div style="font-size:48px;margin-bottom:10px">✅</div>
+      <div style="font-size:20px;font-weight:800;color:#0f172a;margin-bottom:6px">Today's Quiz Complete!</div>
+      <div style="font-size:32px;font-weight:900;color:#8b5cf6;margin-bottom:8px">${score} / 8 points</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:18px">You've already taken today's quiz. Come back tomorrow for new questions!</div>
+      <button onclick="setQuizMode('learn')" style="padding:10px 22px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">📖 Go to Learn Mode</button>
+    </div>`;
+}
+
+function showQuizReview() {
+  const area = document.getElementById('quiz-review-area');
+  if(!area || !quizState) return;
+  const catColors = { 'Visa':'#8b5cf6','Documents':'#0ea5e9','Destinations':'#f97316','Airlines':'#0369a1','Hotels':'#10b981','Geography':'#16a34a','Travel Tips':'#f59e0b' };
+  area.innerHTML = `
+    <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">🔍 Answer Review</div>
+    ${quizState.questions.map((q, i) => {
+      const userAns = quizState.answers[i];
+      const correct = userAns === q.ans;
+      const catColor = catColors[q.cat] || '#64748b';
+      return `<div style="background:#fff;border:1.5px solid ${correct?'#86efac':'#fca5a5'};border-radius:12px;padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <span style="font-size:14px">${correct?'✅':'❌'}</span>
+          <span style="background:${catColor}20;color:${catColor};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${q.cat}</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px">Q${i+1}. ${q.q}</div>
+        ${!correct ? `<div style="font-size:12px;color:#dc2626;margin-bottom:3px">Your answer: <strong>${q.opts[userAns]||'—'}</strong></div>` : ''}
+        <div style="font-size:12px;color:#16a34a;margin-bottom:6px">Correct: <strong>${q.opts[q.ans]}</strong></div>
+        <div style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:8px 10px">${q.exp}</div>
+      </div>`;
+    }).join('')}`;
+}
+
+// ── Learn Mode ──
+function renderLearnMode() {
+  const panel = document.getElementById('learn-content');
+  if(!panel) return;
+
+  // Tip of the Day based on day
+  const todayTip = TRAVEL_TIPS[dayOfYear() % TRAVEL_TIPS.length];
+  const catColors = { 'Airline Tip':'#0369a1','Visa Tip':'#8b5cf6','Hotel Tip':'#10b981','Destination Tip':'#f97316','Packing Tip':'#f59e0b','Safety Tip':'#dc2626','Money Tip':'#16a34a','Documents Tip':'#0ea5e9','Travel Tip':'#6d28d9' };
+
+  const cats = [...new Set(TRAVEL_TIPS.map(t => t.cat))];
+
+  panel.innerHTML = `
+    <!-- Tip of the Day -->
+    <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:16px;padding:22px;color:#fff;margin-bottom:20px;position:relative;overflow:hidden">
+      <div style="position:absolute;right:-20px;bottom:-20px;font-size:80px;opacity:.15">${todayTip.icon}</div>
+      <div style="font-size:11px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px">✨ Tip of the Day</div>
+      <div style="font-size:16px;font-weight:800;margin-bottom:8px">${todayTip.cat}</div>
+      <div style="font-size:13px;line-height:1.7;opacity:.92">${todayTip.tip}</div>
+      <div style="font-size:10px;opacity:.6;margin-top:10px">Source: ${todayTip.src}</div>
+    </div>
+
+    <!-- Category Filter -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <button onclick="filterLearnCat('all',this)" id="lc-all" style="padding:5px 12px;background:#8b5cf6;color:#fff;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">All Tips</button>
+      ${cats.map(c => `<button onclick="filterLearnCat('${c}',this)" style="padding:5px 12px;background:#f1f5f9;color:#64748b;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">${c}</button>`).join('')}
+    </div>
+
+    <!-- All Tips Grid -->
+    <div id="learn-tips-grid" style="display:grid;gap:12px">
+      ${TRAVEL_TIPS.map((t, i) => {
+        const cc = catColors[t.cat] || '#64748b';
+        return `<div class="learn-tip-card" data-cat="${t.cat}" style="background:#fff;border:1.5px solid #e2e8f0;border-left:4px solid ${cc};border-radius:12px;padding:16px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span style="font-size:22px">${t.icon}</span>
+            <span style="background:${cc}20;color:${cc};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${t.cat}</span>
+          </div>
+          <div style="font-size:13px;color:#1e293b;line-height:1.7;font-weight:500">${t.tip}</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:6px">Source: ${t.src}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+function filterLearnCat(cat, el) {
+  document.querySelectorAll('#learn-tips-grid .learn-tip-card').forEach(card => {
+    card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
+  });
+  // Update button styles
+  el.closest('div').querySelectorAll('button').forEach(b => {
+    b.style.background = '#f1f5f9'; b.style.color = '#64748b';
+  });
+  el.style.background = '#8b5cf6'; el.style.color = '#fff';
+}
+
+// ── Leaderboard ──
+function renderLeaderboard() {
+  const el = document.getElementById('quiz-leaderboard');
+  if(!el) return;
+
+  const month = monthStr();
+  const monthKey = 'mon_' + month.replace(/-/g,'');
+  const today = todayStr();
+  const dailyKey = 'day_' + today.replace(/-/g,'');
+
+  // Build leaderboard from known staff + Firestore data
+  const STAFF_LIST = [
+    {id:'1', name:'Ms. Rehana Ansari', initials:'RA'},
+    {id:'2', name:'Mr. Paresh Gajera', initials:'PG'},
+    {id:'3', name:'Ms. Nusaiba Puthawala', initials:'NP'},
+    {id:'4', name:'Mr. Ahyan Shaikh', initials:'AS'},
+  ];
+
+  const rows = STAFF_LIST.map(s => {
+    const d = quizScores[s.id] || {};
+    return {
+      ...s,
+      monthPts: d[monthKey] || 0,
+      todayPts: d[dailyKey] !== undefined ? d[dailyKey] : null,
+      streak:   d.streak   || 0,
+      total:    d.totalPoints || 0,
+    };
+  }).sort((a,b) => b.monthPts - a.monthPts);
+
+  const medals = ['🥇','🥈','🥉','4️⃣'];
+  const avatarColors = ['#f97316','#8b5cf6','#0ea5e9','#10b981'];
+
+  el.innerHTML = `
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:40px 1fr repeat(4,80px);padding:10px 16px;background:#f8fafc;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;gap:8px">
+        <div>#</div><div>Staff</div><div style="text-align:center">Today</div><div style="text-align:center">Month</div><div style="text-align:center">Streak</div><div style="text-align:center">Total</div>
+      </div>
+      ${rows.map((r, i) => {
+        const isMe = CURRENT_USER && String(CURRENT_USER.id) === r.id;
+        return `<div style="display:grid;grid-template-columns:40px 1fr repeat(4,80px);padding:13px 16px;border-top:1px solid #f1f5f9;align-items:center;gap:8px;background:${isMe?'#faf5ff':'#fff'}">
+          <div style="font-size:18px">${medals[i]||'·'}</div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:32px;height:32px;border-radius:50%;background:${avatarColors[parseInt(r.id)-1]||'#64748b'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${r.initials}</div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#0f172a">${r.name}${isMe?' <span style="font-size:10px;background:#8b5cf6;color:#fff;padding:1px 6px;border-radius:99px;font-weight:700">You</span>':''}</div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:13px;font-weight:700;color:${r.todayPts!==null?'#8b5cf6':'#94a3b8'}">${r.todayPts!==null?r.todayPts+'/8':'—'}</div>
+          <div style="text-align:center;font-size:13px;font-weight:800;color:#0f172a">${r.monthPts}</div>
+          <div style="text-align:center;font-size:13px;font-weight:700;color:#f97316">${r.streak>0?'🔥'+r.streak:'—'}</div>
+          <div style="text-align:center;font-size:13px;font-weight:700;color:#64748b">${r.total}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 
 
 // ═══════════════════════════════════════════════════════
