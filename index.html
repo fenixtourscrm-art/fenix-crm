@@ -718,7 +718,7 @@ let targets=[];
 let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
-const cName=id=>{const c=clients.find(x=>x.id===id);return c?`${c.firstName} ${c.lastName}`:"Unknown";};
+const cName=id=>{const sid=String(id);const c=clients.find(x=>String(x.id)===sid);return c?`${c.firstName} ${c.lastName}`:"Unknown";};
 const sName=id=>{const s=STAFF.find(x=>x.id===id);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
@@ -1482,7 +1482,7 @@ function updateBkForm(){
 
 function saveVisa(){
   // Visa modal kept for quick visa add — adds to allBookings as Visa category
-  const clientId=parseInt(document.getElementById("v-client").value);
+  const clientId=document.getElementById("v-client").value;
   const country=document.getElementById("v-country").value;
   const passportNo=document.getElementById("v-pass").value;
   const visaType=document.getElementById("v-type").value;
@@ -1871,7 +1871,7 @@ async function saveEnquiry(isEdit) {
   const destCustom= document.getElementById("e-dest-custom")?.value.trim()||"";
   const destIntl  = document.getElementById("e-dest-intl")?.value||"";
   const destDom   = document.getElementById("e-dest-dom")?.value||"";
-  const dest      = destCustom||(activeTab==="International"?destIntl:destDom)||"Unknown";
+  const dest      = destCustom||(activeTab==="International"?destIntl:destDom)||"";
   const intentions= [...document.querySelectorAll("#e-intentions .chip.selected")].map(c=>c.textContent);
   const adults    = parseInt(document.getElementById("e-adults")?.value)||0;
   const childBed  = parseInt(document.getElementById("e-childbed")?.value)||0;
@@ -1880,7 +1880,7 @@ async function saveEnquiry(isEdit) {
   const src       = document.getElementById("e-source").value;
   const subVal    = document.getElementById("e-subval")?.value||"";
   const data = {
-    clientId:parseInt(document.getElementById("e-client").value),
+    clientId:document.getElementById("e-client").value,
     type:document.getElementById("e-type").value,
     source:src, influencerName:subVal, refName:subVal,
     destination:dest, destType:activeTab,
@@ -1996,7 +1996,7 @@ async function saveTask() {
     title,
     assignedTo,
     assignedBy: CURRENT_USER ? CURRENT_USER.id : parseInt(document.getElementById("t-by").value),
-    clientId:parseInt(document.getElementById("t-client").value)||0,
+    clientId:document.getElementById("t-client").value||"",
     dueDate:document.getElementById("t-due").value,
     priority:document.getElementById("t-pri").value,
     done:false,
