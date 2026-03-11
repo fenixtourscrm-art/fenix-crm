@@ -1867,37 +1867,103 @@ async function saveClient() {
 async function saveEnquiry(isEdit) {
   const clientSel = document.getElementById("e-client");
   if(!clientSel || !clientSel.value || clientSel.value==="0") return alert("⚠️ Please select a Client!");
-  const activeTab = document.getElementById("dtab-intl")?.classList.contains("active")?"International":"Domestic";
-  const destCustom= document.getElementById("e-dest-custom")?.value.trim()||"";
-  const destIntl  = document.getElementById("e-dest-intl")?.value||"";
-  const destDom   = document.getElementById("e-dest-dom")?.value||"";
-  const dest      = destCustom||(activeTab==="International"?destIntl:destDom)||"";
-  const intentions= [...document.querySelectorAll("#e-intentions .chip.selected")].map(c=>c.textContent);
-  const adults    = parseInt(document.getElementById("e-adults")?.value)||0;
-  const childBed  = parseInt(document.getElementById("e-childbed")?.value)||0;
-  const childNoBed= parseInt(document.getElementById("e-childnobed")?.value)||0;
-  const infant    = parseInt(document.getElementById("e-infant")?.value)||0;
-  const src       = document.getElementById("e-source").value;
-  const subVal    = document.getElementById("e-subval")?.value||"";
+  const gv = id => document.getElementById(id)?.value?.trim() || "";
+  const gi = id => parseInt(document.getElementById(id)?.value)||0;
+
+  const cat = gv("e-category") || "International Tours";
+
+  // ── Destination: category-aware ──
+  let dest = "";
+  if(cat==="International Tours") dest = gv("e-dest-custom") || gv("e-dest-intl");
+  else if(cat==="Domestic Tours") dest = gv("e-dest-custom") || gv("e-dest-dom");
+  else if(cat==="Domestic Hotel") dest = gv("e-dest-custom") || gv("e-dest-dom");
+  else dest = gv("e-dest-custom");
+
+  // ── Pax (shared by tours, tickets, hotel, insurance, cruise) ──
+  const adults    = gi("e-adults");
+  const childBed  = gi("e-childbed");
+  const childNoBed= gi("e-childnobed");
+  const infant    = gi("e-infant");
+  const pax       = adults + childBed + childNoBed + infant || 1;
+
+  // ── Base data always saved ──
+  const src    = gv("e-source");
+  const subVal = gv("e-subval");
   const data = {
-    clientId:document.getElementById("e-client").value,
-    type:document.getElementById("e-type").value,
-    source:src, influencerName:subVal, refName:subVal,
-    destination:dest, destType:activeTab,
-    category:document.getElementById("e-category")?.value||activeTab+" Tours",
-    intentions, startDate:document.getElementById("e-start").value,
-    endDate:document.getElementById("e-end").value,
-    adults, childBed, childNoBed, infant,
-    pax:adults+childBed+childNoBed+infant||1,
-    budget:document.getElementById("e-budget").value,
-    hotelPref:document.getElementById("e-hotel")?.value||"Any",
-    rating:document.getElementById("e-rating").value,
-    followUpDate:document.getElementById("e-fudate")?.value||"",
-    followUpStatus:document.getElementById("e-fustatus")?.value||"New Enquiry",
-    status:document.getElementById("e-status").value,
-    staffId:parseInt(document.getElementById("e-staff").value),
-    lostReason:"", notes:document.getElementById("e-notes").value,
+    clientId   : gv("e-client"),
+    category   : cat,
+    type       : gv("e-type"),
+    source     : src,
+    influencerName: subVal,
+    refName    : subVal,
+    destination: dest,
+    rating     : gv("e-rating"),
+    status     : gv("e-status"),
+    staffId    : gv("e-staff"),
+    notes      : gv("e-notes"),
+    adults, childBed, childNoBed, infant, pax,
   };
+
+  // ── Category-specific fields ──
+  if(cat==="International Tours" || cat==="Domestic Tours") {
+    data.startDate  = gv("e-start");
+    data.endDate    = gv("e-end");
+    data.budget     = gv("e-budget");
+    data.hotelPref  = gv("e-hotel") || "Any";
+    data.special    = gv("e-special");
+    data.intentions = [...document.querySelectorAll("#e-intentions .chip.selected")].map(c=>c.textContent);
+    data.destType   = cat==="International Tours" ? "International" : "Domestic";
+  }
+  else if(cat==="International Tickets" || cat==="Domestic Tickets") {
+    data.fromCity    = gv("e-from-city");
+    data.startDate   = gv("e-start");
+    data.endDate     = gv("e-end");
+    data.airline     = gv("e-airline");
+    data.ticketClass = gv("e-ticket-class");
+    data.budget      = gv("e-budget");
+  }
+  else if(cat==="International Hotel" || cat==="Domestic Hotel") {
+    data.hotelName   = gv("e-hotel-name");
+    data.startDate   = gv("e-start");
+    data.endDate     = gv("e-end");
+    data.hotelPref   = gv("e-hotel") || "Any";
+    data.roomType    = gv("e-room-type");
+    data.rooms       = gi("e-rooms");
+    data.budget      = gv("e-budget");
+  }
+  else if(cat==="Visa") {
+    data.visaType      = gv("e-visa-type");
+    data.passportNo    = gv("e-passport");
+    data.passportExpiry= gv("e-pass-expiry");
+    data.ecrType       = gv("e-ecr-type");
+    data.dropBox       = gv("e-dropbox");
+    data.startDate     = gv("e-start");
+    data.numApplicants = gi("e-num-applicants") || 1;
+  }
+  else if(cat==="Passport") {
+    data.passportType   = gv("e-passport-type");
+    data.applicantName  = gv("e-applicant");
+    data.dob            = gv("e-dob");
+    data.startDate      = gv("e-start");
+    data.passportNo     = gv("e-passport");
+    data.passportStatus = gv("e-passport-status");
+  }
+  else if(cat==="Travel Insurance") {
+    data.insType     = gv("e-ins-type");
+    data.ageCriteria = gv("e-age-criteria");
+    data.sumInsured  = gv("e-sum-insured");
+    data.startDate   = gv("e-start");
+    data.endDate     = gv("e-end");
+    data.budget      = gv("e-budget");
+  }
+  else if(cat==="Cruise") {
+    data.cruiseType  = gv("e-cruise-type");
+    data.cabinType   = gv("e-cabin");
+    data.startDate   = gv("e-start");
+    data.endDate     = gv("e-end");
+    data.budget      = gv("e-budget");
+  }
+
   try {
     if(isEdit) {
       const e=enquiries.find(x=>x.id===window._editEnqId);
@@ -2268,166 +2334,289 @@ function updateEnqForm(ex) {
   const wrap = document.getElementById("enq-dynamic-fields");
   if(!wrap) return;
 
-  const paxFields = `
-    <div class="fg" style="margin-bottom:12px"><label>Passenger Details</label>
-      <div class="pax-grid">
-        <div class="pax-item"><div class="pax-label">Adults</div><input class="pax-input" type="number" id="e-adults" value="${ex?.adults||2}" min="0"/></div>
-        <div class="pax-item"><div class="pax-label">Child With Bed</div><input class="pax-input" type="number" id="e-childbed" value="${ex?.childBed||0}" min="0"/></div>
-        <div class="pax-item"><div class="pax-label">Child No Bed</div><input class="pax-input" type="number" id="e-childnobed" value="${ex?.childNoBed||0}" min="0"/></div>
-        <div class="pax-item"><div class="pax-label">Infant</div><input class="pax-input" type="number" id="e-infant" value="${ex?.infant||0}" min="0"/></div>
-      </div>
+  const gv = id => { const el=document.getElementById(id); return el?el.value:""; };
+
+  // ── Shared reusable blocks ──
+  const secHeader = (icon, label, color="#0369a1") =>
+    `<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:${color};background:${color}12;border-left:3px solid ${color};padding:5px 10px;border-radius:0 6px 6px 0;margin:12px 0 6px">${icon} ${label}</div>`;
+
+  const paxBlock = `
+    ${secHeader("👥","Passenger Details","#0369a1")}
+    <div class="pax-grid">
+      <div class="pax-item"><div class="pax-label">Adults</div><input class="pax-input" type="number" id="e-adults" value="${ex?.adults||2}" min="0"/></div>
+      <div class="pax-item"><div class="pax-label">Child With Bed</div><input class="pax-input" type="number" id="e-childbed" value="${ex?.childBed||0}" min="0"/></div>
+      <div class="pax-item"><div class="pax-label">Child No Bed</div><input class="pax-input" type="number" id="e-childnobed" value="${ex?.childNoBed||0}" min="0"/></div>
+      <div class="pax-item"><div class="pax-label">Infant</div><input class="pax-input" type="number" id="e-infant" value="${ex?.infant||0}" min="0"/></div>
     </div>`;
 
-  const dateFields = `
+  const dateBlock = (startLabel="Travel Date", endLabel="Return Date") => `
     <div class="form-grid">
-      <div class="fg"><label>Travel Start Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
-      <div class="fg"><label>Travel End Date</label><input type="date" id="e-end" value="${ex?.endDate||""}"/></div>
+      <div class="fg"><label>${startLabel}</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
+      <div class="fg"><label>${endLabel}</label><input type="date" id="e-end" value="${ex?.endDate||""}"/></div>
     </div>`;
 
-  const budgetField = `<div class="form-grid"><div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹50,000" value="${ex?.budget||""}"/></div><div class="fg"><label>Hotel Preference</label><select id="e-hotel"><option>5 Star</option><option>4 Star</option><option>3 Star</option><option>Budget</option><option>Any</option></select></div></div>`;
+  const intlCountrySel = (id="e-dest-custom", label="Destination Country", val="") => `
+    <div class="fg"><label>${label}</label>
+      <select id="${id}"><option value="">-- Select Country --</option><option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
+    </div>`;
 
-  const intentionsField = `<div class="form-grid g1"><div class="fg"><label>Inclusions</label><div class="intention-chips" id="e-intentions">${INTENTIONS.map(i=>`<div class="chip ${ex?.intentions?.includes(i)?"selected":""}" onclick="toggleChip(this)">${i}</div>`).join("")}</div></div></div>`;
+  const domDestSel = (id="e-dest-dom", label="Destination") => `
+    <div class="fg"><label>${label}</label>
+      <select id="${id}"><option value="">-- Select --</option><option value="Ahmedabad">Ahmedabad</option><option value="Mumbai">Mumbai</option><option value="Delhi">Delhi</option><option value="Bangalore">Bangalore</option><option value="Chennai">Chennai</option><option value="Hyderabad">Hyderabad</option><option value="Kolkata">Kolkata</option><option value="Jaipur">Jaipur</option><option value="Agra">Agra</option><option value="Goa">Goa</option><option value="Kerala">Kerala</option><option value="Manali">Manali</option><option value="Shimla">Shimla</option><option value="Darjeeling">Darjeeling</option><option value="Varanasi">Varanasi</option><option value="Amritsar">Amritsar</option><option value="Udaipur">Udaipur</option><option value="Jodhpur">Jodhpur</option><option value="Rishikesh">Rishikesh</option><option value="Mysore">Mysore</option><option value="Ooty">Ooty</option><option value="Coorg">Coorg</option><option value="Andaman Islands">Andaman Islands</option><option value="Lakshadweep">Lakshadweep</option><option value="Rann of Kutch">Rann of Kutch</option><option value="Srinagar">Srinagar</option><option value="Leh Ladakh">Leh Ladakh</option><option value="Hampi">Hampi</option><option value="Khajuraho">Khajuraho</option><option value="Pondicherry">Pondicherry</option></select>
+    </div>`;
 
-  const intlDestField = `
-    <div class="form-grid"><div class="fg"><label>International Destination</label>
-      <select id="e-dest-intl"><option value="">Select Country...</option>$<option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
-    </div><div class="fg"><label>Custom Destination</label><input id="e-dest-custom" placeholder="Or type custom..." value="${ex?.destination||""}"/></div></div>`;
-
-  const domDestField = `
-    <div class="form-grid"><div class="fg"><label>Domestic Destination</label>
-      <select id="e-dest-dom"><option value="">Select...</option>${DOM_DESTINATIONS.map(d=>`<option>${d}</option>`).join("")}</select>
-    </div><div class="fg"><label>Custom Destination</label><input id="e-dest-custom" placeholder="Or type custom..." value="${ex?.destination||""}"/></div></div>`;
-
+  // ── INTERNATIONAL & DOMESTIC TOURS ──
   if(cat==="International Tours" || cat==="Domestic Tours") {
-    const destField = cat==="International Tours" ? intlDestField : domDestField;
-    wrap.innerHTML = destField + paxFields + dateFields + budgetField + intentionsField;
+    const isIntl = cat==="International Tours";
+    wrap.innerHTML = `
+      ${secHeader("✈️", cat, "#0369a1")}
+      <div class="form-grid">
+        ${isIntl ? intlCountrySel("e-dest-intl","Destination Country") : domDestSel("e-dest-dom","Destination")}
+        <div class="fg"><label>Custom / Other Destination</label><input id="e-dest-custom" placeholder="Type if not listed..." value="${ex?.destination||""}"/></div>
+      </div>
+      ${dateBlock("Travel Start Date","Travel End Date")}
+      <div class="form-grid">
+        <div class="fg"><label>Hotel Preference</label>
+          <select id="e-hotel"><option>5 Star</option><option>4 Star</option><option>3 Star</option><option>Budget</option><option>Any</option></select>
+        </div>
+        <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹50,000" value="${ex?.budget||""}"/></div>
+      </div>
+      <div class="form-grid g1">
+        <div class="fg"><label>Special Requests / Inclusions</label>
+          <textarea id="e-special" rows="2" placeholder="e.g. Honeymoon setup, vegetarian meals...">${ex?.special||""}</textarea>
+        </div>
+      </div>
+      ${paxBlock}`;
+    setTimeout(()=>{
+      if(ex?.destination && document.getElementById("e-dest-intl")) document.getElementById("e-dest-intl").value=ex.destination;
+      if(ex?.destination && document.getElementById("e-dest-dom")) document.getElementById("e-dest-dom").value=ex.destination;
+      if(ex?.hotelPref) { const h=document.getElementById("e-hotel"); if(h) h.value=ex.hotelPref; }
+    },10);
   }
+
+  // ── INTERNATIONAL & DOMESTIC TICKETS (FLIGHTS) ──
   else if(cat==="International Tickets" || cat==="Domestic Tickets") {
     wrap.innerHTML = `
+      ${secHeader("🛫","Flight Details","#7c3aed")}
       <div class="form-grid">
-        <div class="fg"><label>From City</label><input id="e-from-city" placeholder="e.g. Ahmedabad" value="${ex?.fromCity||""}"/></div>
-        <div class="fg"><label>To City / Country</label><input id="e-dest-custom" placeholder="e.g. Dubai" value="${ex?.destination||""}"/></div>
+        <div class="fg"><label>Departure City</label><input id="e-from-city" placeholder="e.g. Ahmedabad" value="${ex?.fromCity||""}"/></div>
+        <div class="fg"><label>Arrival City / Country</label><input id="e-dest-custom" placeholder="e.g. Dubai, London" value="${ex?.destination||""}"/></div>
+      </div>
+      ${dateBlock("Travel Date","Return Date")}
+      <div class="form-grid">
+        <div class="fg"><label>Airline Preference</label><input id="e-airline" placeholder="e.g. IndiGo, Emirates" value="${ex?.airline||""}"/></div>
+        <div class="fg"><label>Ticket Class</label>
+          <select id="e-ticket-class">
+            <option ${ex?.ticketClass==="Economy"?"selected":""}>Economy</option>
+            <option ${ex?.ticketClass==="Business"?"selected":""}>Business</option>
+            <option ${ex?.ticketClass==="First Class"?"selected":""}>First Class</option>
+          </select>
+        </div>
       </div>
       <div class="form-grid">
-        <div class="fg"><label>Travel Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
-        <div class="fg"><label>Return Date</label><input type="date" id="e-end" value="${ex?.endDate||""}"/></div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>Ticket Class</label><select id="e-ticket-class"><option>Economy</option><option>Business</option><option>First Class</option></select></div>
         <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹15,000" value="${ex?.budget||""}"/></div>
       </div>
-      ${paxFields}`;
+      ${paxBlock}`;
   }
+
+  // ── INTERNATIONAL & DOMESTIC HOTEL ──
   else if(cat==="International Hotel" || cat==="Domestic Hotel") {
-    const destField = cat==="International Hotel" ? intlDestField : domDestField;
-    wrap.innerHTML = destField + `
+    const isIntl = cat==="International Hotel";
+    wrap.innerHTML = `
+      ${secHeader("🏨","Hotel Details","#059669")}
       <div class="form-grid">
-        <div class="fg"><label>Check-in Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
-        <div class="fg"><label>Check-out Date</label><input type="date" id="e-end" value="${ex?.endDate||""}"/></div>
+        ${isIntl ? intlCountrySel("e-dest-custom","Hotel Destination") : domDestSel("e-dest-dom","Hotel Destination")}
+        <div class="fg"><label>Hotel Name</label><input id="e-hotel-name" placeholder="e.g. Atlantis, The Palm" value="${ex?.hotelName||""}"/></div>
+      </div>
+      ${dateBlock("Check-in Date","Check-out Date")}
+      <div class="form-grid">
+        <div class="fg"><label>Hotel Category</label>
+          <select id="e-hotel">
+            <option ${ex?.hotelPref==="5 Star"?"selected":""}>5 Star</option>
+            <option ${ex?.hotelPref==="4 Star"?"selected":""}>4 Star</option>
+            <option ${ex?.hotelPref==="3 Star"?"selected":""}>3 Star</option>
+            <option ${ex?.hotelPref==="Budget"?"selected":""}>Budget</option>
+            <option ${ex?.hotelPref==="Any"||!ex?.hotelPref?"selected":""}>Any</option>
+          </select>
+        </div>
+        <div class="fg"><label>Room Type</label>
+          <select id="e-room-type">
+            <option>Standard</option><option>Deluxe</option><option>Suite</option><option>Family Room</option>
+          </select>
+        </div>
       </div>
       <div class="form-grid">
-        <div class="fg"><label>Hotel Preference</label><select id="e-hotel"><option>5 Star</option><option>4 Star</option><option>3 Star</option><option>Budget</option><option>Any</option></select></div>
+        <div class="fg"><label>No. of Rooms</label><input type="number" id="e-rooms" value="${ex?.rooms||1}" min="1"/></div>
         <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹10,000" value="${ex?.budget||""}"/></div>
       </div>
-      ${paxFields}`;
+      ${paxBlock}`;
+    setTimeout(()=>{ if(ex?.destination && !isIntl && document.getElementById("e-dest-dom")) document.getElementById("e-dest-dom").value=ex.destination; },10);
   }
+
+  // ── VISA ──
   else if(cat==="Visa") {
     wrap.innerHTML = `
+      ${secHeader("🛂","Visa Details","#dc2626")}
       <div class="form-grid">
         <div class="fg"><label>Visa Country <span style="color:#dc2626">*</span></label>
-          <select id="e-dest-custom"><option value="">Select Country...</option>$<option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
+          <select id="e-dest-custom"><option value="">-- Select Country --</option><option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
         </div>
-        <div class="fg"><label>Visa Type</label><select id="e-visa-type"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option><option>Medical</option></select></div>
+        <div class="fg"><label>Visa Type</label>
+          <select id="e-visa-type">
+            <option ${ex?.visaType==="Tourist"||!ex?.visaType?"selected":""}>Tourist</option>
+            <option ${ex?.visaType==="Business"?"selected":""}>Business</option>
+            <option ${ex?.visaType==="Transit"?"selected":""}>Transit</option>
+            <option ${ex?.visaType==="Student"?"selected":""}>Student</option>
+            <option ${ex?.visaType==="Work"?"selected":""}>Work</option>
+            <option ${ex?.visaType==="Medical"?"selected":""}>Medical</option>
+          </select>
+        </div>
       </div>
+      ${secHeader("📘","Passport Information","#0369a1")}
       <div class="form-grid">
         <div class="fg"><label>Passport No</label><input id="e-passport" placeholder="e.g. Z1234567" value="${ex?.passportNo||""}"/></div>
-        <div class="fg"><label>Passport Expiry</label><input type="date" id="e-pass-expiry" value="${ex?.passportExpiry||""}"/></div>
+        <div class="fg"><label>Passport Expiry Date</label><input type="date" id="e-pass-expiry" value="${ex?.passportExpiry||""}"/></div>
       </div>
       <div class="form-grid">
         <div class="fg"><label>ECR / Non-ECR</label>
-          <select id="e-ecr-type"><option value="">-- Select --</option><option>ECR Passport</option><option>Non-ECR Passport</option></select>
+          <select id="e-ecr-type">
+            <option value="">-- Select --</option>
+            <option ${ex?.ecrType==="ECR Passport"?"selected":""}>ECR Passport</option>
+            <option ${ex?.ecrType==="Non-ECR Passport"?"selected":""}>Non-ECR Passport</option>
+          </select>
         </div>
         <div class="fg"><label>Travel Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
       </div>
       <div class="form-grid g1" id="e-dropbox-wrap" style="display:none">
-        <div class="fg"><label>Drop Box</label>
-          <select id="e-dropbox"><option value="">-- Select --</option><option>Yes – Drop Box Eligible</option><option>No – Appointment Required</option></select>
+        <div class="fg"><label>🇺🇸 Drop Box (US Visa Only)</label>
+          <select id="e-dropbox">
+            <option value="">-- Select --</option>
+            <option ${ex?.dropBox==="Yes – Drop Box Eligible"?"selected":""}>Yes – Drop Box Eligible</option>
+            <option ${ex?.dropBox==="No – Appointment Required"?"selected":""}>No – Appointment Required</option>
+          </select>
         </div>
       </div>
-      <div class="form-grid g1"><div class="fg"><label>No. of Applicants</label><input type="number" id="e-num-applicants" min="1" value="${ex?.numApplicants||1}" placeholder="e.g. 2"/></div></div>
-      ${paxFields}`;
-    if(ex?.destination) {
-      const sel = document.getElementById("e-dest-custom");
-      if(sel) {
-        sel.value = ex.destination;
-        // Show Drop Box field for US visa
-        if(ex.destination === "United States") {
-          const dw = document.getElementById("e-dropbox-wrap");
-          if(dw) dw.style.display = "";
-        }
+      <div class="form-grid">
+        <div class="fg"><label>No. of Applicants</label><input type="number" id="e-num-applicants" min="1" value="${ex?.numApplicants||1}"/></div>
+      </div>
+      ${paxBlock}`;
+    setTimeout(()=>{
+      const sel=document.getElementById("e-dest-custom");
+      if(sel && ex?.destination) {
+        sel.value=ex.destination;
+        if(ex.destination==="United States") { const dw=document.getElementById("e-dropbox-wrap"); if(dw) dw.style.display=""; }
       }
-    }
-    // Wire up country change to show/hide drop box
-    const csel = document.getElementById("e-dest-custom");
-    if(csel) csel.addEventListener("change", function() {
-      const dw = document.getElementById("e-dropbox-wrap");
-      if(dw) dw.style.display = this.value === "United States" ? "" : "none";
-    });
+      if(sel) sel.addEventListener("change",function(){
+        const dw=document.getElementById("e-dropbox-wrap");
+        if(dw) dw.style.display=this.value==="United States"?"":"none";
+      });
+    },10);
   }
+
+  // ── PASSPORT ──
   else if(cat==="Passport") {
     wrap.innerHTML = `
+      ${secHeader("📕","Passport Application Details","#92400e")}
       <div class="form-grid">
-        <div class="fg"><label>Passport Type</label><select id="e-passport-type"><option>Fresh Application</option><option>Renewal</option><option>Tatkal</option></select></div>
+        <div class="fg"><label>Passport Application Type</label>
+          <select id="e-passport-type">
+            <option ${ex?.passportType==="Fresh Application"||!ex?.passportType?"selected":""}>Fresh Application</option>
+            <option ${ex?.passportType==="Renewal"?"selected":""}>Renewal</option>
+            <option ${ex?.passportType==="Tatkal"?"selected":""}>Tatkal</option>
+          </select>
+        </div>
         <div class="fg"><label>Applicant Name</label><input id="e-applicant" placeholder="Full name as on ID" value="${ex?.applicantName||""}"/></div>
       </div>
       <div class="form-grid">
         <div class="fg"><label>Date of Birth</label><input type="date" id="e-dob" value="${ex?.dob||""}"/></div>
-        <div class="fg"><label>Submission Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
+        <div class="fg"><label>Submission / Appointment Date</label><input type="date" id="e-start" value="${ex?.startDate||""}"/></div>
       </div>
-      <div class="form-grid g1">
-        <div class="fg"><label>Current Passport No (if renewal)</label><input id="e-passport" placeholder="Leave blank for fresh" value="${ex?.passportNo||""}"/></div>
+      <div class="form-grid">
+        <div class="fg"><label>Current Passport No (if renewal)</label><input id="e-passport" placeholder="Leave blank for fresh application" value="${ex?.passportNo||""}"/></div>
+        <div class="fg"><label>Application Status</label>
+          <select id="e-passport-status">
+            <option ${ex?.passportStatus==="Applied"||!ex?.passportStatus?"selected":""}>Applied</option>
+            <option ${ex?.passportStatus==="Docs Pending"?"selected":""}>Docs Pending</option>
+            <option ${ex?.passportStatus==="Under Process"?"selected":""}>Under Process</option>
+            <option ${ex?.passportStatus==="Ready"?"selected":""}>Ready</option>
+            <option ${ex?.passportStatus==="Delivered"?"selected":""}>Delivered</option>
+          </select>
+        </div>
       </div>`;
   }
+
+  // ── TRAVEL INSURANCE ──
   else if(cat==="Travel Insurance") {
     wrap.innerHTML = `
+      ${secHeader("🛡️","Travel Insurance Details","#0284c7")}
       <div class="form-grid">
         <div class="fg"><label>Destination Country</label>
-          <select id="e-dest-custom"><option value="">Select Country...</option>$<option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
+          <select id="e-dest-custom"><option value="">-- Select Country --</option><option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
         </div>
-        <div class="fg"><label>Insurance Type</label><select id="e-ins-type"><option>Single Trip</option><option>Multi Trip</option><option>Family</option><option>Senior Citizen</option></select></div>
+        <div class="fg"><label>Insurance Type</label>
+          <select id="e-ins-type">
+            <option ${ex?.insType==="Single Trip"||!ex?.insType?"selected":""}>Single Trip</option>
+            <option ${ex?.insType==="Multi Trip"?"selected":""}>Multi Trip</option>
+            <option ${ex?.insType==="Family"?"selected":""}>Family</option>
+            <option ${ex?.insType==="Senior Citizen"?"selected":""}>Senior Citizen</option>
+          </select>
+        </div>
       </div>
       <div class="form-grid">
         <div class="fg"><label>Age Criteria</label>
           <select id="e-age-criteria">
             <option value="">-- Select Age Group --</option>
-            <option value="1-40">1 – 40 years</option>
-            <option value="41-60">41 – 60 years</option>
-            <option value="61-70">61 – 70 years</option>
-            <option value="71-75">71 – 75 years</option>
-            <option value="76-80">76 – 80 years</option>
-            <option value="81+">Above 81 years (Premium Insurance)</option>
+            <option value="1-40" ${ex?.ageCriteria==="1-40"?"selected":""}>1 – 40 years</option>
+            <option value="41-60" ${ex?.ageCriteria==="41-60"?"selected":""}>41 – 60 years</option>
+            <option value="61-70" ${ex?.ageCriteria==="61-70"?"selected":""}>61 – 70 years</option>
+            <option value="71-75" ${ex?.ageCriteria==="71-75"?"selected":""}>71 – 75 years</option>
+            <option value="76-80" ${ex?.ageCriteria==="76-80"?"selected":""}>76 – 80 years</option>
+            <option value="81+" ${ex?.ageCriteria==="81+"?"selected":""}>Above 81 years (Premium)</option>
           </select>
         </div>
-        <div class="fg"><label>Sum Insured</label><select id="e-sum-insured"><option>$50,000</option><option>$100,000</option><option>$250,000</option><option>$500,000</option></select></div>
+        <div class="fg"><label>Sum Insured</label>
+          <select id="e-sum-insured">
+            <option ${ex?.sumInsured==="$50,000"||!ex?.sumInsured?"selected":""}>$50,000</option>
+            <option ${ex?.sumInsured==="$100,000"?"selected":""}>$100,000</option>
+            <option ${ex?.sumInsured==="$250,000"?"selected":""}>$250,000</option>
+            <option ${ex?.sumInsured==="$500,000"?"selected":""}>$500,000</option>
+          </select>
+        </div>
       </div>
-      ${dateFields}
+      ${dateBlock("Insurance Start Date","Insurance End Date")}
       <div class="form-grid">
         <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹2,000" value="${ex?.budget||""}"/></div>
       </div>
-      ${paxFields}`;
+      ${paxBlock}`;
+    setTimeout(()=>{ if(ex?.destination) { const s=document.getElementById("e-dest-custom"); if(s) s.value=ex.destination; } },10);
   }
+
+  // ── CRUISE ──
   else if(cat==="Cruise") {
     wrap.innerHTML = `
+      ${secHeader("🛳️","Cruise Details","#0891b2")}
       <div class="form-grid">
-        <div class="fg"><label>Country for Cruising</label><input id="e-dest-custom" placeholder="e.g. Dubai, Mediterranean, Caribbean" value="${ex?.destination||""}"/></div>
-        <div class="fg"><label>Cruise Type</label><select id="e-cruise-type"><option>International</option><option>Domestic</option></select></div>
+        <div class="fg"><label>Country / Region for Cruising</label><input id="e-dest-custom" placeholder="e.g. Dubai, Mediterranean, Caribbean" value="${ex?.destination||""}"/></div>
+        <div class="fg"><label>Cruise Type</label>
+          <select id="e-cruise-type">
+            <option ${ex?.cruiseType==="International"||!ex?.cruiseType?"selected":""}>International</option>
+            <option ${ex?.cruiseType==="Domestic"?"selected":""}>Domestic</option>
+          </select>
+        </div>
       </div>
-      ${dateFields}
+      ${dateBlock("Cruise Start Date","Cruise End Date")}
       <div class="form-grid">
-        <div class="fg"><label>Cabin Type</label><select id="e-cabin"><option>Interior</option><option>Ocean View</option><option>Balcony</option><option>Suite</option></select></div>
+        <div class="fg"><label>Cabin Type</label>
+          <select id="e-cabin">
+            <option ${ex?.cabinType==="Interior"||!ex?.cabinType?"selected":""}>Interior</option>
+            <option ${ex?.cabinType==="Ocean View"?"selected":""}>Ocean View</option>
+            <option ${ex?.cabinType==="Balcony"?"selected":""}>Balcony</option>
+            <option ${ex?.cabinType==="Suite"?"selected":""}>Suite</option>
+          </select>
+        </div>
         <div class="fg"><label>Budget (₹)</label><input id="e-budget" placeholder="e.g. ₹80,000" value="${ex?.budget||""}"/></div>
       </div>
-      ${paxFields}`;
+      ${paxBlock}`;
   }
 }
 
