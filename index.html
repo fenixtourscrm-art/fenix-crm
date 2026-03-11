@@ -406,7 +406,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
             <span id="book-cal-label" style="font-size:12px;font-weight:700;color:#0f172a;min-width:110px;text-align:center"></span>
             <button class="btn btn-ghost" onclick="nextMonth('book')">›</button>
           </div>
-          <button class="btn btn-primary" onclick="openBookingModal()">+ Add Booking</button>
         </div>
       </div>
 
@@ -682,6 +681,7 @@ const BK_CATS=[
   {id:"Travel Insurance",     label:"Insurance",      icon:"🛡️", di:"international"},
   {id:"Cruise",               label:"Cruise",         icon:"🛳️", di:"international"},
   {id:"Visa",                 label:"Visa",           icon:"📄", di:"international"},
+  {id:"Passport",             label:"Passport",       icon:"📕", di:"domestic"},
 ];
 
 // Unified bookings — include old visa records as category "Visa"
