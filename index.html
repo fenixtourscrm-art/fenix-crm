@@ -531,12 +531,50 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-primary" onclick="openBugModal()">+ Report a Bug</button>
       </div>
 
+      <!-- KPI Stat Cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:12px;margin-bottom:20px">
+        <div style="background:#fff;border-radius:12px;padding:14px 16px;border:1.5px solid #e2e8f0;text-align:center;cursor:pointer" onclick="setBugFilter('all',document.getElementById('bug-filter-all'))">
+          <div id="bug-stat-total" style="font-size:24px;font-weight:800;color:#0f172a">0</div>
+          <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px">Total</div>
+        </div>
+        <div style="background:#fee2e2;border-radius:12px;padding:14px 16px;border:1.5px solid #fca5a5;text-align:center;cursor:pointer" onclick="setBugFilter('open',document.getElementById('bug-filter-open'))">
+          <div id="bug-stat-open" style="font-size:24px;font-weight:800;color:#991b1b">0</div>
+          <div style="font-size:11px;color:#991b1b;font-weight:600;margin-top:2px">Open</div>
+        </div>
+        <div style="background:#fef3c7;border-radius:12px;padding:14px 16px;border:1.5px solid #fcd34d;text-align:center;cursor:pointer" onclick="setBugFilter('progress',document.getElementById('bug-filter-progress'))">
+          <div id="bug-stat-progress" style="font-size:24px;font-weight:800;color:#92400e">0</div>
+          <div style="font-size:11px;color:#92400e;font-weight:600;margin-top:2px">In Progress</div>
+        </div>
+        <div style="background:#dcfce7;border-radius:12px;padding:14px 16px;border:1.5px solid #86efac;text-align:center;cursor:pointer" onclick="setBugFilter('fixed',document.getElementById('bug-filter-fixed'))">
+          <div id="bug-stat-fixed" style="font-size:24px;font-weight:800;color:#166534">0</div>
+          <div style="font-size:11px;color:#166534;font-weight:600;margin-top:2px">Fixed</div>
+        </div>
+        <div style="background:#fff1f2;border-radius:12px;padding:14px 16px;border:1.5px solid #fda4af;text-align:center;cursor:pointer" onclick="setBugFilter('high',document.getElementById('bug-filter-high'))">
+          <div id="bug-stat-high" style="font-size:24px;font-weight:800;color:#be123c">0</div>
+          <div style="font-size:11px;color:#be123c;font-weight:600;margin-top:2px">🚨 High Priority</div>
+        </div>
+      </div>
+
+      <!-- Search + Sort row -->
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <input id="bug-search" placeholder="🔍 Search bugs..." oninput="renderBugReports()"
+          style="flex:1;min-width:180px;padding:8px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px"/>
+        <select id="bug-sort" onchange="renderBugReports()"
+          style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff;color:#374151">
+          <option value="newest">🕐 Newest First</option>
+          <option value="oldest">🕓 Oldest First</option>
+          <option value="priority">🔥 Priority (High→Low)</option>
+          <option value="section">📂 Section A–Z</option>
+        </select>
+      </div>
+
       <!-- Filter tabs -->
       <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
         <button class="btn" id="bug-filter-all" onclick="setBugFilter('all',this)" style="background:#f97316;color:#fff;font-size:12px">All</button>
         <button class="btn" id="bug-filter-open" onclick="setBugFilter('open',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🔴 Open</button>
         <button class="btn" id="bug-filter-progress" onclick="setBugFilter('progress',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🟡 In Progress</button>
         <button class="btn" id="bug-filter-fixed" onclick="setBugFilter('fixed',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🟢 Fixed</button>
+        <button class="btn" id="bug-filter-high" onclick="setBugFilter('high',this)" style="background:#f1f5f9;color:#64748b;font-size:12px">🚨 High Priority</button>
       </div>
 
       <!-- Bug list -->
@@ -2752,6 +2790,11 @@ function openBugModal() {
             </div>
           </div>
         </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:5px">Steps to Reproduce (Optional)</label>
+            <textarea id="bug-steps" rows="3" placeholder="1. Go to Bookings tab&#10;2. Click Add Booking&#10;3. Fill form and click Save&#10;4. Error appears" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical"></textarea>
+          </div>
+        </div>
         <button onclick="saveBugReport()" style="width:100%;margin-top:18px;padding:12px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
           🐛 Submit Bug Report
         </button>
@@ -2764,7 +2807,9 @@ async function saveBugReport() {
   const section  = document.getElementById("bug-section")?.value;
   const title    = document.getElementById("bug-title")?.value.trim();
   const desc     = document.getElementById("bug-desc")?.value.trim();
+  const steps    = document.getElementById("bug-steps")?.value.trim() || "";
   const priority = document.querySelector('input[name="bug-priority"]:checked')?.value || "medium";
+  const browserInfo = `${navigator.userAgent} | Screen: ${screen.width}x${screen.height}`;
 
   if(!section) return alert("⚠️ Please select the section where the bug occurs!");
   if(!title)   return alert("⚠️ Please enter a bug title!");
@@ -2773,6 +2818,8 @@ async function saveBugReport() {
   try {
     await fbAdd("bugreports", {
       section, title, description: desc,
+      stepsToReproduce: steps,
+      browserInfo,
       priority, status: "open",
       reportedBy: CURRENT_USER?.name || "Unknown",
       reportedById: CURRENT_USER?.id || 0,
@@ -2810,23 +2857,54 @@ function renderBugReports() {
   if(!el) return;
 
   const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
+  const searchQ = (document.getElementById("bug-search")?.value || "").toLowerCase().trim();
+  const sortBy  = document.getElementById("bug-sort")?.value || "newest";
+
+  // ── Update stat cards ──
+  const setS = (id, val) => { const e = document.getElementById(id); if(e) e.textContent = val; };
+  setS("bug-stat-total",    bugReports.length);
+  setS("bug-stat-open",     bugReports.filter(b => b.status === "open").length);
+  setS("bug-stat-progress", bugReports.filter(b => b.status === "in-progress").length);
+  setS("bug-stat-fixed",    bugReports.filter(b => b.status === "fixed").length);
+  setS("bug-stat-high",     bugReports.filter(b => b.priority === "high" && b.status !== "fixed").length);
+
   let list = [...bugReports];
-  if(bugFilter !== "all") {
-    const map = { open:"open", progress:"in-progress", fixed:"fixed" };
-    list = list.filter(b => b.status === (map[bugFilter]||bugFilter));
+
+  // ── Filter ──
+  if(bugFilter === "open")     list = list.filter(b => b.status === "open");
+  else if(bugFilter === "progress") list = list.filter(b => b.status === "in-progress");
+  else if(bugFilter === "fixed")    list = list.filter(b => b.status === "fixed");
+  else if(bugFilter === "high")     list = list.filter(b => b.priority === "high" && b.status !== "fixed");
+
+  // ── Search ──
+  if(searchQ) {
+    list = list.filter(b =>
+      (b.title||"").toLowerCase().includes(searchQ) ||
+      (b.description||"").toLowerCase().includes(searchQ) ||
+      (b.section||"").toLowerCase().includes(searchQ) ||
+      (b.reportedBy||"").toLowerCase().includes(searchQ) ||
+      (b.stepsToReproduce||"").toLowerCase().includes(searchQ)
+    );
   }
+
+  // ── Sort ──
+  const PRIO_ORDER = { high: 0, medium: 1, low: 2 };
+  if(sortBy === "newest")   list.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
+  else if(sortBy === "oldest") list.sort((a,b) => (a.createdAt||"").localeCompare(b.createdAt||""));
+  else if(sortBy === "priority") list.sort((a,b) => (PRIO_ORDER[a.priority]??1) - (PRIO_ORDER[b.priority]??1));
+  else if(sortBy === "section") list.sort((a,b) => (a.section||"").localeCompare(b.section||""));
 
   if(!list.length) {
     el.innerHTML = `<div class="empty" style="padding:40px">
-      ${bugFilter==="all" ? "🎉 No bugs reported yet! Everything is working well." : "No bugs in this category."}
+      ${searchQ ? "🔍 No bugs match your search." : bugFilter==="all" ? "🎉 No bugs reported yet! Everything is working well." : "No bugs in this category."}
     </div>`;
     return;
   }
 
   const priorityMeta = {
-    high:   { label:"🔴 High",   bg:"#fee2e2", color:"#991b1b" },
-    medium: { label:"🟡 Medium", bg:"#fef3c7", color:"#92400e" },
-    low:    { label:"🟢 Low",    bg:"#dcfce7", color:"#166534" },
+    high:   { label:"🔴 High",   bg:"#fee2e2", color:"#991b1b", border:"#dc2626" },
+    medium: { label:"🟡 Medium", bg:"#fef3c7", color:"#92400e", border:"#d97706" },
+    low:    { label:"🟢 Low",    bg:"#dcfce7", color:"#166534", border:"#16a34a" },
   };
   const statusMeta = {
     "open":        { label:"🔴 Open",        bg:"#fee2e2", color:"#991b1b" },
@@ -2839,7 +2917,7 @@ function renderBugReports() {
     const sm = statusMeta[b.status]     || statusMeta.open;
     const date = b.createdAt ? new Date(b.createdAt).toLocaleDateString("en-IN", {day:"2-digit",month:"short",year:"numeric"}) : "";
 
-    return `<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,0.05)">
+    return `<div style="background:#fff;border:1px solid #e2e8f0;border-left:4px solid ${pm.border};border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 6px rgba(0,0,0,0.05)">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
         <div style="flex:1">
           <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:4px">${b.title}</div>
@@ -2849,6 +2927,11 @@ function renderBugReports() {
             <span style="background:${sm.bg};color:${sm.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${sm.label}</span>
           </div>
           <div style="font-size:12px;color:#374151;background:#f8fafc;border-radius:8px;padding:10px 12px;line-height:1.6">${b.description}</div>
+          ${b.stepsToReproduce ? `<div style="margin-top:8px;font-size:12px;color:#374151;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;line-height:1.6">
+            <div style="font-weight:700;color:#0369a1;margin-bottom:4px;font-size:11px;text-transform:uppercase">📋 Steps to Reproduce</div>
+            <pre style="margin:0;font-family:inherit;white-space:pre-wrap">${b.stepsToReproduce}</pre>
+          </div>` : ""}
+          ${isOwner && b.browserInfo ? `<div style="margin-top:6px;font-size:10px;color:#94a3b8;background:#f8fafc;border-radius:6px;padding:6px 10px;word-break:break-all">💻 <strong>Device:</strong> ${b.browserInfo}</div>` : ""}
           <div style="font-size:10px;color:#94a3b8;margin-top:8px">Reported by <strong>${b.reportedBy}</strong> · ${date}</div>
         </div>
       </div>
