@@ -391,21 +391,11 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div class="bk-cards-grid" id="bk-cards"></div>
 
       <!-- Filters row -->
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-          <!-- Domestic / International toggle -->
-          <div class="di-toggle">
-            <button class="di-btn active" id="di-all" onclick="setDIFilter('all',this)">All</button>
-            <button class="di-btn" id="di-dom" onclick="setDIFilter('domestic',this)">🇮🇳 Domestic</button>
-            <button class="di-btn" id="di-intl" onclick="setDIFilter('international',this)">🌍 International</button>
-          </div>
-        </div>
-        <div style="display:flex;gap:6px">
-          <div style="display:flex;align-items:center;gap:6px">
-            <button class="btn btn-ghost" onclick="prevMonth('book')">‹</button>
-            <span id="book-cal-label" style="font-size:12px;font-weight:700;color:#0f172a;min-width:110px;text-align:center"></span>
-            <button class="btn btn-ghost" onclick="nextMonth('book')">›</button>
-          </div>
+      <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <button class="btn btn-ghost" onclick="prevMonth('book')">‹</button>
+          <span id="book-cal-label" style="font-size:12px;font-weight:700;color:#0f172a;min-width:110px;text-align:center"></span>
+          <button class="btn btn-ghost" onclick="nextMonth('book')">›</button>
         </div>
       </div>
 
@@ -2075,8 +2065,11 @@ async function saveBooking(isEdit) {
       await fbUpdate("bookings",b.id,data); Object.assign(b,data);
       closeOverlay(); renderBookings();
     } else {
-      await fbAdd("bookings",data);
+      const newBkId = await fbAdd("bookings",data);
+      data.id = newBkId;
+      allBookings.push(data);
       closeOverlay();
+      renderBookings();
     }
     window._bkPreCat=null; renderCalendar("book");
   } catch(e) { alert("Save failed: "+e.message); }
@@ -2949,19 +2942,23 @@ function openAddPayment(bookingId) {
           <button onclick="document.getElementById('add-payment-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:18px;color:#64748b">✕</button>
         </div>
 
-        <!-- Summary cards -->
+        <!-- Editable Total & Paid + Pending display -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
           <div style="background:#f8fafc;border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase">Total</div>
-            <div style="font-size:14px;font-weight:800;color:#0f172a;margin-top:2px">${fmt(totalAmt)}</div>
+            <div style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:4px">Total Amount ₹</div>
+            <input type="number" id="ap-total-edit" value="${totalAmt}" min="0"
+              style="width:100%;padding:4px 6px;border:1.5px solid #cbd5e1;border-radius:6px;font-size:13px;font-weight:800;color:#0f172a;text-align:center;box-sizing:border-box;background:#fff"
+              oninput="updateApPending(parseFloat(this.value)||0, parseFloat(document.getElementById('ap-paid-edit').value)||0)"/>
           </div>
           <div style="background:#dcfce7;border-radius:10px;padding:10px;text-align:center">
-            <div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase">Paid</div>
-            <div style="font-size:14px;font-weight:800;color:#16a34a;margin-top:2px">${fmt(paidSoFar)}</div>
+            <div style="font-size:10px;color:#166534;font-weight:700;text-transform:uppercase;margin-bottom:4px">Paid So Far ₹</div>
+            <input type="number" id="ap-paid-edit" value="${paidSoFar}" min="0"
+              style="width:100%;padding:4px 6px;border:1.5px solid #86efac;border-radius:6px;font-size:13px;font-weight:800;color:#16a34a;text-align:center;box-sizing:border-box;background:#f0fdf4"
+              oninput="updateApPending(parseFloat(document.getElementById('ap-total-edit').value)||0, parseFloat(this.value)||0)"/>
           </div>
           <div style="background:#fee2e2;border-radius:10px;padding:10px;text-align:center">
             <div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase">Pending</div>
-            <div style="font-size:14px;font-weight:800;color:#dc2626;margin-top:2px" id="ap-pending-display">${fmt(pendingAmt)}</div>
+            <div style="font-size:14px;font-weight:800;color:#dc2626;margin-top:6px" id="ap-pending-display">${fmt(pendingAmt)}</div>
           </div>
         </div>
 
@@ -3032,8 +3029,10 @@ async function saveAddPayment(bookingId) {
   const method = document.getElementById("ap-method")?.value || "Cash";
   const ref    = document.getElementById("ap-ref")?.value    || "";
 
-  const totalAmt   = parseFloat(b.amount) || 0;
-  const newPaid    = (parseFloat(b.paid) || 0) + newAmt;
+  const totalAmt   = parseFloat(document.getElementById("ap-total-edit")?.value) || parseFloat(b.amount) || 0;
+  const editedPaid = parseFloat(document.getElementById("ap-paid-edit")?.value);
+  const basePaid   = isNaN(editedPaid) ? (parseFloat(b.paid) || 0) : editedPaid;
+  const newPaid    = basePaid + newAmt;
   const newPending = Math.max(0, totalAmt - newPaid);
   const newPayStatus = newPaid >= totalAmt ? "Fully Paid" : newPaid > 0 ? "Partially Paid" : "Pending";
 
@@ -3054,6 +3053,7 @@ async function saveAddPayment(bookingId) {
       paymentHistory: history,
     });
     // Update local
+    b.amount = totalAmt;
     b.paid = newPaid;
     b.pendingAmount = newPending;
     b.paymentStatus = newPayStatus;
