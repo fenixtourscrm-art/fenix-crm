@@ -447,7 +447,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="tab" id="tab-marketing">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div class="section-title" style="margin:0">Marketing Tracker</div>
-        <button class="btn btn-primary" onclick="openModal('marketing')">+ Add Entry</button>
       </div>
       <div class="three-col" style="margin-bottom:20px">
         <div class="kpi"><div class="kpi-icon">📞</div><div class="kpi-label">Total Marketing Calls</div><div class="kpi-value" id="mkt-calls">0</div><div class="kpi-sub">this month</div></div>
@@ -2157,8 +2156,8 @@ async function saveReport() {
     entries, otherWork:document.getElementById("r-other").value,
   };
   try {
-    const id=await fbAdd("reports",data); data.id=id; reports.push(data);
-    closeOverlay(); renderReports();
+    await fbAdd("reports",data);
+    closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
 }
 
@@ -2203,8 +2202,8 @@ async function saveMktCall() {
     clientId:window._mktClientId||null,
   };
   try {
-    const id=await fbAdd("marketing",data); data.id=id; marketing.push(data);
-    window._mktClientId=null; closeOverlay(); renderMarketing();
+    await fbAdd("marketing",data);
+    window._mktClientId=null; closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
 }
 
@@ -2223,8 +2222,8 @@ async function saveTarget() {
   };
   try {
     if(ex) { await fbUpdate("targets",ex.id,data); Object.assign(ex,data); }
-    else   { const id=await fbAdd("targets",data); data.id=id; targets.push(data); }
-    closeOverlay(); renderTargets(); renderChart();
+    else   { await fbAdd("targets",data); }
+    closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
 }
 
