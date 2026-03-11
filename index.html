@@ -766,7 +766,7 @@ function renderDashboard(){
     <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">Total Clients</div><div class="kpi-value">${clients.length}</div><div class="kpi-sub">in database</div></div>
     <div class="kpi"><div class="kpi-icon">🛂</div><div class="kpi-label">Visa Pending</div><div class="kpi-value">${visas.filter(v=>v.status==="Pending"||v.status==="Submitted").length}</div><div class="kpi-sub">applications</div></div>`;
   const hot=enquiries.filter(e=>e.status==="Active"&&(e.rating==="A+"||e.rating==="A")).slice(0,4);
-  document.getElementById("dash-hot").innerHTML=hot.length?hot.map(e=>`<div class="task-item"><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)} ${rBadge(e.rating)} ${tBadge(e.type)}</div><div style="font-size:11px;color:#64748b;margin-top:2px">✈️ ${e.destination} · ${e.pax} pax · ${e.budget}</div><div style="font-size:10px;color:#94a3b8">👤 ${sName(e.staffId)} · 🎯 ${e.intentions.join(", ")}</div></div><button class="btn btn-success" style="font-size:10px" onclick="markBooked('${e.id}')">Book ✓</button></div>`).join(""):`<div class="empty">No hot enquiries</div>`;
+  document.getElementById("dash-hot").innerHTML=hot.length?hot.map(e=>`<div class="task-item"><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)} ${rBadge(e.rating)} ${tBadge(e.type)}</div><div style="font-size:11px;color:#64748b;margin-top:2px">✈️ ${e.destination} · ${e.pax} pax · ${e.budget}</div><div style="font-size:10px;color:#94a3b8">👤 ${sName(e.staffId)}${(e.intentions&&e.intentions.length)?` · 🎯 ${e.intentions.join(", ")}`:""}</div></div><button class="btn btn-success" style="font-size:10px" onclick="markBooked('${e.id}')">Book ✓</button></div>`).join(""):`<div class="empty">No hot enquiries</div>`;
   const od=tasks.filter(t=>!t.done&&t.dueDate<today()).slice(0,4);
   document.getElementById("dash-overdue").innerHTML=od.length?od.map(t=>`<div class="task-item overdue"><div class="pdot ph"></div><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${t.title}</div><div style="font-size:10px;color:#dc2626;margin-top:2px">⚠️ Due ${t.dueDate} · ${sName(t.assignedTo)}</div></div></div>`).join(""):`<div class="empty">No overdue tasks 🎉</div>`;
   const todayReports=reports.filter(r=>r.date===today());
@@ -845,7 +845,7 @@ function renderEnquiries(){
   let list=enquiries;
   if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk") list=list.filter(e=>e.status===enqFilter);
   else if(enqFilter==="New"||enqFilter==="Old"||enqFilter==="Repeated") list=list.filter(e=>e.type===enqFilter);
-  if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||e.intentions.includes(catFilter));
+  if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||(Array.isArray(e.intentions)&&e.intentions.includes(catFilter)));
   const fuColors={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
   document.getElementById("enq-tbody").innerHTML=list.map(e=>{
     const fuColor=fuColors[e.followUpStatus]||"#94a3b8";
@@ -1799,7 +1799,14 @@ function loadFromFirestore() {
 
   collections.forEach(col => {
     const unsub = db.collection(col).onSnapshot(snap => {
-      const docs = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      const docs = snap.docs.map(d => {
+        const data = d.data();
+        // Ensure array fields are always arrays
+        if(col==="enquiries") {
+          if(!Array.isArray(data.intentions)) data.intentions = [];
+        }
+        return {id: d.id, ...data};
+      });
       if(col==="clients")   clients    = docs;
       if(col==="enquiries") enquiries  = docs;
       if(col==="bookings")  allBookings= docs;
