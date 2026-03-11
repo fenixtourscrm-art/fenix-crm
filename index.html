@@ -43,7 +43,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .kpi-sub{font-size:10px;color:#f97316;margin-top:3px}
 /* SECTION */
 .section-title{font-size:14px;font-weight:700;font-family:"Playfair Display",serif;color:#0f172a;margin-bottom:12px;border-left:3px solid #f97316;padding-left:10px;display:flex;align-items:center;justify-content:space-between}
-.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:visible;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
 table{width:100%;border-collapse:collapse}
 th{background:#f8fafc;color:#64748b;font-size:9px;letter-spacing:.12em;font-weight:700;padding:9px 14px;text-align:left;border-bottom:1px solid #e2e8f0;white-space:nowrap}
 td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151;vertical-align:middle}
@@ -181,7 +181,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 .cat-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap}
 /* ACTION BTN */
 .action-btn-wrap{position:relative;display:inline-block}
-.action-dropdown{display:none;position:absolute;right:0;top:100%;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:50;min-width:200px;overflow:hidden;margin-top:4px}
+.action-dropdown{display:none;position:absolute;right:0;top:100%;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:9990;min-width:200px;overflow:hidden;margin-top:4px}
 .action-dropdown.open{display:block}
 .action-dropdown-item{padding:10px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
 .action-dropdown-item:hover{background:#fff7ed;color:#ea580c}
@@ -719,7 +719,7 @@ let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
 const cName=id=>{const sid=String(id);const c=clients.find(x=>String(x.id)===sid);return c?`${c.firstName} ${c.lastName}`:"Unknown";};
-const sName=id=>{const s=STAFF.find(x=>x.id===id);return s?s.name:"Unknown";};
+const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
 const thisMonth=()=>today().slice(0,7);
@@ -805,7 +805,7 @@ function renderClients(){
     <td style="position:relative;overflow:visible;white-space:nowrap">
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
         <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
-        <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.12);min-width:180px;display:none">
+        <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:9990;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);min-width:180px;display:none">
           <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
           <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
         </div>
@@ -1858,8 +1858,11 @@ async function saveClient() {
   };
   _saving = true;
   try {
-    await fbAdd("clients", data);
+    const newId = await fbAdd("clients", data);
+    data.id = newId;
+    clients.push(data);
     closeOverlay();
+    renderClients();
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
 }
@@ -1899,7 +1902,7 @@ async function saveEnquiry(isEdit) {
     destination: dest,
     rating     : gv("e-rating"),
     status     : gv("e-status"),
-    staffId    : gv("e-staff"),
+    staffId    : parseInt(gv("e-staff"))||0,
     notes      : gv("e-notes"),
     adults, childBed, childNoBed, infant, pax,
   };
@@ -2003,7 +2006,7 @@ async function saveBooking(isEdit) {
     paymentStatus: gv("b-pay-status") || "Pending",
     pendingAmount: Math.max(0, (parseFloat(document.getElementById("b-amt")?.value)||0) - (parseFloat(document.getElementById("b-paid")?.value)||0)),
     paymentHistory: [],
-    staffId: document.getElementById("b-staff")?.value || (CURRENT_USER?.id||0),
+    staffId: parseInt(document.getElementById("b-staff")?.value)||CURRENT_USER?.id||0,
     notes: gv("b-notes"),
     // tour fields
     tourType: gv("b-tourtype"),
