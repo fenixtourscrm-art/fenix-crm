@@ -2377,15 +2377,9 @@ async function sendAIMessage() {
     const lastMessages = aiHistory.slice(-6);
     const conversationText = lastMessages.map(m => 
       (m.role === 'user' ? 'Customer: ' : 'Fenix AI: ') + m.content
-    ).join('
-');
+    ).join('\n');
     
-    const fullPrompt = systemPrompt + '
-
-Conversation:
-' + conversationText + '
-
-Fenix AI:';
+    const fullPrompt = systemPrompt + '\n\nConversation:\n' + conversationText + '\n\nFenix AI:';
     const encodedPrompt = encodeURIComponent(fullPrompt);
     
     const response = await fetch(`https://text.pollinations.ai/${encodedPrompt}`, {
