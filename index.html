@@ -18,6 +18,18 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .nav-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;font-size:12px;font-weight:600;color:#64748b;transition:all .15s;border-left:3px solid transparent;margin-bottom:1px;border-radius:0 8px 8px 0;margin-right:8px}
 .nav-item:hover{background:#fff7ed;color:#ea580c;border-left-color:rgba(249,115,22,0.4)}
 .nav-item.active{background:#fff7ed;color:#ea580c;border-left-color:#f97316}
+/* ── QUIZ STYLES ── */
+.qmode-btn{padding:8px 16px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-size:12px;font-weight:700;color:#64748b;transition:.15s}
+.qmode-btn:hover{border-color:#8b5cf6;color:#8b5cf6}
+.qmode-active{background:#8b5cf6!important;border-color:#8b5cf6!important;color:#fff!important}
+.quiz-stat-card{border-radius:14px;padding:16px 20px;color:#fff}
+.quiz-stat-label{font-size:10px;font-weight:700;opacity:.8;letter-spacing:.5px;margin-bottom:4px}
+.quiz-stat-val{font-size:26px;font-weight:800;line-height:1.1}
+.q-cat-btn{padding:6px 14px;border:2px solid #e2e8f0;border-radius:20px;background:#fff;cursor:pointer;font-size:12px;font-weight:600;color:#64748b;transition:.15s;white-space:nowrap}
+.q-cat-btn:hover{border-color:#8b5cf6;color:#8b5cf6}
+.q-cat-active{background:#8b5cf6!important;border-color:#8b5cf6!important;color:#fff!important}
+.learn-card{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:16px;transition:.2s}
+.learn-card:hover{border-color:#8b5cf6;box-shadow:0 4px 16px rgba(139,92,246,.12)}
 .nav-icon{font-size:15px;width:18px;text-align:center}
 .nav-badge{margin-left:auto;background:#ef4444;color:#fff;border-radius:99px;font-size:9px;font-weight:800;padding:1px 6px}
 .nav-badge.o{background:#f97316}
@@ -563,74 +575,178 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div id="search-results"></div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════
+         TRAVEL QUIZ TAB
+    ════════════════════════════════════════════════ -->
     <div class="tab" id="tab-quiz">
-      <!-- Header row -->
+
+      <!-- TOP HEADER -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
         <div>
-          <div class="section-title" style="margin:0">🧠 Daily Travel Quiz</div>
-          <div style="font-size:12px;color:#94a3b8;margin-top:2px">Test your travel knowledge · New questions every day</div>
+          <div class="section-title" style="margin:0">🧠 Travel Knowledge Quiz</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:3px">Daily learning for travel agents · New questions every day</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button id="quiz-mode-btn" class="btn" onclick="setQuizMode('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
-          <button id="learn-mode-btn" class="btn btn-ghost" onclick="setQuizMode('learn')" style="font-size:12px;font-weight:700">📚 Learn Mode</button>
-          <button id="leader-mode-btn" class="btn btn-ghost" onclick="setQuizMode('leaderboard')" style="font-size:12px;font-weight:700">🏆 Leaderboard</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="qbtn-quiz"     onclick="setQuizMode('quiz')"        class="qmode-btn qmode-active">🎯 Daily Quiz</button>
+          <button id="qbtn-learn"    onclick="setQuizMode('learn')"       class="qmode-btn">📚 Learn Mode</button>
+          <button id="qbtn-board"    onclick="setQuizMode('leaderboard')" class="qmode-btn">🏆 Leaderboard</button>
+          <button id="qbtn-admin"    onclick="setQuizMode('admin')"       class="qmode-btn" style="display:none">⚙️ Manage Questions</button>
         </div>
       </div>
 
-      <!-- QUIZ PANEL -->
-      <div id="quiz-panel">
-        <!-- Score bar -->
-        <div class="card" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-          <div style="display:flex;align-items:center;gap:16px">
-            <div style="text-align:center">
-              <div style="font-size:11px;opacity:.8">TODAY'S SCORE</div>
-              <div id="quiz-score-big" style="font-size:28px;font-weight:800;line-height:1">0/0</div>
-            </div>
-            <div style="width:1px;height:40px;background:rgba(255,255,255,.3)"></div>
-            <div style="text-align:center">
-              <div style="font-size:11px;opacity:.8">STREAK 🔥</div>
-              <div id="quiz-streak" style="font-size:28px;font-weight:800;line-height:1">0</div>
-            </div>
+      <!-- ══ DAILY QUIZ PANEL ══ -->
+      <div id="qpanel-quiz">
+        <!-- Score banner -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px">
+          <div class="quiz-stat-card" style="background:linear-gradient(135deg,#f97316,#ea580c)">
+            <div class="quiz-stat-label">TODAY'S SCORE</div>
+            <div class="quiz-stat-val" id="q-score-today">0 / 0</div>
           </div>
-          <div id="quiz-cat-badges" style="display:flex;gap:6px;flex-wrap:wrap">
-            <span class="quiz-cat-pill active" onclick="filterQuizCat('all',this)">All</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Visa',this)">🛂 Visa</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Passport',this)">📕 Passport</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Destinations',this)">🌍 Destinations</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Hotels',this)">🏨 Hotels</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Cruise',this)">🚢 Cruise</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Geography',this)">🗺️ Geography</span>
-            <span class="quiz-cat-pill" onclick="filterQuizCat('Industry',this)">✈️ Industry</span>
+          <div class="quiz-stat-card" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">
+            <div class="quiz-stat-label">MONTHLY SCORE</div>
+            <div class="quiz-stat-val" id="q-score-month">0</div>
+          </div>
+          <div class="quiz-stat-card" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">
+            <div class="quiz-stat-label">TEAM RANK 🏅</div>
+            <div class="quiz-stat-val" id="q-rank">—</div>
           </div>
         </div>
+
+        <!-- Category filter -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="q-cat-row">
+          <button class="q-cat-btn q-cat-active" onclick="qSetCat('all',this)">All Topics</button>
+          <button class="q-cat-btn" onclick="qSetCat('Visa',this)">🛂 Visa</button>
+          <button class="q-cat-btn" onclick="qSetCat('Passport',this)">📕 Passport</button>
+          <button class="q-cat-btn" onclick="qSetCat('Destinations',this)">🌍 Destinations</button>
+          <button class="q-cat-btn" onclick="qSetCat('Hotels',this)">🏨 Hotels & Packages</button>
+          <button class="q-cat-btn" onclick="qSetCat('Cruise',this)">🚢 Cruise</button>
+          <button class="q-cat-btn" onclick="qSetCat('Airlines',this)">✈️ Airlines</button>
+          <button class="q-cat-btn" onclick="qSetCat('Geography',this)">🗺️ Geography</button>
+          <button class="q-cat-btn" onclick="qSetCat('Industry',this)">💼 Industry Terms</button>
+        </div>
+
         <!-- Question card -->
-        <div class="card">
-          <div id="quiz-container"><div style="text-align:center;padding:40px;color:#94a3b8">Loading quiz...</div></div>
+        <div class="card" id="q-card">
+          <div style="text-align:center;padding:48px 20px;color:#94a3b8">
+            <div style="font-size:40px">🧠</div>
+            <div style="margin-top:12px;font-size:15px">Loading today's quiz…</div>
+          </div>
         </div>
       </div>
 
-      <!-- LEARN PANEL -->
-      <div id="learn-panel" style="display:none">
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="learn-cat-row">
-          <button class="btn btn-ghost quiz-cat-btn active" onclick="filterLearn('all',this)" style="font-size:12px">All</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Visa',this)" style="font-size:12px">🛂 Visa</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Passport',this)" style="font-size:12px">📕 Passport</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Destinations',this)" style="font-size:12px">🌍 Destinations</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Hotels',this)" style="font-size:12px">🏨 Hotels</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Cruise',this)" style="font-size:12px">🚢 Cruise</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Geography',this)" style="font-size:12px">🗺️ Geography</button>
-          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Industry',this)" style="font-size:12px">✈️ Industry</button>
+      <!-- ══ LEARN MODE PANEL ══ -->
+      <div id="qpanel-learn" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <!-- Tip of the day -->
+          <div class="card" style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border-color:#fed7aa">
+            <div style="font-size:11px;font-weight:700;color:#ea580c;letter-spacing:.5px;margin-bottom:8px">💡 TRAVEL TIP OF THE DAY</div>
+            <div id="learn-tip-text" style="font-size:14px;font-weight:600;color:#1e293b;line-height:1.6"></div>
+            <div id="learn-tip-src"  style="font-size:11px;color:#94a3b8;margin-top:6px"></div>
+          </div>
+          <!-- Did you know -->
+          <div class="card" style="background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#bbf7d0">
+            <div style="font-size:11px;font-weight:700;color:#16a34a;letter-spacing:.5px;margin-bottom:8px">🌟 DID YOU KNOW?</div>
+            <div id="learn-fact-text" style="font-size:14px;font-weight:600;color:#1e293b;line-height:1.6"></div>
+          </div>
         </div>
-        <div id="learn-container" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
+
+        <!-- Category filter for learn cards -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="q-cat-btn q-cat-active" onclick="learnFilter('all',this)">All</button>
+          <button class="q-cat-btn" onclick="learnFilter('Visa',this)">🛂 Visa</button>
+          <button class="q-cat-btn" onclick="learnFilter('Passport',this)">📕 Passport</button>
+          <button class="q-cat-btn" onclick="learnFilter('Destinations',this)">🌍 Destinations</button>
+          <button class="q-cat-btn" onclick="learnFilter('Hotels',this)">🏨 Hotels</button>
+          <button class="q-cat-btn" onclick="learnFilter('Cruise',this)">🚢 Cruise</button>
+          <button class="q-cat-btn" onclick="learnFilter('Airlines',this)">✈️ Airlines</button>
+          <button class="q-cat-btn" onclick="learnFilter('Geography',this)">🗺️ Geography</button>
+          <button class="q-cat-btn" onclick="learnFilter('Industry',this)">💼 Industry</button>
+        </div>
+
+        <!-- Learn cards grid -->
+        <div id="learn-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px"></div>
       </div>
 
-      <!-- LEADERBOARD PANEL -->
-      <div id="leaderboard-panel" style="display:none">
-        <div class="card">
-          <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px">🏆 All-Time Leaderboard</div>
-          <div id="leaderboard-container"><div style="text-align:center;padding:30px;color:#94a3b8">Loading scores...</div></div>
+      <!-- ══ LEADERBOARD PANEL ══ -->
+      <div id="qpanel-leaderboard" style="display:none">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <!-- Today -->
+          <div class="card">
+            <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+              🏆 Today's Leaderboard
+              <span style="font-size:11px;color:#94a3b8;font-weight:400" id="board-date"></span>
+            </div>
+            <div id="board-today">
+              <div style="text-align:center;padding:24px;color:#94a3b8">Loading…</div>
+            </div>
+          </div>
+          <!-- Monthly -->
+          <div class="card">
+            <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px">📅 This Month's Top Scores</div>
+            <div id="board-month">
+              <div style="text-align:center;padding:24px;color:#94a3b8">Loading…</div>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- ══ ADMIN PANEL ══ -->
+      <div id="qpanel-admin" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div style="font-size:15px;font-weight:700;margin-bottom:16px">➕ Add New Question</div>
+          <div style="display:grid;gap:12px">
+            <div>
+              <label class="form-label">Question *</label>
+              <input id="aq-question" class="form-input" placeholder="Type the question here…">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label class="form-label">Option A *</label><input id="aq-a" class="form-input" placeholder="Option A"></div>
+              <div><label class="form-label">Option B *</label><input id="aq-b" class="form-input" placeholder="Option B"></div>
+              <div><label class="form-label">Option C *</label><input id="aq-c" class="form-input" placeholder="Option C"></div>
+              <div><label class="form-label">Option D *</label><input id="aq-d" class="form-input" placeholder="Option D"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div>
+                <label class="form-label">Correct Answer *</label>
+                <select id="aq-correct" class="form-input">
+                  <option value="0">A</option>
+                  <option value="1">B</option>
+                  <option value="2">C</option>
+                  <option value="3">D</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">Category *</label>
+                <select id="aq-cat" class="form-input">
+                  <option value="Visa">🛂 Visa</option>
+                  <option value="Passport">📕 Passport</option>
+                  <option value="Destinations">🌍 Destinations</option>
+                  <option value="Hotels">🏨 Hotels & Packages</option>
+                  <option value="Cruise">🚢 Cruise</option>
+                  <option value="Airlines">✈️ Airlines</option>
+                  <option value="Geography">🗺️ Geography</option>
+                  <option value="Industry">💼 Industry Terms</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label class="form-label">Explanation (shown after answering)</label>
+              <textarea id="aq-exp" class="form-input" rows="2" placeholder="Brief explanation of the correct answer…" style="resize:vertical"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="adminAddQuestion()" style="width:fit-content">➕ Add Question to Bank</button>
+          </div>
+        </div>
+
+        <!-- Question list -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+            <div style="font-size:15px;font-weight:700">📋 All Questions (<span id="aq-count">0</span>)</div>
+            <input id="aq-search" class="form-input" placeholder="🔍 Search questions…" style="width:260px" oninput="renderAdminQuestions()">
+          </div>
+          <div id="admin-q-list"></div>
+        </div>
+      </div>
+
     </div>
 
     <div class="tab" id="tab-ai">
@@ -3064,180 +3180,426 @@ const QUIZ_BANK = [
   {q:"What does MICE stand for in corporate travel?",o:["Meetings, Incentives, Conferences/Conventions, Exhibitions","Management In Corporate Events","Major International Conference Events","Monthly Incentive Club Events"],a:0,cat:"Industry",exp:"MICE stands for Meetings, Incentives, Conferences/Conventions, and Exhibitions — a major segment of the group travel business."},
 ];
 
-let quizState={score:0,total:0,current:null,answered:false};
+// ════════════════════════════════════════════════
+//  TRAVEL QUIZ SYSTEM — Full Featured
+// ════════════════════════════════════════════════
+let quizState   = {score:0, total:0, current:null, answered:false};
+let quizMode    = 'quiz';
+let quizCat     = 'all';
+let allQBank    = [];   // merged built-in + Firestore custom questions
 
-// ══ QUIZ STATE ══
-let quizCatFilter = 'all';
-let quizMode = 'quiz';
+// ── Category colours ──
+const Q_COLORS = {
+  Visa:'#0ea5e9', Passport:'#8b5cf6', Destinations:'#10b981',
+  Hotels:'#f59e0b', Cruise:'#06b6d4', Airlines:'#f97316',
+  Geography:'#ec4899', Industry:'#64748b'
+};
 
-function setQuizMode(mode) {
+// ════ MODE SWITCHING ════════════════════════════
+function setQuizMode(mode){
   quizMode = mode;
-  document.getElementById('quiz-panel').style.display        = mode==='quiz'        ? '' : 'none';
-  document.getElementById('learn-panel').style.display       = mode==='learn'       ? '' : 'none';
-  document.getElementById('leaderboard-panel').style.display = mode==='leaderboard' ? '' : 'none';
-  document.getElementById('quiz-mode-btn').style.background    = mode==='quiz'        ? '#8b5cf6' : '';
-  document.getElementById('quiz-mode-btn').style.color         = mode==='quiz'        ? '#fff'    : '';
-  document.getElementById('learn-mode-btn').style.background   = mode==='learn'       ? '#8b5cf6' : '';
-  document.getElementById('learn-mode-btn').style.color        = mode==='learn'       ? '#fff'    : '';
-  document.getElementById('leader-mode-btn').style.background  = mode==='leaderboard' ? '#8b5cf6' : '';
-  document.getElementById('leader-mode-btn').style.color       = mode==='leaderboard' ? '#fff'    : '';
-  if(mode==='learn') renderLearn('all');
-  if(mode==='leaderboard') renderLeaderboard();
+  ['quiz','learn','leaderboard','admin'].forEach(m=>{
+    document.getElementById('qpanel-'+m).style.display = m===mode ? '' : 'none';
+    const btn = document.getElementById('qbtn-'+m);
+    if(btn){ btn.classList.toggle('qmode-active', m===mode); }
+  });
+  if(mode==='learn')        renderLearnMode('all');
+  if(mode==='leaderboard')  renderLeaderboard();
+  if(mode==='admin')        renderAdminQuestions();
 }
 
-function filterQuizCat(cat, el) {
-  quizCatFilter = cat;
-  document.querySelectorAll('.quiz-cat-pill').forEach(p=>p.classList.remove('active'));
-  if(el) el.classList.add('active');
+// ════ INIT ══════════════════════════════════════
+function initQuiz(){
+  // Merge built-in + any custom questions from Firestore
+  loadCustomQuestions().then(custom=>{
+    allQBank = [...QUIZ_BANK, ...custom];
+    // Show admin button for owner (id 1)
+    if(CURRENT_USER && CURRENT_USER.id==='1'){
+      document.getElementById('qbtn-admin').style.display='';
+    }
+    loadTodayProgress();
+    renderTip();
+  });
+}
+
+function loadTodayProgress(){
+  const today = new Date().toDateString();
+  const key   = 'fenix_quiz_' + (CURRENT_USER?.id||'x') + '_' + today;
+  const saved = JSON.parse(localStorage.getItem(key)||'{"score":0,"total":0,"answered":[]}');
+  quizState.score = saved.score||0;
+  quizState.total = saved.total||0;
+  updateScoreBanner();
+  showQuestion(saved.answered||[]);
+  loadMonthlyScore();
+  loadRank();
+}
+
+function saveProgress(answeredArr){
+  const today = new Date().toDateString();
+  const key   = 'fenix_quiz_' + (CURRENT_USER?.id||'x') + '_' + today;
+  localStorage.setItem(key, JSON.stringify({
+    score: quizState.score,
+    total: quizState.total,
+    answered: answeredArr
+  }));
+}
+
+// ════ SCORE BANNER ══════════════════════════════
+function updateScoreBanner(){
+  const el = document.getElementById('q-score-today');
+  if(el) el.textContent = quizState.score + ' / ' + quizState.total;
+}
+
+function loadMonthlyScore(){
+  if(!CURRENT_USER) return;
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+(now.getMonth()+1);
+  // Sum up localStorage scores for this month
+  let monthTotal = 0;
+  for(let d=1; d<=31; d++){
+    const date = new Date(now.getFullYear(), now.getMonth(), d).toDateString();
+    const key  = 'fenix_quiz_' + CURRENT_USER.id + '_' + date;
+    const s    = localStorage.getItem(key);
+    if(s){ try{ monthTotal += JSON.parse(s).score||0; }catch(e){} }
+  }
+  const el = document.getElementById('q-score-month');
+  if(el) el.textContent = monthTotal + ' pts';
+}
+
+function loadRank(){
+  if(!CURRENT_USER) return;
+  const today = new Date().toDateString();
+  // Quick local rank from localStorage scores of all staff
+  const STAFF_IDS = ['1','2','3','4'];
+  const scores = STAFF_IDS.map(id=>{
+    const key = 'fenix_quiz_' + id + '_' + today;
+    const s   = localStorage.getItem(key);
+    if(s){ try{ return {id, score:JSON.parse(s).score||0}; }catch(e){} }
+    return {id, score:0};
+  }).sort((a,b)=>b.score-a.score);
+  const rank = scores.findIndex(s=>s.id===CURRENT_USER.id) + 1;
+  const el = document.getElementById('q-rank');
+  if(el) el.textContent = rank===1 ? '🥇 #1' : rank===2 ? '🥈 #2' : rank===3 ? '🥉 #3' : '#'+rank;
+}
+
+// ════ QUESTION DISPLAY ══════════════════════════
+function qSetCat(cat, el){
+  quizCat = cat;
+  document.querySelectorAll('.q-cat-btn').forEach(b=>b.classList.remove('q-cat-active'));
+  if(el) el.classList.add('q-cat-active');
+  const today = new Date().toDateString();
+  const key   = 'fenix_quiz_' + (CURRENT_USER?.id||'x') + '_' + today;
+  const saved = JSON.parse(localStorage.getItem(key)||'{"score":0,"total":0,"answered":[]}');
+  quizState.score = saved.score||0;
+  quizState.total = saved.total||0;
+  updateScoreBanner();
+  showQuestion(saved.answered||[]);
+}
+
+function showQuestion(answeredIdxArr){
+  let bank = quizCat==='all' ? allQBank : allQBank.filter(q=>q.cat===quizCat);
+  const remaining = bank.filter((_,i)=>!answeredIdxArr.includes(allQBank.indexOf(_)));
+  const card = document.getElementById('q-card');
+  if(!card) return;
+
+  if(!remaining.length){
+    const pct = quizState.total ? Math.round(quizState.score/quizState.total*100) : 0;
+    const stars = pct>=90?'⭐⭐⭐':pct>=70?'⭐⭐':pct>=50?'⭐':'';
+    card.innerHTML=`
+      <div style="text-align:center;padding:48px 20px">
+        <div style="font-size:56px">🎉</div>
+        <div style="font-size:22px;font-weight:800;color:#16a34a;margin-top:14px">${stars} Quiz Complete!</div>
+        <div style="color:#64748b;margin-top:8px;font-size:14px">
+          ${quizCat==='all'?'You answered all questions for today!':'All '+quizCat+' questions done!'}
+        </div>
+        <div style="font-size:36px;font-weight:800;color:#f97316;margin-top:20px">${quizState.score} / ${quizState.total}</div>
+        <div style="font-size:14px;color:#64748b;margin-top:4px">${pct}% correct</div>
+        <div style="display:flex;justify-content:center;gap:10px;margin-top:24px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="resetTodayQuiz()" style="background:#8b5cf6;border-color:#8b5cf6">🔄 Restart Today</button>
+          <button class="btn btn-ghost" onclick="setQuizMode('leaderboard')">🏆 See Leaderboard</button>
+          <button class="btn btn-ghost" onclick="setQuizMode('learn')">📚 Learn Mode</button>
+        </div>
+      </div>`;
+    saveScoreToFirestore();
+    loadRank();
+    return;
+  }
+
+  const rIdx  = Math.floor(Math.random()*remaining.length);
+  const q     = remaining[rIdx];
+  const qIdx  = allQBank.indexOf(q);
+  quizState.current = {q, qIdx};
+  quizState.answered = false;
+  const color = Q_COLORS[q.cat]||'#64748b';
+
+  card.innerHTML=`
+    <div style="margin-bottom:22px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        ${q.cat?`<span style="background:${color}18;color:${color};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${q.cat.toUpperCase()}</span>`:''}
+        <span style="font-size:11px;color:#94a3b8">Question ${quizState.total+1} · <b style="color:#8b5cf6">${remaining.length}</b> remaining today</span>
+      </div>
+      <div style="font-size:18px;font-weight:700;color:#1e293b;line-height:1.6">${q.q}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="q-options">
+      ${q.o.map((opt,i)=>`
+        <button onclick="answerQuestion(${i},${q.a},${qIdx})"
+          style="padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;text-align:left;cursor:pointer;font-size:14px;font-weight:500;transition:.15s;display:flex;align-items:center;gap:10px;line-height:1.4"
+          onmouseover="if(!this.dataset.done){this.style.borderColor='${color}';this.style.background='${color}10'}"
+          onmouseout="if(!this.dataset.done){this.style.borderColor='#e2e8f0';this.style.background='#fff'}">
+          <span style="min-width:26px;height:26px;border-radius:6px;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${['A','B','C','D'][i]}</span>
+          <span>${opt}</span>
+        </button>`).join('')}
+    </div>
+    <div id="q-feedback" style="margin-top:18px"></div>`;
+}
+
+function answerQuestion(chosen, correct, qIdx){
+  if(quizState.answered) return;
+  quizState.answered = true;
+  const isRight = chosen === correct;
+  if(isRight) quizState.score++;
+  quizState.total++;
+
+  // Color the buttons
+  const btns = document.querySelectorAll('#q-options button');
+  btns.forEach((b,i)=>{
+    b.dataset.done = true;
+    b.style.cursor = 'default';
+    if(i===correct){
+      b.style.background='#dcfce7'; b.style.borderColor='#16a34a'; b.style.color='#166534';
+    } else if(i===chosen && !isRight){
+      b.style.background='#fee2e2'; b.style.borderColor='#ef4444'; b.style.color='#991b1b';
+    }
+    b.onmouseover = null; b.onmouseout = null;
+  });
+
+  // Save
+  const today = new Date().toDateString();
+  const key   = 'fenix_quiz_' + (CURRENT_USER?.id||'x') + '_' + today;
+  const saved = JSON.parse(localStorage.getItem(key)||'{"score":0,"total":0,"answered":[]}');
+  if(!saved.answered.includes(qIdx)) saved.answered.push(qIdx);
+  saved.score = quizState.score;
+  saved.total = quizState.total;
+  localStorage.setItem(key, JSON.stringify(saved));
+  updateScoreBanner();
+
+  // Feedback
+  const q = quizState.current.q;
+  document.getElementById('q-feedback').innerHTML=`
+    <div style="padding:16px;border-radius:12px;background:${isRight?'#f0fdf4':'#fef2f2'};border:1.5px solid ${isRight?'#bbf7d0':'#fecaca'}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:20px">${isRight?'✅':'❌'}</span>
+        <span style="font-weight:700;font-size:14px;color:${isRight?'#15803d':'#dc2626'}">${isRight?'Correct! Well done 🎉':'Incorrect!'}</span>
+      </div>
+      ${!isRight?`<div style="font-size:13px;color:#64748b;margin-bottom:6px">✅ Correct answer: <strong style="color:#15803d">${q.o[correct]}</strong></div>`:''}
+      ${q.exp?`<div style="font-size:13px;color:#475569;line-height:1.6;padding:8px 12px;background:rgba(0,0,0,.03);border-radius:8px;margin-top:6px">💡 ${q.exp}</div>`:''}
+    </div>
+    <button class="btn btn-primary" onclick="initQuiz()" style="margin-top:14px;background:#8b5cf6;border-color:#8b5cf6">
+      Next Question →
+    </button>`;
+}
+
+function resetTodayQuiz(){
+  const today = new Date().toDateString();
+  const key   = 'fenix_quiz_' + (CURRENT_USER?.id||'x') + '_' + today;
+  localStorage.removeItem(key);
+  quizState = {score:0, total:0, current:null, answered:false};
+  updateScoreBanner();
   initQuiz();
 }
 
-function initQuiz(){
-  const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('fenix_quiz_'+today)||'{"score":0,"total":0,"answered":[]}');
-  quizState.score=stored.score||0;
-  quizState.total=stored.total||0;
-  // Update score display
-  const sd = document.getElementById('quiz-score-big');
-  const st = document.getElementById('quiz-streak');
-  if(sd) sd.textContent = quizState.score+'/'+quizState.total;
-  // Streak
-  const streak = parseInt(localStorage.getItem('fenix_quiz_streak')||'0');
-  if(st) st.textContent = streak;
-  showQuizQuestion(stored.answered||[]);
-}
-
-function showQuizQuestion(answeredToday){
-  let bank = QUIZ_BANK;
-  if(quizCatFilter !== 'all') bank = QUIZ_BANK.filter(q=>q.cat===quizCatFilter);
-  const remaining = bank.filter((_,i)=>!answeredToday.includes(QUIZ_BANK.indexOf(_)));
-  const sd = document.getElementById('quiz-score-big');
-  if(sd) sd.textContent = quizState.score+'/'+quizState.total;
-  if(!remaining.length){
-    document.getElementById('quiz-container').innerHTML=`
-      <div style="text-align:center;padding:48px 20px">
-        <div style="font-size:56px">🎉</div>
-        <div style="font-size:20px;font-weight:800;color:#16a34a;margin-top:12px">Quiz Complete!</div>
-        <div style="color:#64748b;margin-top:8px">You've answered all ${quizCatFilter==='all'?'':'category '}questions for today.</div>
-        <div style="font-size:32px;font-weight:800;color:#f97316;margin-top:16px">${quizState.score} / ${quizState.total}</div>
-        <div style="margin-top:8px;font-size:13px;color:#94a3b8">${quizState.total>0?Math.round(quizState.score/quizState.total*100)+'% correct':''}</div>
-        <button class="btn btn-primary" style="margin-top:24px" onclick="localStorage.removeItem('fenix_quiz_'+new Date().toDateString());quizState.score=0;quizState.total=0;initQuiz()">🔄 Restart Today's Quiz</button>
-      </div>`;
-    saveLeaderboardScore();
-    return;
-  }
-  const idx=Math.floor(Math.random()*remaining.length);
-  const bankIdx=QUIZ_BANK.indexOf(remaining[idx]);
-  quizState.current={q:remaining[idx],bankIdx};
-  quizState.answered=false;
-  const q = remaining[idx];
-  const catColor = {Visa:'#0ea5e9',Passport:'#8b5cf6',Destinations:'#10b981',Hotels:'#f59e0b',Cruise:'#06b6d4',Geography:'#f97316',Industry:'#ec4899'}[q.cat]||'#64748b';
-  document.getElementById('quiz-container').innerHTML=`
-    <div style="margin-bottom:20px">
-      ${q.cat?`<span style="background:${catColor}20;color:${catColor};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${q.cat.toUpperCase()}</span>`:''}
-      <div style="font-size:11px;color:#94a3b8;margin-top:8px">Question ${quizState.total+1} · <span style="color:#8b5cf6;font-weight:600">${remaining.length} remaining</span></div>
-      <div style="font-size:18px;font-weight:700;color:#1e293b;line-height:1.6;margin-top:8px">${q.q}</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="quiz-options">
-      ${q.o.map((opt,i)=>`<button onclick="answerQuiz(${i},${q.a},${bankIdx})" style="padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;text-align:left;cursor:pointer;font-size:14px;font-weight:500;transition:.15s;display:flex;align-items:center;gap:10px" onmouseover="if(!this.dataset.answered){this.style.borderColor='#8b5cf6';this.style.background='#f5f3ff'}" onmouseout="if(!this.dataset.answered){this.style.borderColor='#e2e8f0';this.style.background='#fff'}"><span style="background:#f1f5f9;color:#64748b;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;flex-shrink:0">${['A','B','C','D'][i]}</span>${opt}</button>`).join('')}
-    </div>
-    <div id="quiz-feedback" style="margin-top:16px"></div>`;
-}
-
-function answerQuiz(chosen, correct, bankIdx){
-  if(quizState.answered) return;
-  quizState.answered=true;
-  const btns=document.querySelectorAll('#quiz-options button');
-  btns.forEach((b,i)=>{
-    b.dataset.answered=true;
-    b.style.cursor='default';
-    if(i===correct) b.style.background='#dcfce7',b.style.borderColor='#16a34a',b.style.color='#166534';
-    if(i===chosen&&chosen!==correct) b.style.background='#fee2e2',b.style.borderColor='#ef4444',b.style.color='#991b1b';
-  });
-  const isRight=chosen===correct;
-  if(isRight) quizState.score++;
-  quizState.total++;
-  const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('fenix_quiz_'+today)||'{"score":0,"total":0,"answered":[]}');
-  stored.score=quizState.score;
-  stored.total=quizState.total;
-  if(!stored.answered.includes(bankIdx)) stored.answered.push(bankIdx);
-  localStorage.setItem('fenix_quiz_'+today,JSON.stringify(stored));
-  const sd=document.getElementById('quiz-score-big');
-  if(sd) sd.textContent=quizState.score+'/'+quizState.total;
-  const q=QUIZ_BANK[bankIdx];
-  const exp = q.exp || '';
-  document.getElementById('quiz-feedback').innerHTML=`
-    <div style="padding:14px 16px;border-radius:12px;background:${isRight?'#f0fdf4':'#fef2f2'};border:1.5px solid ${isRight?'#bbf7d0':'#fecaca'};display:flex;align-items:flex-start;gap:10px">
-      <div style="font-size:20px">${isRight?'✅':'❌'}</div>
-      <div>
-        <div style="font-weight:700;color:${isRight?'#166534':'#991b1b'};font-size:13px">${isRight?'Correct! Well done 🎉':'Wrong answer'}</div>
-        ${exp?`<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.5">${exp}</div>`:''}
-      </div>
-    </div>
-    <button class="btn btn-primary" style="margin-top:12px;background:#8b5cf6;border-color:#8b5cf6" onclick="initQuiz()">Next Question →</button>`;
-}
-
-function saveLeaderboardScore(){
-  if(!CURRENT_USER) return;
-  const today=new Date().toDateString();
-  const stored=JSON.parse(localStorage.getItem('fenix_quiz_'+today)||'{"score":0,"total":0}');
-  if(!stored.total) return;
+// ════ SCORE SAVING TO FIRESTORE ═════════════════
+function saveScoreToFirestore(){
+  if(!CURRENT_USER || !quizState.total) return;
+  const today = new Date().toDateString();
+  const pct   = Math.round(quizState.score/quizState.total*100);
+  const now   = new Date();
+  const mKey  = now.getFullYear()+'-'+(now.getMonth()+1);
   db.collection('quizscores').doc(CURRENT_USER.id+'_'+today).set({
-    staffId: CURRENT_USER.id,
-    staffName: CURRENT_USER.name,
-    score: stored.score,
-    total: stored.total,
-    pct: Math.round(stored.score/stored.total*100),
-    date: today,
-    ts: new Date().toISOString()
+    staffId: CURRENT_USER.id, staffName: CURRENT_USER.name,
+    score: quizState.score, total: quizState.total, pct,
+    date: today, monthKey: mKey, ts: now.toISOString()
   }).catch(()=>{});
 }
 
+// ════ LEADERBOARD ═══════════════════════════════
 function renderLeaderboard(){
-  const el=document.getElementById('leaderboard-container');
-  if(!el) return;
-  el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8">Loading...</div>';
-  const today=new Date().toDateString();
+  const today = new Date().toDateString();
+  const bd = document.getElementById('board-date');
+  if(bd) bd.textContent = today;
+
+  // Today's board
+  const todayEl = document.getElementById('board-today');
+  todayEl.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8">Loading…</div>';
   db.collection('quizscores').where('date','==',today).get().then(snap=>{
-    if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8">No scores yet today. Be the first! 🏆</div>';return;}
-    const scores=[];
-    snap.forEach(d=>scores.push(d.data()));
-    scores.sort((a,b)=>b.pct-a.pct||b.score-a.score);
+    if(snap.empty){
+      todayEl.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8">No scores yet today.<br>Be the first to finish! 🏆</div>';
+      return;
+    }
+    const rows=[];
+    snap.forEach(d=>rows.push(d.data()));
+    rows.sort((a,b)=>b.pct-a.pct||b.score-a.score);
     const medals=['🥇','🥈','🥉'];
-    el.innerHTML=scores.map((s,i)=>`
-      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9">
+    todayEl.innerHTML=rows.map((r,i)=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9;${r.staffId===CURRENT_USER?.id?'background:#fff7ed;margin:0 -4px;padding:10px 4px;border-radius:8px':''}">
         <div style="font-size:22px;width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
         <div style="flex:1">
-          <div style="font-weight:600;color:#1e293b">${s.staffName}</div>
-          <div style="font-size:12px;color:#94a3b8">${s.score}/${s.total} correct</div>
+          <div style="font-weight:700;color:#1e293b;font-size:14px">${r.staffName||'Staff'}${r.staffId===CURRENT_USER?.id?' <span style="font-size:10px;background:#f97316;color:#fff;padding:1px 6px;border-radius:10px">YOU</span>':''}</div>
+          <div style="font-size:11px;color:#94a3b8">${r.score}/${r.total} correct · ${r.pct}%</div>
         </div>
-        <div style="font-size:18px;font-weight:800;color:#8b5cf6">${s.pct}%</div>
+        <div>
+          <div style="font-size:20px;font-weight:800;color:${i===0?'#f59e0b':i===1?'#94a3b8':i===2?'#b45309':'#64748b'}">${r.pct}%</div>
+        </div>
       </div>`).join('');
-  }).catch(()=>{el.innerHTML='<div style="color:#ef4444;padding:20px">Could not load scores.</div>';});
+  }).catch(()=>{ todayEl.innerHTML='<div style="color:#ef4444;padding:16px">Could not load scores.</div>'; });
+
+  // Monthly board
+  const monthEl = document.getElementById('board-month');
+  monthEl.innerHTML = '<div style="text-align:center;padding:16px;color:#94a3b8">Loading…</div>';
+  const mKey = new Date().getFullYear()+'-'+(new Date().getMonth()+1);
+  db.collection('quizscores').where('monthKey','==',mKey).get().then(snap=>{
+    if(snap.empty){ monthEl.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8">No monthly scores yet.</div>'; return; }
+    const byStaff={};
+    snap.forEach(d=>{
+      const r=d.data();
+      if(!byStaff[r.staffId]) byStaff[r.staffId]={name:r.staffName,score:0,total:0};
+      byStaff[r.staffId].score+=r.score||0;
+      byStaff[r.staffId].total+=r.total||0;
+    });
+    const rows=Object.values(byStaff).map(r=>({...r,pct:r.total?Math.round(r.score/r.total*100):0})).sort((a,b)=>b.score-a.score);
+    const medals=['🥇','🥈','🥉'];
+    monthEl.innerHTML=rows.map((r,i)=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:22px;width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
+        <div style="flex:1">
+          <div style="font-weight:700;color:#1e293b;font-size:14px">${r.name||'Staff'}</div>
+          <div style="font-size:11px;color:#94a3b8">${r.score} pts · ${r.pct}% avg</div>
+        </div>
+        <div style="font-size:20px;font-weight:800;color:#8b5cf6">${r.score}</div>
+      </div>`).join('');
+  }).catch(()=>{ monthEl.innerHTML='<div style="color:#ef4444;padding:16px">Could not load.</div>'; });
 }
 
-function renderLearn(cat){
-  const el=document.getElementById('learn-container');
-  if(!el) return;
-  let bank=cat==='all'?QUIZ_BANK:QUIZ_BANK.filter(q=>q.cat===cat);
-  if(!bank.length){el.innerHTML='<div style="color:#94a3b8;padding:20px">No questions in this category yet.</div>';return;}
-  el.innerHTML=bank.map(q=>{
-    const catColor={Visa:'#0ea5e9',Passport:'#8b5cf6',Destinations:'#10b981',Hotels:'#f59e0b',Cruise:'#06b6d4',Geography:'#f97316',Industry:'#ec4899'}[q.cat]||'#64748b';
+// ════ LEARN MODE ════════════════════════════════
+const TRAVEL_TIPS = [
+  {cat:'Visa',     tip:'Dubai (UAE) tourist visa processing usually takes 3–5 working days when applied through an airline or authorized agent.', fact:'The Schengen Area comprises 27 European countries where you can travel freely with a single Schengen visa.'},
+  {cat:'Airlines', tip:'Always check the airline website directly for cheapest fares — booking fees on third-party sites can add ₹500–₹2,000 per ticket.', fact:'Emirates airline operates the world\'s longest non-stop flight: Dubai to Auckland (New Zealand) — 17+ hours.'},
+  {cat:'Hotels',   tip:'EP (European Plan) = Room only. CP = Room + Breakfast. MAP = Room + Breakfast + Dinner. AP = All 3 meals included.', fact:'The Burj Al Arab in Dubai was the first hotel in the world to claim a 7-star rating, though officially it is classified as 5-star.'},
+  {cat:'Passport', tip:'Always renew your passport when it has less than 6 months of validity remaining — most countries require 6 months validity for entry.', fact:'India has over 1.4 billion people but issues one of the world\'s most-used passports for international travel.'},
+  {cat:'Cruise',   tip:'Book shore excursions in advance — popular tours at cruise ports sell out quickly, especially in peak season.', fact:'Royal Caribbean\'s Icon of the Seas (2024) is the world\'s largest cruise ship, carrying over 7,600 passengers.'},
+  {cat:'Destinations', tip:'Maldives is best visited November–April (dry season). June–August is monsoon season with rough seas and less visibility.', fact:'Japan\'s cherry blossom (Sakura) season typically lasts just 2 weeks — one of the most anticipated travel events in Asia.'},
+  {cat:'Industry', tip:'FIT = Free Independent Travel (customised private tour). GIT = Group Inclusive Tour (10+ people with group rates).', fact:'IATA (International Air Transport Association) represents over 290 airlines worldwide, covering 82% of global air traffic.'},
+  {cat:'Geography', tip:'UAE uses Gulf Standard Time (GST = UTC+4). India is UTC+5:30, making India 1 hour 30 minutes ahead of Dubai.', fact:'Vatican City inside Rome, Italy is the world\'s smallest country — just 0.44 km² with about 800 residents.'},
+];
+
+function renderTip(){
+  const day = new Date().getDate() % TRAVEL_TIPS.length;
+  const tip = TRAVEL_TIPS[day];
+  const tt  = document.getElementById('learn-tip-text');
+  const ts  = document.getElementById('learn-tip-src');
+  const ft  = document.getElementById('learn-fact-text');
+  if(tt) tt.textContent = tip.tip;
+  if(ts) ts.textContent = '📂 Category: ' + tip.cat;
+  if(ft) ft.textContent = tip.fact;
+}
+
+function renderLearnMode(cat){
+  renderTip();
+  learnFilter(cat);
+}
+
+function learnFilter(cat, el){
+  if(el){
+    el.closest('div').querySelectorAll('.q-cat-btn').forEach(b=>b.classList.remove('q-cat-active'));
+    el.classList.add('q-cat-active');
+  }
+  const grid = document.getElementById('learn-grid');
+  if(!grid) return;
+  const bank = cat==='all' ? allQBank : allQBank.filter(q=>q.cat===cat);
+  if(!bank.length){ grid.innerHTML='<div style="color:#94a3b8;padding:20px;grid-column:1/-1">No questions in this category yet.</div>'; return; }
+  grid.innerHTML = bank.map(q=>{
+    const color = Q_COLORS[q.cat]||'#64748b';
     return `<div class="learn-card">
-      ${q.cat?`<span style="background:${catColor}20;color:${catColor};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${q.cat}</span>`:''}
-      <div style="font-weight:700;color:#1e293b;margin:8px 0 6px;font-size:13px;line-height:1.4">${q.q}</div>
-      <div style="font-size:12px;color:#16a34a;font-weight:600">✅ ${q.o[q.a]}</div>
-      ${q.exp?`<div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.5">${q.exp}</div>`:''}
+      ${q.cat?`<span style="background:${color}18;color:${color};font-size:10px;font-weight:700;padding:2px 10px;border-radius:20px">${q.cat}</span>`:''}
+      <div style="font-weight:700;color:#1e293b;margin:10px 0 6px;font-size:13px;line-height:1.5">${q.q}</div>
+      <div style="font-size:13px;color:#15803d;font-weight:600;margin-bottom:4px">✅ ${q.o[q.a]}</div>
+      ${q.exp?`<div style="font-size:11px;color:#64748b;line-height:1.5;margin-top:6px;padding-top:6px;border-top:1px solid #f1f5f9">${q.exp}</div>`:''}
     </div>`;
   }).join('');
 }
 
-function filterLearn(cat, el){
-  document.querySelectorAll('.quiz-cat-btn').forEach(b=>b.classList.remove('active'));
-  if(el) el.classList.add('active');
-  renderLearn(cat);
+// ════ ADMIN — CUSTOM QUESTIONS IN FIRESTORE ═════
+async function loadCustomQuestions(){
+  try{
+    const snap = await db.collection('quizquestions').get();
+    const custom = [];
+    snap.forEach(d=>custom.push({...d.data(), _firestoreId: d.id}));
+    return custom;
+  }catch(e){ return []; }
 }
+
+function adminAddQuestion(){
+  const q   = document.getElementById('aq-question').value.trim();
+  const a   = document.getElementById('aq-a').value.trim();
+  const b   = document.getElementById('aq-b').value.trim();
+  const cc  = document.getElementById('aq-c').value.trim();
+  const d   = document.getElementById('aq-d').value.trim();
+  const ans = parseInt(document.getElementById('aq-correct').value);
+  const cat = document.getElementById('aq-cat').value;
+  const exp = document.getElementById('aq-exp').value.trim();
+
+  if(!q||!a||!b||!cc||!d){ alert('Please fill all 4 options and the question.'); return; }
+
+  const docData = { q, o:[a,b,cc,d], a:ans, cat, exp, addedBy: CURRENT_USER?.name||'Admin', addedAt: new Date().toISOString() };
+
+  db.collection('quizquestions').add(docData).then(()=>{
+    allQBank.push(docData);
+    ['aq-question','aq-a','aq-b','aq-c','aq-d','aq-exp'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('aq-correct').value='0';
+    renderAdminQuestions();
+    alert('✅ Question added!');
+  }).catch(e=>alert('Error: '+e.message));
+}
+
+function renderAdminQuestions(){
+  const search = (document.getElementById('aq-search')?.value||'').toLowerCase();
+  const list   = document.getElementById('admin-q-list');
+  const count  = document.getElementById('aq-count');
+  if(!list) return;
+
+  // Show all (built-in + custom)
+  const custom = allQBank.filter(q=>q._firestoreId);
+  if(count) count.textContent = allQBank.length + ' total (' + custom.length + ' custom)';
+
+  const display = custom.filter(q=> !search || q.q.toLowerCase().includes(search) || q.cat?.toLowerCase().includes(search));
+  if(!display.length){
+    list.innerHTML='<div style="text-align:center;padding:24px;color:#94a3b8">'+(custom.length?'No results found.':'No custom questions yet. Add one above!')+'</div>';
+    return;
+  }
+  const color_fn = q => Q_COLORS[q.cat]||'#64748b';
+  list.innerHTML = display.map((q,i)=>`
+    <div style="padding:12px 0;border-bottom:1px solid #f1f5f9;display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="background:${color_fn(q)}18;color:${color_fn(q)};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${q.cat||'Misc'}</span>
+        </div>
+        <div style="font-weight:600;font-size:13px;color:#1e293b;margin-bottom:4px">${q.q}</div>
+        <div style="font-size:12px;color:#64748b">${q.o.map((o,j)=>`<b>${['A','B','C','D'][j]}</b>: ${o}`).join(' · ')}</div>
+        <div style="font-size:12px;color:#16a34a;margin-top:3px">✅ Correct: ${q.o[q.a]}</div>
+        ${q.exp?`<div style="font-size:11px;color:#94a3b8;margin-top:2px">${q.exp}</div>`:''}
+      </div>
+      <button onclick="adminDeleteQuestion('${q._firestoreId}')" style="color:#ef4444;background:none;border:none;cursor:pointer;font-size:18px;padding:4px;flex-shrink:0" title="Delete">🗑️</button>
+    </div>`).join('');
+}
+
+function adminDeleteQuestion(firestoreId){
+  if(!confirm('Delete this question?')) return;
+  db.collection('quizquestions').doc(firestoreId).delete().then(()=>{
+    allQBank = allQBank.filter(q=>q._firestoreId!==firestoreId);
+    renderAdminQuestions();
+  }).catch(e=>alert('Error: '+e.message));
+}
+
 
 
 // ══════════════ AI ASSISTANT ══════════════
