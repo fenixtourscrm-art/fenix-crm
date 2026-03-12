@@ -2361,7 +2361,6 @@ async function sendAIMessage() {
   btn.disabled = true;
   btn.style.opacity = '0.5';
 
-  // Typing indicator
   const typingId = 'ai-typing-' + Date.now();
   win.innerHTML += `<div class="ai-msg ai-msg-bot" id="${typingId}">
     <div class="ai-avatar">✈️</div>
@@ -2369,37 +2368,36 @@ async function sendAIMessage() {
   </div>`;
   win.scrollTop = win.scrollHeight;
 
-  // Add to history
   aiHistory.push({ role: 'user', content: msg });
 
-  // ── PROXY URL: paste your Google Apps Script Web App URL below ──
-  const PROXY_URL = window.FENIX_AI_PROXY || "";
-  if (!PROXY_URL) {
-    const typingEl2 = document.getElementById(typingId);
-    if (typingEl2) typingEl2.remove();
-    win.innerHTML += `<div class="ai-msg ai-msg-bot"><div class="ai-avatar">✈️</div><div class="ai-bubble ai-bubble-bot" style="color:#f59e0b">⚙️ <strong>AI proxy not configured.</strong><br>Contact your CRM admin to complete AI setup.</div></div>`;
-    btn.disabled = false; btn.style.opacity = '1';
-    win.scrollTop = win.scrollHeight; return;
-  }
   try {
-    const response = await fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ messages: aiHistory })
+    const systemPrompt = "You are Fenix AI, a travel expert assistant for Fenix Tours and Travels Pvt Ltd based in Ahmedabad India. ONLY answer travel related questions about visas destinations passports hotels cruises flights travel insurance and travel documents. If asked anything not related to travel politely decline and say you only answer travel questions. Keep answers practical and relevant to Indian travellers. Mention prices in Indian Rupees where relevant.";
+    
+    // Build conversation context
+    const lastMessages = aiHistory.slice(-6);
+    const conversationText = lastMessages.map(m => 
+      (m.role === 'user' ? 'Customer: ' : 'Fenix AI: ') + m.content
+    ).join('
+');
+    
+    const fullPrompt = systemPrompt + '
+
+Conversation:
+' + conversationText + '
+
+Fenix AI:';
+    const encodedPrompt = encodeURIComponent(fullPrompt);
+    
+    const response = await fetch(`https://text.pollinations.ai/${encodedPrompt}`, {
+      method: 'GET',
+      headers: { 'Accept': 'text/plain' }
     });
 
-    const rawText = await response.text();
-    console.log("AI Proxy raw response:", rawText);
-    let data;
-    try { data = JSON.parse(rawText); } catch(pe) { throw new Error("Invalid JSON from proxy: " + rawText.substring(0,200)); }
-    if (data.error) throw new Error("Proxy error: " + data.error);
-    const reply = data.reply || (data.content && data.content[0] ? data.content[0].text : null) || 'Sorry, I could not get a response. Please try again.';
-
-    // Remove typing indicator
+    const reply = await response.text();
+    
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
 
-    // Format reply (convert **bold** and newlines)
     const formatted = escHtml(reply).split('\n').join('<br>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
     win.innerHTML += `<div class="ai-msg ai-msg-bot">
@@ -2407,10 +2405,7 @@ async function sendAIMessage() {
       <div class="ai-bubble ai-bubble-bot">${formatted}</div>
     </div>`;
 
-    // Add assistant reply to history
     aiHistory.push({ role: 'assistant', content: reply });
-
-    // Keep history to last 10 messages (5 turns) to save tokens
     if (aiHistory.length > 10) aiHistory = aiHistory.slice(-10);
 
   } catch (err) {
@@ -2418,7 +2413,7 @@ async function sendAIMessage() {
     if (typingEl) typingEl.remove();
     win.innerHTML += `<div class="ai-msg ai-msg-bot">
       <div class="ai-avatar">✈️</div>
-      <div class="ai-bubble ai-bubble-bot" style="color:#ef4444">⚠️ Error connecting to AI. Please check your internet and try again.</div>
+      <div class="ai-bubble ai-bubble-bot" style="color:#ef4444">⚠️ Error: ${escHtml(err.message)}</div>
     </div>`;
   }
 
@@ -2427,37 +2422,6 @@ async function sendAIMessage() {
   win.scrollTop = win.scrollHeight;
 }
 
-function saveAIProxy() {
-  const url = document.getElementById('ai-proxy-input').value.trim();
-  if (!url) { alert('Please enter a URL'); return; }
-  localStorage.setItem('fenix_ai_proxy', url);
-  window.FENIX_AI_PROXY = url;
-  document.getElementById('ai-proxy-status').innerHTML = '<span style="color:#10b981">✅ Saved! AI Assistant is now active.</span>';
-}
-
-async function testAIProxy() {
-  const url = document.getElementById('ai-proxy-input').value.trim() || window.FENIX_AI_PROXY;
-  if (!url) { alert('Enter a URL first'); return; }
-  const status = document.getElementById('ai-proxy-status');
-  status.innerHTML = '<span style="color:#f59e0b">🔄 Testing...</span>';
-  try {
-    const r = await fetch(url);
-    const d = await r.json();
-    status.innerHTML = d.status ? '<span style="color:#10b981">✅ Proxy is working! ' + d.status + '</span>' : '<span style="color:#10b981">✅ Connected!</span>';
-  } catch(e) {
-    status.innerHTML = '<span style="color:#ef4444">❌ Could not connect: ' + e.message + '</span>';
-  }
-}
-
-// Auto-load saved proxy URL on startup
-(function loadSavedProxy() {
-  const saved = localStorage.getItem('fenix_ai_proxy');
-  if (saved) {
-    window.FENIX_AI_PROXY = saved;
-    const inp = document.getElementById('ai-proxy-input');
-    if (inp) inp.value = saved;
-  }
-})();
 
 function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
