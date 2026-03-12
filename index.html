@@ -568,7 +568,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div class="section-title" style="margin:0">🧠 Daily Travel Quiz</div>
         <div id="quiz-score-display" style="font-size:13px;color:#64748b;font-weight:600"></div>
       </div>
-      <div class="card" style="max-width:760px">
+      <div class="card">
         <div id="quiz-container"><div style="text-align:center;padding:40px;color:#94a3b8">Loading quiz...</div></div>
       </div>
     </div>
@@ -3019,9 +3019,9 @@ function showQuizQuestion(answeredToday){
   document.getElementById('quiz-container').innerHTML=`
     <div style="margin-bottom:20px">
       <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">Question ${quizState.total+1} · ${remaining.length} remaining today</div>
-      <div style="font-size:16px;font-weight:700;color:#1e293b;line-height:1.5">${remaining[idx].q}</div>
+      <div style="font-size:18px;font-weight:700;color:#1e293b;line-height:1.6;margin-bottom:20px">${remaining[idx].q}</div>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px" id="quiz-options">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="quiz-options">
       ${remaining[idx].o.map((opt,i)=>`<button onclick="answerQuiz(${i},${remaining[idx].a},${bankIdx})" style="padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;text-align:left;cursor:pointer;font-size:14px;font-weight:500;transition:.15s" onmouseover="this.style.borderColor='#f97316'" onmouseout="if(!this.dataset.answered)this.style.borderColor='#e2e8f0'">${['A','B','C','D'][i]}. ${opt}</button>`).join('')}
     </div>
     <div id="quiz-feedback" style="margin-top:16px"></div>`;
