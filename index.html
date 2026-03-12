@@ -2384,7 +2384,7 @@ async function sendAIMessage() {
   try {
     const response = await fetch(PROXY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({ messages: aiHistory })
     });
 
