@@ -2388,10 +2388,12 @@ async function sendAIMessage() {
       body: JSON.stringify({ messages: aiHistory })
     });
 
-    const data = await response.json();
-    // Support both {reply:"..."} from proxy and full Anthropic format
+    const rawText = await response.text();
+    console.log("AI Proxy raw response:", rawText);
+    let data;
+    try { data = JSON.parse(rawText); } catch(pe) { throw new Error("Invalid JSON from proxy: " + rawText.substring(0,200)); }
+    if (data.error) throw new Error("Proxy error: " + data.error);
     const reply = data.reply || (data.content && data.content[0] ? data.content[0].text : null) || 'Sorry, I could not get a response. Please try again.';
-    if (data.error) throw new Error(data.error);
 
     // Remove typing indicator
     const typingEl = document.getElementById(typingId);
