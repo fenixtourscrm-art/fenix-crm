@@ -564,12 +564,72 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     </div>
 
     <div class="tab" id="tab-quiz">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div class="section-title" style="margin:0">🧠 Daily Travel Quiz</div>
-        <div id="quiz-score-display" style="font-size:13px;color:#64748b;font-weight:600"></div>
+      <!-- Header row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="section-title" style="margin:0">🧠 Daily Travel Quiz</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:2px">Test your travel knowledge · New questions every day</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="quiz-mode-btn" class="btn" onclick="setQuizMode('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
+          <button id="learn-mode-btn" class="btn btn-ghost" onclick="setQuizMode('learn')" style="font-size:12px;font-weight:700">📚 Learn Mode</button>
+          <button id="leader-mode-btn" class="btn btn-ghost" onclick="setQuizMode('leaderboard')" style="font-size:12px;font-weight:700">🏆 Leaderboard</button>
+        </div>
       </div>
-      <div class="card">
-        <div id="quiz-container"><div style="text-align:center;padding:40px;color:#94a3b8">Loading quiz...</div></div>
+
+      <!-- QUIZ PANEL -->
+      <div id="quiz-panel">
+        <!-- Score bar -->
+        <div class="card" style="padding:16px 20px;margin-bottom:16px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:#fff;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div style="text-align:center">
+              <div style="font-size:11px;opacity:.8">TODAY'S SCORE</div>
+              <div id="quiz-score-big" style="font-size:28px;font-weight:800;line-height:1">0/0</div>
+            </div>
+            <div style="width:1px;height:40px;background:rgba(255,255,255,.3)"></div>
+            <div style="text-align:center">
+              <div style="font-size:11px;opacity:.8">STREAK 🔥</div>
+              <div id="quiz-streak" style="font-size:28px;font-weight:800;line-height:1">0</div>
+            </div>
+          </div>
+          <div id="quiz-cat-badges" style="display:flex;gap:6px;flex-wrap:wrap">
+            <span class="quiz-cat-pill active" onclick="filterQuizCat('all',this)">All</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Visa',this)">🛂 Visa</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Passport',this)">📕 Passport</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Destinations',this)">🌍 Destinations</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Hotels',this)">🏨 Hotels</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Cruise',this)">🚢 Cruise</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Geography',this)">🗺️ Geography</span>
+            <span class="quiz-cat-pill" onclick="filterQuizCat('Industry',this)">✈️ Industry</span>
+          </div>
+        </div>
+        <!-- Question card -->
+        <div class="card">
+          <div id="quiz-container"><div style="text-align:center;padding:40px;color:#94a3b8">Loading quiz...</div></div>
+        </div>
+      </div>
+
+      <!-- LEARN PANEL -->
+      <div id="learn-panel" style="display:none">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap" id="learn-cat-row">
+          <button class="btn btn-ghost quiz-cat-btn active" onclick="filterLearn('all',this)" style="font-size:12px">All</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Visa',this)" style="font-size:12px">🛂 Visa</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Passport',this)" style="font-size:12px">📕 Passport</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Destinations',this)" style="font-size:12px">🌍 Destinations</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Hotels',this)" style="font-size:12px">🏨 Hotels</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Cruise',this)" style="font-size:12px">🚢 Cruise</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Geography',this)" style="font-size:12px">🗺️ Geography</button>
+          <button class="btn btn-ghost quiz-cat-btn" onclick="filterLearn('Industry',this)" style="font-size:12px">✈️ Industry</button>
+        </div>
+        <div id="learn-container" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div>
+      </div>
+
+      <!-- LEADERBOARD PANEL -->
+      <div id="leaderboard-panel" style="display:none">
+        <div class="card">
+          <div style="font-size:15px;font-weight:700;color:#1e293b;margin-bottom:16px">🏆 All-Time Leaderboard</div>
+          <div id="leaderboard-container"><div style="text-align:center;padding:30px;color:#94a3b8">Loading scores...</div></div>
+        </div>
       </div>
     </div>
 
@@ -2963,66 +3023,123 @@ function renderBugReports() {
 
 // ══════════════ TRAVEL QUIZ ══════════════
 const QUIZ_BANK = [
-  {q:"What is the validity of a standard Indian passport?",o:["5 years","10 years","15 years","20 years"],a:1},
-  {q:"Which country does NOT require a visa for Indian passport holders?",o:["USA","Nepal","UK","Australia"],a:1},
-  {q:"What does 'VOA' stand for in travel?",o:["Visa on Arrival","Visit of Approval","Verified Official Authorization","Visa on Application"],a:0},
-  {q:"Which Indian airport has the IATA code 'BOM'?",o:["Bengaluru","Chennai","Mumbai","Kolkata"],a:2},
-  {q:"Dubai is the largest city of which country?",o:["Qatar","Bahrain","Saudi Arabia","UAE"],a:3},
-  {q:"What currency is used in Thailand?",o:["Ringgit","Baht","Dong","Rupiah"],a:1},
-  {q:"Schengen visa covers how many European countries?",o:["20","25","27","29"],a:2},
-  {q:"Which document is required for international travel besides passport?",o:["Aadhar Card","Visa (for most countries)","Driving License","Voter ID"],a:1},
-  {q:"What is the minimum passport validity required by most countries for entry?",o:["1 month","3 months","6 months","12 months"],a:2},
-  {q:"Which airline is the national carrier of India?",o:["IndiGo","SpiceJet","Air India","Vistara"],a:2},
-  {q:"Maldives is located in which ocean?",o:["Atlantic","Pacific","Arctic","Indian"],a:3},
-  {q:"What is the currency of Japan?",o:["Yuan","Won","Yen","Ringgit"],a:2},
-  {q:"Which city is known as the 'City of Love'?",o:["Rome","Venice","Paris","Barcelona"],a:2},
-  {q:"Singapore is a city-state in which region?",o:["East Asia","South Asia","Southeast Asia","Central Asia"],a:2},
-  {q:"What is the full form of IATA?",o:["International Air Travel Association","International Air Transport Association","International Aviation Travel Agency","Indian Air Transport Authority"],a:1},
-  {q:"Which visa allows multiple entries into a country?",o:["Single Entry","Double Entry","Transit Visa","Multiple Entry"],a:3},
-  {q:"Bali is part of which country?",o:["Malaysia","Thailand","Philippines","Indonesia"],a:3},
-  {q:"What is the currency of UAE?",o:["Riyal","Dinar","Dirham","Dollar"],a:2},
-  {q:"Which passport color does India issue?",o:["Green","Blue","Red","Black"],a:1},
-  {q:"What does 'ETA' stand for in travel?",o:["Electronic Travel Authorization","Emergency Travel Agency","Extended Travel Access","Electronic Ticket Approval"],a:0},
-  {q:"Which is the busiest airport in the world by passenger traffic?",o:["Heathrow London","Dubai International","Hartsfield-Jackson Atlanta","Beijing Capital"],a:2},
-  {q:"Turkey's Istanbul straddles which two continents?",o:["Africa & Asia","Europe & Asia","Europe & Africa","Asia & Australia"],a:1},
-  {q:"Which country has the most UNESCO World Heritage Sites?",o:["France","China","Italy","India"],a:2},
-  {q:"What is the capital of Australia?",o:["Sydney","Melbourne","Brisbane","Canberra"],a:3},
-  {q:"Which ocean is the largest?",o:["Atlantic","Arctic","Indian","Pacific"],a:3},
-  {q:"What is the currency of Malaysia?",o:["Baht","Ringgit","Rupiah","Dollar"],a:1},
-  {q:"Hong Kong is a Special Administrative Region of which country?",o:["Japan","South Korea","China","Taiwan"],a:2},
-  {q:"Which is the smallest country in the world?",o:["Monaco","San Marino","Liechtenstein","Vatican City"],a:3},
-  {q:"Mount Everest is on the border of which two countries?",o:["India & China","Nepal & China","India & Nepal","Bhutan & China"],a:1},
-  {q:"What is the capital of Canada?",o:["Toronto","Vancouver","Montreal","Ottawa"],a:3},
+  // ── PASSPORT ──
+  {q:"What is the validity of a standard Indian passport?",o:["5 years","10 years","15 years","20 years"],a:1,cat:"Passport",exp:"An Indian adult passport (18+) is valid for 10 years from the date of issue. Minors under 15 get a 5-year passport."},
+  {q:"Which document is mandatory for all international travellers?",o:["Driving Licence","Aadhar Card","Passport","PAN Card"],a:2,cat:"Passport",exp:"A valid passport is the primary mandatory travel document for all international travel from India."},
+  {q:"How long is an Indian passport valid for adults?",o:["5 years","10 years","15 years","20 years"],a:1,cat:"Passport",exp:"Indian adult passports are valid for 10 years. Tatkal (urgent) passport takes 1-3 working days at extra cost."},
+  {q:"What does OCI stand for in Indian travel documents?",o:["Overseas Citizen of India","Official Country Identity","Overseas Country Immigration","Outside Citizen Index"],a:0,cat:"Passport",exp:"OCI stands for Overseas Citizen of India. It is a long-term multi-purpose visa for foreign nationals of Indian origin."},
+  {q:"What is a PCC required for in travel?",o:["Passport renewal","Police Clearance Certificate — needed for long-term visas abroad","Proof of Customs Clearance","Passenger Confirmation Card"],a:1,cat:"Passport",exp:"PCC (Police Clearance Certificate) is required for immigration, long-term visas, and employment abroad, certifying no criminal record."},
+  // ── VISA ──
+  {q:"Which country does NOT require a visa for Indian passport holders?",o:["USA","Nepal","UK","Australia"],a:1,cat:"Visa",exp:"Nepal and Bhutan allow Indians visa-free entry. Most other countries require a visa for Indian passport holders."},
+  {q:"What does 'VOA' stand for in travel?",o:["Visa on Arrival","Very Old Age","Visitor Open Access","Vacation Overseas Allowance"],a:0,cat:"Visa",exp:"VOA stands for Visa on Arrival — you obtain the visa stamp at the destination airport/port on arrival."},
+  {q:"Which countries are covered under the Schengen Visa?",o:["Only France","Multiple European countries","Only Germany","Only Italy"],a:1,cat:"Visa",exp:"The Schengen Visa allows travel to 27 European countries including France, Germany, Italy, Spain and more — without border checks between them."},
+  {q:"How many working days does a Dubai tourist visa typically take?",o:["1–2 days","3–5 days","10–15 days","1 month"],a:1,cat:"Visa",exp:"Dubai (UAE) tourist visa processing typically takes 3–5 working days when applied through an airline or authorized agent."},
+  {q:"What is Drop Box facility in US visa renewal?",o:["Online visa application","Submitting documents without attending an interview","Free visa service","A courier company name"],a:1,cat:"Visa",exp:"US visa Drop Box allows eligible applicants renewing within 48 months of expiry to submit documents at a courier centre — no interview needed."},
+  {q:"Which visa category is B1/B2 in the USA?",o:["Student Visa","Work Visa","Business/Tourist Visa","Transit Visa"],a:2,cat:"Visa",exp:"B1 is US Business visa and B2 is US Tourist visa. They are often issued together as a B1/B2 combined visa, valid for 10 years."},
+  {q:"What is the minimum passport validity required for most international travel?",o:["1 month","3 months","6 months","1 year"],a:2,cat:"Visa",exp:"Most countries require at least 6 months of passport validity beyond your intended stay. Always check the specific destination rules."},
+  // ── DESTINATIONS ──
+  {q:"Bali is part of which country?",o:["Malaysia","Thailand","Philippines","Indonesia"],a:3,cat:"Destinations",exp:"Bali is a beautiful island province in Indonesia. It's famous for temples, rice terraces, beaches, and spiritual culture."},
+  {q:"Which is the tallest building in the world, located in Dubai?",o:["Burj Al Arab","Palm Tower","Burj Khalifa","CCTV Tower"],a:2,cat:"Destinations",exp:"Burj Khalifa in Dubai stands at 828 metres and is the tallest building in the world, with observation decks at levels 124 and 148."},
+  {q:"Petronas Twin Towers are located in which city?",o:["Singapore","Jakarta","Kuala Lumpur","Bangkok"],a:2,cat:"Destinations",exp:"Petronas Twin Towers are in Kuala Lumpur, Malaysia. They were the world's tallest buildings from 1998 to 2004."},
+  {q:"The best time to see cherry blossoms in Japan is?",o:["January–February","March–April","July–August","October–November"],a:1,cat:"Destinations",exp:"Cherry blossom (Sakura) season in Japan typically occurs from late March to early April, varying slightly by region and year."},
+  {q:"Which African country is famous for wildlife safaris and the Masai Mara reserve?",o:["South Africa","Tanzania","Kenya","Botswana"],a:2,cat:"Destinations",exp:"Kenya's Masai Mara National Reserve is world-famous for the annual Great Wildebeest Migration and year-round Big Five wildlife sightings."},
+  {q:"Santorini is a famous island destination in which country?",o:["Italy","Spain","Greece","Croatia"],a:2,cat:"Destinations",exp:"Santorini is a stunning volcanic island in Greece, famous for white-washed buildings, blue domes, and spectacular Aegean sunsets."},
+  {q:"The famous 'Oktoberfest' festival takes place in which city?",o:["Berlin","Vienna","Zurich","Munich"],a:3,cat:"Destinations",exp:"Oktoberfest is the world's largest beer festival held annually in Munich, Bavaria, Germany. It attracts over 6 million visitors each year."},
+  // ── GEOGRAPHY ──
+  {q:"What is the currency used in Japan?",o:["Won","Yen","Yuan","Baht"],a:1,cat:"Geography",exp:"Japan uses the Japanese Yen (JPY ¥). South Korea uses Won, China uses Yuan/Renminbi, Thailand uses Baht."},
+  {q:"What is the currency of the UAE (Dubai)?",o:["Riyal","Dirham","Dinar","Dollar"],a:1,cat:"Geography",exp:"The UAE uses the UAE Dirham (AED). Saudi Arabia uses Riyal, Kuwait and Bahrain use Dinar."},
+  {q:"Which is the smallest country in the world?",o:["Monaco","San Marino","Vatican City","Liechtenstein"],a:2,cat:"Geography",exp:"Vatican City is the world's smallest country at just 0.44 km², located within Rome, Italy. It's the headquarters of the Roman Catholic Church."},
+  {q:"What is the capital of Australia?",o:["Sydney","Melbourne","Canberra","Brisbane"],a:2,cat:"Geography",exp:"Canberra is the capital of Australia — not Sydney or Melbourne. It was purpose-built as a compromise between these two rival cities."},
+  {q:"What is the time difference between India (IST) and UAE (Gulf Standard Time)?",o:["30 minutes","1 hour 30 minutes","3 hours","Same time"],a:1,cat:"Geography",exp:"UAE (GST) is 1 hour 30 minutes behind India (IST). When it's 12:00 PM in India, it's 10:30 AM in Dubai."},
+  // ── HOTELS ──
+  {q:"What does 'All-Inclusive' mean at a resort?",o:["Only breakfast included","All meals, drinks, and most activities included in one price","Free airport transfer only","Only WiFi and breakfast"],a:1,cat:"Hotels",exp:"All-Inclusive resorts bundle accommodation, all meals (breakfast, lunch, dinner), beverages including alcohol, and most activities into one price."},
+  {q:"What does 'CP' (Continental Plan) include at a hotel?",o:["Room + all meals","Room + breakfast only","Room + lunch only","All inclusive"],a:1,cat:"Hotels",exp:"Continental Plan (CP) includes room accommodation plus breakfast only. It's one of the most common hotel plans for travel packages."},
+  {q:"What does 'MAP' stand for in hotel meal plans?",o:["Morning And Poolside","Modified American Plan (Room+Breakfast+Dinner)","Maximum Accommodation Package","Monthly Advance Payment"],a:1,cat:"Hotels",exp:"MAP (Modified American Plan) includes room, breakfast, and dinner. Lunch is not included and guests pay for it separately."},
+  // ── CRUISE ──
+  {q:"What is a 'Port of Call' on a cruise?",o:["The home port where cruise starts","A city where the ship stops during the voyage","The ship's main restaurant","The cruise booking office"],a:1,cat:"Cruise",exp:"A Port of Call is an intermediate stop on a cruise itinerary where passengers can go ashore to explore before the ship continues."},
+  {q:"What does 'Embarkation' mean on a cruise?",o:["Getting off the ship","Getting onto the ship at the home port","Booking a cruise","Paying cruise fees"],a:1,cat:"Cruise",exp:"Embarkation means boarding the cruise ship at the home (departure) port. Disembarkation means getting off the ship at the end of the cruise."},
+  // ── INDUSTRY ──
+  {q:"What does IATA stand for?",o:["International Air Transport Association","Indian Airlines Travel Authority","International Airport Terminal Agency","Internal Airline Tracking Application"],a:0,cat:"Industry",exp:"IATA is the International Air Transport Association — the trade body for world airlines setting standards and policies for safe air travel."},
+  {q:"What does 'PNR' stand for in airline ticketing?",o:["Passenger Name Record","Personal Number Registration","Priority Notification Receipt","Passenger Navigation Route"],a:0,cat:"Industry",exp:"PNR stands for Passenger Name Record — a unique booking reference code (usually 6 characters) containing all flight details for a passenger."},
+  {q:"What does MICE stand for in corporate travel?",o:["Meetings, Incentives, Conferences/Conventions, Exhibitions","Management In Corporate Events","Major International Conference Events","Monthly Incentive Club Events"],a:0,cat:"Industry",exp:"MICE stands for Meetings, Incentives, Conferences/Conventions, and Exhibitions — a major segment of the group travel business."},
 ];
 
 let quizState={score:0,total:0,current:null,answered:false};
+
+// ══ QUIZ STATE ══
+let quizCatFilter = 'all';
+let quizMode = 'quiz';
+
+function setQuizMode(mode) {
+  quizMode = mode;
+  document.getElementById('quiz-panel').style.display        = mode==='quiz'        ? '' : 'none';
+  document.getElementById('learn-panel').style.display       = mode==='learn'       ? '' : 'none';
+  document.getElementById('leaderboard-panel').style.display = mode==='leaderboard' ? '' : 'none';
+  document.getElementById('quiz-mode-btn').style.background    = mode==='quiz'        ? '#8b5cf6' : '';
+  document.getElementById('quiz-mode-btn').style.color         = mode==='quiz'        ? '#fff'    : '';
+  document.getElementById('learn-mode-btn').style.background   = mode==='learn'       ? '#8b5cf6' : '';
+  document.getElementById('learn-mode-btn').style.color        = mode==='learn'       ? '#fff'    : '';
+  document.getElementById('leader-mode-btn').style.background  = mode==='leaderboard' ? '#8b5cf6' : '';
+  document.getElementById('leader-mode-btn').style.color       = mode==='leaderboard' ? '#fff'    : '';
+  if(mode==='learn') renderLearn('all');
+  if(mode==='leaderboard') renderLeaderboard();
+}
+
+function filterQuizCat(cat, el) {
+  quizCatFilter = cat;
+  document.querySelectorAll('.quiz-cat-pill').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  initQuiz();
+}
 
 function initQuiz(){
   const today=new Date().toDateString();
   const stored=JSON.parse(localStorage.getItem('fenix_quiz_'+today)||'{"score":0,"total":0,"answered":[]}');
   quizState.score=stored.score||0;
   quizState.total=stored.total||0;
+  // Update score display
+  const sd = document.getElementById('quiz-score-big');
+  const st = document.getElementById('quiz-streak');
+  if(sd) sd.textContent = quizState.score+'/'+quizState.total;
+  // Streak
+  const streak = parseInt(localStorage.getItem('fenix_quiz_streak')||'0');
+  if(st) st.textContent = streak;
   showQuizQuestion(stored.answered||[]);
 }
 
 function showQuizQuestion(answeredToday){
-  const remaining=QUIZ_BANK.filter((_,i)=>!answeredToday.includes(i));
-  document.getElementById('quiz-score-display').textContent=`Score: ${quizState.score}/${quizState.total}`;
+  let bank = QUIZ_BANK;
+  if(quizCatFilter !== 'all') bank = QUIZ_BANK.filter(q=>q.cat===quizCatFilter);
+  const remaining = bank.filter((_,i)=>!answeredToday.includes(QUIZ_BANK.indexOf(_)));
+  const sd = document.getElementById('quiz-score-big');
+  if(sd) sd.textContent = quizState.score+'/'+quizState.total;
   if(!remaining.length){
-    document.getElementById('quiz-container').innerHTML=`<div style="text-align:center;padding:40px"><div style="font-size:48px">🎉</div><div style="font-size:18px;font-weight:700;color:#16a34a;margin-top:12px">Quiz Complete!</div><div style="color:#64748b;margin-top:8px">You've answered all questions for today.</div><div style="font-size:24px;font-weight:800;color:#f97316;margin-top:16px">${quizState.score} / ${quizState.total}</div><button class="btn btn-primary" style="margin-top:20px" onclick="localStorage.removeItem('fenix_quiz_'+new Date().toDateString());initQuiz()">🔄 Restart</button></div>`;
+    document.getElementById('quiz-container').innerHTML=`
+      <div style="text-align:center;padding:48px 20px">
+        <div style="font-size:56px">🎉</div>
+        <div style="font-size:20px;font-weight:800;color:#16a34a;margin-top:12px">Quiz Complete!</div>
+        <div style="color:#64748b;margin-top:8px">You've answered all ${quizCatFilter==='all'?'':'category '}questions for today.</div>
+        <div style="font-size:32px;font-weight:800;color:#f97316;margin-top:16px">${quizState.score} / ${quizState.total}</div>
+        <div style="margin-top:8px;font-size:13px;color:#94a3b8">${quizState.total>0?Math.round(quizState.score/quizState.total*100)+'% correct':''}</div>
+        <button class="btn btn-primary" style="margin-top:24px" onclick="localStorage.removeItem('fenix_quiz_'+new Date().toDateString());quizState.score=0;quizState.total=0;initQuiz()">🔄 Restart Today's Quiz</button>
+      </div>`;
+    saveLeaderboardScore();
     return;
   }
   const idx=Math.floor(Math.random()*remaining.length);
   const bankIdx=QUIZ_BANK.indexOf(remaining[idx]);
   quizState.current={q:remaining[idx],bankIdx};
   quizState.answered=false;
+  const q = remaining[idx];
+  const catColor = {Visa:'#0ea5e9',Passport:'#8b5cf6',Destinations:'#10b981',Hotels:'#f59e0b',Cruise:'#06b6d4',Geography:'#f97316',Industry:'#ec4899'}[q.cat]||'#64748b';
   document.getElementById('quiz-container').innerHTML=`
     <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">Question ${quizState.total+1} · ${remaining.length} remaining today</div>
-      <div style="font-size:18px;font-weight:700;color:#1e293b;line-height:1.6;margin-bottom:20px">${remaining[idx].q}</div>
+      ${q.cat?`<span style="background:${catColor}20;color:${catColor};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.5px">${q.cat.toUpperCase()}</span>`:''}
+      <div style="font-size:11px;color:#94a3b8;margin-top:8px">Question ${quizState.total+1} · <span style="color:#8b5cf6;font-weight:600">${remaining.length} remaining</span></div>
+      <div style="font-size:18px;font-weight:700;color:#1e293b;line-height:1.6;margin-top:8px">${q.q}</div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px" id="quiz-options">
-      ${remaining[idx].o.map((opt,i)=>`<button onclick="answerQuiz(${i},${remaining[idx].a},${bankIdx})" style="padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;text-align:left;cursor:pointer;font-size:14px;font-weight:500;transition:.15s" onmouseover="this.style.borderColor='#f97316'" onmouseout="if(!this.dataset.answered)this.style.borderColor='#e2e8f0'">${['A','B','C','D'][i]}. ${opt}</button>`).join('')}
+      ${q.o.map((opt,i)=>`<button onclick="answerQuiz(${i},${q.a},${bankIdx})" style="padding:14px 16px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;text-align:left;cursor:pointer;font-size:14px;font-weight:500;transition:.15s;display:flex;align-items:center;gap:10px" onmouseover="if(!this.dataset.answered){this.style.borderColor='#8b5cf6';this.style.background='#f5f3ff'}" onmouseout="if(!this.dataset.answered){this.style.borderColor='#e2e8f0';this.style.background='#fff'}"><span style="background:#f1f5f9;color:#64748b;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;flex-shrink:0">${['A','B','C','D'][i]}</span>${opt}</button>`).join('')}
     </div>
     <div id="quiz-feedback" style="margin-top:16px"></div>`;
 }
@@ -3042,12 +3159,86 @@ function answerQuiz(chosen, correct, bankIdx){
   quizState.total++;
   const today=new Date().toDateString();
   const stored=JSON.parse(localStorage.getItem('fenix_quiz_'+today)||'{"score":0,"total":0,"answered":[]}');
-  stored.score=quizState.score; stored.total=quizState.total;
+  stored.score=quizState.score;
+  stored.total=quizState.total;
   if(!stored.answered.includes(bankIdx)) stored.answered.push(bankIdx);
-  localStorage.setItem('fenix_quiz_'+today, JSON.stringify(stored));
-  document.getElementById('quiz-score-display').textContent=`Score: ${quizState.score}/${quizState.total}`;
-  document.getElementById('quiz-feedback').innerHTML=`<div style="padding:12px 16px;border-radius:10px;background:${isRight?'#dcfce7':'#fee2e2'};color:${isRight?'#166534':'#991b1b'};font-weight:600">${isRight?'✅ Correct! Well done!':'❌ Incorrect. The answer was: '+QUIZ_BANK[bankIdx].o[correct]}</div><button class="btn btn-primary" style="margin-top:12px" onclick="initQuiz()">Next Question →</button>`;
+  localStorage.setItem('fenix_quiz_'+today,JSON.stringify(stored));
+  const sd=document.getElementById('quiz-score-big');
+  if(sd) sd.textContent=quizState.score+'/'+quizState.total;
+  const q=QUIZ_BANK[bankIdx];
+  const exp = q.exp || '';
+  document.getElementById('quiz-feedback').innerHTML=`
+    <div style="padding:14px 16px;border-radius:12px;background:${isRight?'#f0fdf4':'#fef2f2'};border:1.5px solid ${isRight?'#bbf7d0':'#fecaca'};display:flex;align-items:flex-start;gap:10px">
+      <div style="font-size:20px">${isRight?'✅':'❌'}</div>
+      <div>
+        <div style="font-weight:700;color:${isRight?'#166534':'#991b1b'};font-size:13px">${isRight?'Correct! Well done 🎉':'Wrong answer'}</div>
+        ${exp?`<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.5">${exp}</div>`:''}
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:12px;background:#8b5cf6;border-color:#8b5cf6" onclick="initQuiz()">Next Question →</button>`;
 }
+
+function saveLeaderboardScore(){
+  if(!CURRENT_USER) return;
+  const today=new Date().toDateString();
+  const stored=JSON.parse(localStorage.getItem('fenix_quiz_'+today)||'{"score":0,"total":0}');
+  if(!stored.total) return;
+  db.collection('quizscores').doc(CURRENT_USER.id+'_'+today).set({
+    staffId: CURRENT_USER.id,
+    staffName: CURRENT_USER.name,
+    score: stored.score,
+    total: stored.total,
+    pct: Math.round(stored.score/stored.total*100),
+    date: today,
+    ts: new Date().toISOString()
+  }).catch(()=>{});
+}
+
+function renderLeaderboard(){
+  const el=document.getElementById('leaderboard-container');
+  if(!el) return;
+  el.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8">Loading...</div>';
+  const today=new Date().toDateString();
+  db.collection('quizscores').where('date','==',today).get().then(snap=>{
+    if(snap.empty){el.innerHTML='<div style="text-align:center;padding:30px;color:#94a3b8">No scores yet today. Be the first! 🏆</div>';return;}
+    const scores=[];
+    snap.forEach(d=>scores.push(d.data()));
+    scores.sort((a,b)=>b.pct-a.pct||b.score-a.score);
+    const medals=['🥇','🥈','🥉'];
+    el.innerHTML=scores.map((s,i)=>`
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9">
+        <div style="font-size:22px;width:32px;text-align:center">${medals[i]||'#'+(i+1)}</div>
+        <div style="flex:1">
+          <div style="font-weight:600;color:#1e293b">${s.staffName}</div>
+          <div style="font-size:12px;color:#94a3b8">${s.score}/${s.total} correct</div>
+        </div>
+        <div style="font-size:18px;font-weight:800;color:#8b5cf6">${s.pct}%</div>
+      </div>`).join('');
+  }).catch(()=>{el.innerHTML='<div style="color:#ef4444;padding:20px">Could not load scores.</div>';});
+}
+
+function renderLearn(cat){
+  const el=document.getElementById('learn-container');
+  if(!el) return;
+  let bank=cat==='all'?QUIZ_BANK:QUIZ_BANK.filter(q=>q.cat===cat);
+  if(!bank.length){el.innerHTML='<div style="color:#94a3b8;padding:20px">No questions in this category yet.</div>';return;}
+  el.innerHTML=bank.map(q=>{
+    const catColor={Visa:'#0ea5e9',Passport:'#8b5cf6',Destinations:'#10b981',Hotels:'#f59e0b',Cruise:'#06b6d4',Geography:'#f97316',Industry:'#ec4899'}[q.cat]||'#64748b';
+    return `<div class="learn-card">
+      ${q.cat?`<span style="background:${catColor}20;color:${catColor};font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${q.cat}</span>`:''}
+      <div style="font-weight:700;color:#1e293b;margin:8px 0 6px;font-size:13px;line-height:1.4">${q.q}</div>
+      <div style="font-size:12px;color:#16a34a;font-weight:600">✅ ${q.o[q.a]}</div>
+      ${q.exp?`<div style="font-size:11px;color:#64748b;margin-top:6px;line-height:1.5">${q.exp}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function filterLearn(cat, el){
+  document.querySelectorAll('.quiz-cat-btn').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderLearn(cat);
+}
+
 
 // ══════════════ AI ASSISTANT ══════════════
 let aiHistory=[];
