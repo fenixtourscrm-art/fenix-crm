@@ -792,6 +792,7 @@ const RATINGS=["A+","A","B+","B","C"];
 const ENQ_TYPES=["New","Old","Repeated"];
 const INTENTIONS=["Domestic Tickets","Visa","Cruise","Car","Hotels","Travel Insurance","Passport","International Tour","Domestic Tour"];
 const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Social Media","Walking","Corporate","Inquired"];
+const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa","Passport"];
 const SOURCES=["Social Media – Facebook","Social Media – Instagram","Social Media – LinkedIn","Social Media – Twitter/X","Social Media – YouTube","Social Media – WhatsApp","Family Reference","Friends Reference","Customer Reference","Newspaper","Radio Mirchi","Flyer Distribution – Events","Personal Visit – Office","Influencer Reference","Others"];
 const LOST_REASONS=["Budget issue","No response","Went to another agency","Trip cancelled","Other"];
 const VISA_STATUS=["Pending","Submitted","Approved","Rejected"];
@@ -1499,7 +1500,7 @@ function openModal(type){
     const ex=isEdit?enquiries.find(x=>x.id===eid):null;
     const preClient=window._prefilledClientId||"";
     const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Lost","Confirmed Booking"];
-    const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa","Passport"];
+    // SERVICE_CATS is defined globally
 
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid">
