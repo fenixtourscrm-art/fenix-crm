@@ -2509,7 +2509,7 @@ async function del(arr,id) {
   } catch(e) { alert("Delete failed: "+e.message); }
 }
 
-async async function revertToEnquiry(bookingId) {
+async function revertToEnquiry(bookingId) {
   if(_saving) return;
   if(!confirm("Are you sure you want to move this booking back to Inquiry?")) return;
   _saving = true;
