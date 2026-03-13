@@ -1030,49 +1030,95 @@ async function markJunk(id){
   } catch(err){ alert("Failed: "+err.message); }
 }
 async function markBooked(id){
+  const e = enquiries.find(x => x.id === id);
+  if(!e) return;
+  // Store enquiry data for the booking form to use
+  window._bookingFromEnquiryId = id;
+  window._bookingFromEnquiry = e;
+  // Determine category
+  let bkCat = "International Tours";
+  if(e.category) bkCat = e.category;
+  else if(e.destType === "Domestic") bkCat = "Domestic Tours";
+  window._bkPreCat = bkCat;
+  // Open the booking form pre-filled — staff will enter amount/payment then save
+  openModal("booking_from_enquiry");
+}
+
+async function saveBookingFromEnquiry() {
   if(_saving) return;
-  const e=enquiries.find(x=>x.id===id);if(!e)return;
-  if(confirm(`Convert "${cName(e.clientId)} – ${e.destination}" to Booking?`)){
-    _saving = true;
-    try {
-      // Determine correct booking category from enquiry category
-      let bkCat = "International Tours";
-      if(e.category) {
-        bkCat = e.category; // use enquiry category directly if available
-      } else if(e.destType === "Domestic") {
-        bkCat = "Domestic Tours";
-      }
-      const bkData = {
-        category:    bkCat,
-        clientId:    e.clientId,
-        destination: e.destination || "",
-        details:     "",
-        tourType:    e.tourType || "",
-        travelDate:  e.startDate || "",
-        adults:      e.adults  || e.pax || 1,
-        childBed:    e.childBed   || 0,
-        childNoBed:  e.childNoBed || 0,
-        infant:      e.infant     || 0,
-        pax:         e.pax || 1,
-        amount:      0,
-        paid:        0,
-        paymentHistory: [],
-        status:      "Confirmed",
-        paymentStatus: "Pending",
-        staffId:     CURRENT_USER ? CURRENT_USER.id : (e.staffId || 0),
-        notes:       "From enquiry"
-      };
-      await fbUpdate("enquiries", id, {status:"Booked"});
-      e.status = "Booked";
-      await fbAdd("bookings", bkData);
-      renderAll();
-      alert("✅ Moved to Bookings!");
-    } catch(err){
-      alert("Failed: " + err.message);
-    } finally {
-      _saving = false;
-    }
+  const e = window._bookingFromEnquiry;
+  const enqId = window._bookingFromEnquiryId;
+  if(!e || !enqId) return;
+
+  const gv = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+  const gn = id => parseFloat(gv(id)) || 0;
+
+  const amount  = gn("bfe-amount");
+  const paid    = gn("bfe-paid");
+  const pending = Math.max(0, amount - paid);
+  const payStatus = paid >= amount && amount > 0 ? "Fully Paid" : paid > 0 ? "Partially Paid" : "Pending";
+  const bkStatus  = gv("bfe-status") || "Confirmed";
+  const notes     = gv("bfe-notes");
+
+  _saving = true;
+  try {
+    let bkCat = "International Tours";
+    if(e.category) bkCat = e.category;
+    else if(e.destType === "Domestic") bkCat = "Domestic Tours";
+
+    const bkData = {
+      category:       bkCat,
+      clientId:       e.clientId,
+      destination:    e.destination || "",
+      details:        "",
+      tourType:       e.tourType || "",
+      travelDate:     e.startDate || "",
+      adults:         e.adults   || e.pax || 1,
+      childBed:       e.childBed   || 0,
+      childNoBed:     e.childNoBed || 0,
+      infant:         e.infant     || 0,
+      pax:            e.pax || 1,
+      amount:         amount,
+      paid:           paid,
+      pendingAmount:  pending,
+      paymentHistory: paid > 0 ? [{
+        amount: paid,
+        date:   new Date().toISOString().split("T")[0],
+        method: gv("bfe-pay-method") || "Cash",
+        ref:    "",
+        addedBy: CURRENT_USER?.name || "Staff",
+        addedAt: new Date().toISOString()
+      }] : [],
+      status:         bkStatus,
+      paymentStatus:  payStatus,
+      staffId:        CURRENT_USER ? CURRENT_USER.id : (e.staffId || 0),
+      notes:          notes || "Converted from Enquiry"
+    };
+
+    await fbUpdate("enquiries", enqId, { status: "Booked" });
+    e.status = "Booked";
+    await fbAdd("bookings", bkData);
+    closeOverlay();
+    window._bookingFromEnquiry = null;
+    window._bookingFromEnquiryId = null;
+    renderAll();
+    alert("✅ Booking created successfully!");
+  } catch(err) {
+    alert("Failed: " + err.message);
+  } finally {
+    _saving = false;
   }
+}
+
+function bfeCalcPending() {
+  const amount  = parseFloat(document.getElementById("bfe-amount")?.value) || 0;
+  const paid    = parseFloat(document.getElementById("bfe-paid")?.value)   || 0;
+  const pending = Math.max(0, amount - paid);
+  const payStatus = paid >= amount && amount > 0 ? "Fully Paid" : paid > 0 ? "Partially Paid" : "Pending";
+  const pendEl = document.getElementById("bfe-pending");
+  const statusEl = document.getElementById("bfe-pay-status-display");
+  if(pendEl) pendEl.value = pending;
+  if(statusEl) statusEl.value = payStatus;
 }
 
 // BOOKINGS (unified)
@@ -1440,6 +1486,73 @@ function openModal(type){
     updateSourceSub();
     updateEnqForm(ex);
   
+  } else if(type==="booking_from_enquiry"){
+    const e = window._bookingFromEnquiry;
+    if(!e){ closeOverlay(); return; }
+    const clientName = cName(e.clientId);
+    const inputStyle = "width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box";
+    const labelStyle = "font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px";
+    mb.innerHTML = `
+      <div class="modal-title">📋 Confirm Booking <button class="x" onclick="closeOverlay()">✕</button></div>
+
+      <!-- Enquiry Summary (read-only) -->
+      <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;padding:14px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">📄 Enquiry Details (from Inquiry)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;color:#1e293b">
+          <div><span style="color:#64748b">Client:</span> <strong>${clientName}</strong></div>
+          <div><span style="color:#64748b">Service:</span> <strong>${e.category || "—"}</strong></div>
+          <div><span style="color:#64748b">Destination:</span> <strong>${e.destination || "—"}</strong></div>
+          <div><span style="color:#64748b">Travel Date:</span> <strong>${e.startDate || "—"}</strong></div>
+          <div><span style="color:#64748b">Pax:</span> <strong>${e.pax || 1} (${e.adults||1}A ${e.childBed||0}CB ${e.childNoBed||0}CN ${e.infant||0}I)</strong></div>
+          <div><span style="color:#64748b">Staff:</span> <strong>${sName(e.staffId)}</strong></div>
+        </div>
+      </div>
+
+      <!-- Booking Financial Details -->
+      <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;margin-bottom:10px">💰 Booking & Payment Details</div>
+      <div class="form-grid">
+        <div class="fg">
+          <label style="${labelStyle}">Total Amount (₹)</label>
+          <input type="number" id="bfe-amount" placeholder="Enter total amount" min="0" oninput="bfeCalcPending()" style="${inputStyle}"/>
+        </div>
+        <div class="fg">
+          <label style="${labelStyle}">Amount Paid (₹)</label>
+          <input type="number" id="bfe-paid" placeholder="0" value="0" min="0" oninput="bfeCalcPending()" style="${inputStyle}"/>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="fg">
+          <label style="${labelStyle}">Pending Amount (₹)</label>
+          <input type="number" id="bfe-pending" placeholder="Auto-calculated" readonly style="${inputStyle};background:#f8fafc;color:#64748b"/>
+        </div>
+        <div class="fg">
+          <label style="${labelStyle}">Payment Method (if paid)</label>
+          <select id="bfe-pay-method" style="${inputStyle}">
+            <option>Cash</option><option>UPI / GPay</option><option>Bank Transfer</option><option>Cheque</option><option>Card</option><option>Online</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="fg">
+          <label style="${labelStyle}">Booking Status</label>
+          <select id="bfe-status" style="${inputStyle}">
+            <option>Confirmed</option><option>Pending</option><option>Cancelled</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label style="${labelStyle}">Payment Status</label>
+          <input id="bfe-pay-status-display" readonly placeholder="Auto from amounts" style="${inputStyle};background:#f8fafc;color:#64748b"/>
+        </div>
+      </div>
+      <div class="fg" style="margin-top:4px">
+        <label style="${labelStyle}">Notes</label>
+        <textarea id="bfe-notes" rows="2" placeholder="Any booking notes..." style="${inputStyle};resize:vertical">Converted from Enquiry</textarea>
+      </div>
+      <button onclick="saveBookingFromEnquiry()" style="width:100%;margin-top:16px;padding:12px;background:linear-gradient(135deg,#16a34a,#059669);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
+        ✅ Confirm & Create Booking
+      </button>`;
+    setTimeout(() => { bfeCalcPending(); }, 10);
+
   } else if(type==="booking"||type==="editbooking"){
     const isEditBk=type==="editbooking";
     const exBk=isEditBk?allBookings.find(x=>x.id===window._editBkId):null;
