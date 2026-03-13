@@ -459,6 +459,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="tab" id="tab-marketing">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
         <div class="section-title" style="margin:0">Marketing Tracker</div>
+        <button class="btn btn-primary" onclick="openModal('marketing')">+ Add Marketing Call</button>
       </div>
       <div class="three-col" style="margin-bottom:20px">
         <div class="kpi"><div class="kpi-icon">📞</div><div class="kpi-label">Total Marketing Calls</div><div class="kpi-value" id="mkt-calls">0</div><div class="kpi-sub">this month</div></div>
@@ -831,7 +832,17 @@ function showTab(tab,el){
   if(tab==="quiz"){initQuiz();}
 }
 
-function renderAll(){renderDashboard();renderClients();renderEnquiries();renderBookings();renderTasks();renderReports();renderMktCalls();renderTargets();updateBadges();}
+function renderAll(){
+  try{renderDashboard();}catch(e){console.error('renderDashboard:',e);}
+  try{renderClients();}catch(e){console.error('renderClients:',e);}
+  try{renderEnquiries();}catch(e){console.error('renderEnquiries:',e);}
+  try{renderBookings();}catch(e){console.error('renderBookings:',e);}
+  try{renderTasks();}catch(e){console.error('renderTasks:',e);}
+  try{renderReports();}catch(e){console.error('renderReports:',e);}
+  try{renderMktCalls();}catch(e){console.error('renderMktCalls:',e);}
+  try{renderTargets();}catch(e){console.error('renderTargets:',e);}
+  try{updateBadges();}catch(e){console.error('updateBadges:',e);}
+}
 function updateBadges(){
   document.getElementById("enq-badge").textContent=enquiries.filter(e=>e.status==="Active").length;
   const od=tasks.filter(t=>!t.done&&t.dueDate<today()).length;
@@ -1628,18 +1639,6 @@ function addReportEntry(){
 // SAVES
 
 
-function updateBkForm(){
-  const cat=document.getElementById("b-cat")?.value||"";
-  const w=document.getElementById("b-extra-wrap");
-  if(!w)return;
-  if(cat==="Visa"){
-    w.innerHTML=`<div class="form-grid"><div class="fg"><label>Passport No</label><input id="b-passport" placeholder="e.g. Z1234567"/></div><div class="fg"><label>Visa Type</label><select id="b-visatype"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option></select></div></div>`;
-  } else if(cat.includes("Tours")){
-    w.innerHTML=`<div class="form-grid"><div class="fg"><label>Tour Type</label><select id="b-tourtype">${TOUR_TYPES.map(t=>`<option>${t}</option>`).join("")}</select></div></div>`;
-  } else {
-    w.innerHTML="";
-  }
-}
 
 function saveVisa(){
   // Visa modal kept for quick visa add — adds to allBookings as Visa category
@@ -1841,7 +1840,12 @@ renderStaff();
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
-const PERM_MAP  = {"1": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "targets", "settings", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": true}, "2": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "marketing", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "3": {"sections": ["dashboard", "data", "enquiries", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}, "4": {"sections": ["dashboard", "data", "bookings", "tasks", "reports", "followup", "bugreports", "quiz", "ai", "quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}};
+const PERM_MAP  = {
+  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
+  "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}
+}
 
 try {
   firebase.initializeApp(FIREBASE_CONFIG);
