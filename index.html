@@ -939,6 +939,7 @@ function renderClients(){
         <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:9990;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);min-width:180px;display:none">
           <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
           <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
+          <div class="action-dropdown-item" onclick="openClientDocs('${c.id}')">📁 Documents</div>
         </div>
         <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
         <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
@@ -3246,6 +3247,325 @@ function updateBkForm() {
 //  IMPORT CLIENTS FROM EXCEL
 //  Reads: Account Name, Under, Phone, Mobile, e-mail, City, KYC Date, PAN No., GST No.
 // ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  CLIENT DOCUMENT STORAGE (Firestore-based, no Storage needed)
+// ═══════════════════════════════════════════════
+const DOC_TYPES = ["Passport", "PAN Card", "Aadhaar Card"];
+const DOC_ICONS = { "Passport":"📘", "PAN Card":"🪪", "Aadhaar Card":"🆔" };
+const DOC_MAX_B64 = 900000; // ~900KB base64 safe limit per Firestore doc
+
+function openClientDocs(clientId) {
+  const cl = clients.find(x => x.id === clientId);
+  if(!cl) return;
+  window._docsClientId = clientId;
+
+  document.getElementById("client-docs-overlay")?.remove();
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="client-docs-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+      <div style="background:#fff;border-radius:18px;width:100%;max-width:560px;box-shadow:0 24px 64px rgba(0,0,0,0.3);overflow:hidden;margin:auto">
+
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#0369a1,#0284c7);padding:20px 24px;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:16px;font-weight:800;color:#fff">📁 Client Documents</div>
+            <div style="font-size:12px;color:#bae6fd;margin-top:3px">${cl.firstName} ${cl.lastName} · ${cl.mobile}</div>
+          </div>
+          <button onclick="document.getElementById('client-docs-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:18px;color:#fff;line-height:1">✕</button>
+        </div>
+
+        <!-- Upload Section -->
+        <div style="padding:20px 24px;border-bottom:1px solid #f1f5f9">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:12px">Upload New Document</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Document Type</label>
+              <select id="doc-type-sel" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">
+                ${DOC_TYPES.map(t => `<option value="${t}">${DOC_ICONS[t]||"📄"} ${t}</option>`).join("")}
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px">File (JPG, PNG, PDF)</label>
+              <input type="file" id="doc-file-input" accept=".jpg,.jpeg,.png,.pdf"
+                onchange="onDocFileChange(this)"
+                style="width:100%;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box;cursor:pointer"/>
+            </div>
+          </div>
+          <div id="doc-file-info" style="display:none;margin-top:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;font-size:12px;color:#0369a1"></div>
+          <div id="doc-size-warn" style="display:none;margin-top:8px;padding:8px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;font-size:12px;color:#c2410c">
+            ⚠️ File is large — it will be compressed automatically before saving.
+          </div>
+          <button onclick="uploadClientDoc()" id="doc-upload-btn"
+            style="width:100%;margin-top:12px;padding:10px;background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+            ⬆️ Upload & Save Document
+          </button>
+          <div id="doc-upload-progress" style="display:none;margin-top:10px">
+            <div style="background:#f1f5f9;border-radius:99px;height:8px;overflow:hidden">
+              <div id="doc-progress-bar" style="height:100%;background:linear-gradient(90deg,#0369a1,#0284c7);border-radius:99px;width:0%;transition:width 0.3s"></div>
+            </div>
+            <div id="doc-progress-text" style="font-size:11px;color:#64748b;margin-top:4px;text-align:center">Processing...</div>
+          </div>
+        </div>
+
+        <!-- Documents List -->
+        <div style="padding:20px 24px;max-height:380px;overflow-y:auto">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:12px">Saved Documents</div>
+          <div id="client-docs-list">
+            <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">⏳ Loading documents...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `);
+
+  loadClientDocs(clientId);
+}
+
+function onDocFileChange(input) {
+  const file = input.files[0];
+  const infoEl = document.getElementById("doc-file-info");
+  const warnEl = document.getElementById("doc-size-warn");
+  if(!file) { infoEl.style.display="none"; warnEl.style.display="none"; return; }
+
+  const sizeKB = Math.round(file.size / 1024);
+  const type = file.type.startsWith("image/") ? "🖼️ Image" : "📄 PDF";
+  infoEl.style.display = "block";
+  infoEl.textContent = `${type} · ${file.name} · ${sizeKB} KB`;
+
+  // Warn if image is large (will be compressed)
+  if(file.type.startsWith("image/") && file.size > 300000) {
+    warnEl.style.display = "block";
+  } else {
+    warnEl.style.display = "none";
+  }
+}
+
+async function loadClientDocs(clientId) {
+  const listEl = document.getElementById("client-docs-list");
+  if(!listEl) return;
+
+  try {
+    const snap = await _db.collection("clients").doc(clientId).collection("documents").orderBy("uploadedAt","desc").get();
+
+    if(snap.empty) {
+      listEl.innerHTML = `<div style="text-align:center;padding:30px;color:#94a3b8">
+        <div style="font-size:32px;margin-bottom:8px">📂</div>
+        <div style="font-size:13px;font-weight:600">No documents uploaded yet</div>
+        <div style="font-size:11px;margin-top:4px">Upload Passport, PAN Card or Aadhaar above</div>
+      </div>`;
+      return;
+    }
+
+    listEl.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const icon = DOC_ICONS[d.docType] || "📄";
+      const sizeKB = Math.round((d.sizeBytes||0) / 1024);
+      const date = d.uploadedAt ? new Date(d.uploadedAt.toDate()).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"}) : "";
+      const isPdf = d.fileType === "application/pdf";
+      const typeLabel = isPdf ? "📄 PDF" : "🖼️ Image (compressed)";
+
+      return `<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid #e2e8f0;border-radius:12px;margin-bottom:8px;background:#f8fafc">
+        <div style="font-size:28px;flex-shrink:0">${icon}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:#0f172a">${d.docType}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">${typeLabel} · ${sizeKB} KB · ${date}</div>
+          <div style="font-size:10px;color:#94a3b8">${d.fileName||""}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0">
+          <button onclick="viewClientDoc('${doc.id}','${clientId}')" style="padding:5px 10px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">👁 View</button>
+          <button onclick="downloadClientDoc('${doc.id}','${clientId}','${d.docType}')" style="padding:5px 10px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">⬇ Save</button>
+          <button onclick="deleteClientDoc('${doc.id}','${clientId}')" style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>
+        </div>
+      </div>`;
+    }).join("");
+
+  } catch(err) {
+    console.error("Load docs error:", err);
+    listEl.innerHTML = `<div style="color:#dc2626;font-size:13px;text-align:center;padding:20px">⚠️ Could not load documents: ${err.message}</div>`;
+  }
+}
+
+async function uploadClientDoc() {
+  const clientId = window._docsClientId;
+  const fileInput = document.getElementById("doc-file-input");
+  const docType = document.getElementById("doc-type-sel")?.value;
+  const file = fileInput?.files[0];
+
+  if(!file) return alert("⚠️ Please select a file to upload!");
+  if(!docType) return alert("⚠️ Please select a document type!");
+
+  const btn = document.getElementById("doc-upload-btn");
+  const progressDiv = document.getElementById("doc-upload-progress");
+  const progressBar = document.getElementById("doc-progress-bar");
+  const progressText = document.getElementById("doc-progress-text");
+
+  btn.disabled = true;
+  progressDiv.style.display = "block";
+  progressBar.style.width = "10%";
+  progressText.textContent = "Reading file...";
+
+  try {
+    let base64Data = "";
+    let fileType = file.type;
+    let finalSizeBytes = 0;
+
+    if(file.type.startsWith("image/")) {
+      // Compress image to fit within Firestore limits
+      progressText.textContent = "Compressing image...";
+      progressBar.style.width = "30%";
+      const result = await compressImageToBase64(file);
+      base64Data = result.base64;
+      finalSizeBytes = result.sizeBytes;
+      fileType = "image/jpeg";
+    } else {
+      // PDF — read as base64 directly
+      progressText.textContent = "Reading PDF...";
+      progressBar.style.width = "30%";
+      base64Data = await fileToBase64(file);
+      finalSizeBytes = file.size;
+      fileType = "application/pdf";
+    }
+
+    // Safety check
+    if(base64Data.length > DOC_MAX_B64) {
+      btn.disabled = false;
+      progressDiv.style.display = "none";
+      return alert("⚠️ File is too large even after compression (max ~700KB). Please use a smaller or more compressed file.");
+    }
+
+    progressText.textContent = "Saving to database...";
+    progressBar.style.width = "70%";
+
+    await _db.collection("clients").doc(clientId).collection("documents").add({
+      docType,
+      fileName: file.name,
+      fileType,
+      base64Data,
+      sizeBytes: finalSizeBytes,
+      uploadedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      uploadedBy: CURRENT_USER?.name || "Staff",
+    });
+
+    progressBar.style.width = "100%";
+    progressText.textContent = "✅ Saved successfully!";
+
+    await new Promise(r => setTimeout(r, 700));
+    progressDiv.style.display = "none";
+    btn.disabled = false;
+    fileInput.value = "";
+    document.getElementById("doc-file-info").style.display = "none";
+    document.getElementById("doc-size-warn").style.display = "none";
+
+    loadClientDocs(clientId);
+
+  } catch(err) {
+    console.error("Upload error:", err);
+    progressDiv.style.display = "none";
+    btn.disabled = false;
+    alert("❌ Save failed: " + err.message);
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function compressImageToBase64(file, quality = 0.82, maxDim = 1200) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        // Scale down if larger than maxDim
+        if(w > maxDim || h > maxDim) {
+          if(w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else       { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Try reducing quality if still too big
+        const tryCompress = (q) => {
+          const dataUrl = canvas.toDataURL("image/jpeg", q);
+          const b64 = dataUrl.split(",")[1];
+          const bytes = Math.round(b64.length * 0.75);
+          if(bytes > 850000 && q > 0.3) {
+            tryCompress(Math.round((q - 0.15) * 100) / 100);
+          } else {
+            resolve({ base64: b64, sizeBytes: bytes });
+          }
+        };
+        tryCompress(quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function viewClientDoc(docId, clientId) {
+  try {
+    const docSnap = await _db.collection("clients").doc(clientId).collection("documents").doc(docId).get();
+    if(!docSnap.exists) return alert("Document not found.");
+    const d = docSnap.data();
+    const mimeType = d.fileType || "image/jpeg";
+    const dataUrl = `data:${mimeType};base64,${d.base64Data}`;
+
+    // Open in new tab
+    const win = window.open("", "_blank");
+    if(mimeType === "application/pdf") {
+      win.document.write(`<iframe src="${dataUrl}" style="width:100%;height:100vh;border:none"></iframe>`);
+    } else {
+      win.document.write(`<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh">
+        <img src="${dataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain"/>
+      </body></html>`);
+    }
+    win.document.close();
+  } catch(err) {
+    alert("Could not open document: " + err.message);
+  }
+}
+
+async function downloadClientDoc(docId, clientId, docType) {
+  try {
+    const docSnap = await _db.collection("clients").doc(clientId).collection("documents").doc(docId).get();
+    if(!docSnap.exists) return alert("Document not found.");
+    const d = docSnap.data();
+    const mimeType = d.fileType || "image/jpeg";
+    const ext = mimeType === "application/pdf" ? "pdf" : "jpg";
+    const dataUrl = `data:${mimeType};base64,${d.base64Data}`;
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `${docType}_${clientId}.${ext}`;
+    a.click();
+  } catch(err) {
+    alert("Could not download document: " + err.message);
+  }
+}
+
+async function deleteClientDoc(docId, clientId) {
+  if(!confirm("Delete this document? This cannot be undone.")) return;
+  try {
+    await _db.collection("clients").doc(clientId).collection("documents").doc(docId).delete();
+    loadClientDocs(clientId);
+  } catch(err) {
+    alert("Delete failed: " + err.message);
+  }
+}
+
+
 function promptImportCategory(event) {
   const file = event.target.files[0];
   if(!file) return;
