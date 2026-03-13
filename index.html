@@ -785,11 +785,7 @@ const DOM_DESTINATIONS=["Goa","Kerala","Rajasthan","Himachal Pradesh","Uttarakha
 
 let clients=[];
 let enquiries=[];
-let bookings=[
-  {id:1,clientId:1,destination:"Hong Kong",tourType:"Corporate Trip",pax:12,travelDate:"2026-04-10",amount:850000,paid:425000,staffId:2,notes:""},
-  {id:2,clientId:2,destination:"Dubai",tourType:"Family Package",pax:5,travelDate:"2026-05-01",amount:320000,paid:320000,staffId:2,notes:""},
-  {id:3,clientId:3,destination:"Goa",tourType:"Group Tour",pax:20,travelDate:"2026-03-20",amount:400000,paid:200000,staffId:4,notes:""},
-];
+let bookings=[];
 let visas=[];
 let tasks=[];
 let reports=[];
@@ -1033,15 +1029,48 @@ async function markJunk(id){
   } catch(err){ alert("Failed: "+err.message); }
 }
 async function markBooked(id){
+  if(_saving) return;
   const e=enquiries.find(x=>x.id===id);if(!e)return;
   if(confirm(`Convert "${cName(e.clientId)} – ${e.destination}" to Booking?`)){
+    _saving = true;
     try {
-      await fbUpdate("enquiries",id,{status:"Booked"});
-      e.status="Booked";
-      const bkData={category:e.destType==="Domestic"?"Domestic Tours":"International Tours",clientId:e.clientId,destination:e.destination,details:"",tourType:"",travelDate:e.startDate,adults:e.adults||e.pax||1,childBed:e.childBed||0,childNoBed:e.childNoBed||0,infant:e.infant||0,pax:e.pax||1,amount:0,paid:0,status:"Confirmed",staffId:e.staffId,notes:"From enquiry"};
-      await fbAdd("bookings",bkData);
-      renderAll(); alert("✅ Moved to Bookings!");
-    } catch(err){ alert("Failed: "+err.message); }
+      // Determine correct booking category from enquiry category
+      let bkCat = "International Tours";
+      if(e.category) {
+        bkCat = e.category; // use enquiry category directly if available
+      } else if(e.destType === "Domestic") {
+        bkCat = "Domestic Tours";
+      }
+      const bkData = {
+        category:    bkCat,
+        clientId:    e.clientId,
+        destination: e.destination || "",
+        details:     "",
+        tourType:    e.tourType || "",
+        travelDate:  e.startDate || "",
+        adults:      e.adults  || e.pax || 1,
+        childBed:    e.childBed   || 0,
+        childNoBed:  e.childNoBed || 0,
+        infant:      e.infant     || 0,
+        pax:         e.pax || 1,
+        amount:      0,
+        paid:        0,
+        paymentHistory: [],
+        status:      "Confirmed",
+        paymentStatus: "Pending",
+        staffId:     CURRENT_USER ? CURRENT_USER.id : (e.staffId || 0),
+        notes:       "From enquiry"
+      };
+      await fbUpdate("enquiries", id, {status:"Booked"});
+      e.status = "Booked";
+      await fbAdd("bookings", bkData);
+      renderAll();
+      alert("✅ Moved to Bookings!");
+    } catch(err){
+      alert("Failed: " + err.message);
+    } finally {
+      _saving = false;
+    }
   }
 }
 
@@ -1350,7 +1379,7 @@ function globalSearch(q){
   const ql=q.toLowerCase();
   const fc=clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.email} ${c.city}`.toLowerCase().includes(ql));
   const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source}`.toLowerCase().includes(ql));
-  const fb=bookings.filter(b=>`${cName(b.clientId)} ${b.destination}`.toLowerCase().includes(ql));
+  const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination}`.toLowerCase().includes(ql));
   document.getElementById("search-results").innerHTML=`
     ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div><div class="card"><table><thead><tr><th>COMPANY</th><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>ACTION</th></tr></thead><tbody>${fc.map(c=>`<tr><td style="font-size:11px;font-weight:700;color:#0369a1">${c.companyName||"—"}</td><td><strong>${c.firstName} ${c.lastName}</strong></td><td>${c.mobile}</td><td>${c.email}</td><td>${c.city}</td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="font-size:10px;padding:3px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button><button class="btn" style="font-size:10px;padding:3px 10px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" onclick="generateEnquiry('${c.id}')">🎯 Enquiry</button><button class="btn" style="font-size:10px;padding:3px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe" onclick="logMarketingCall('${c.id}')">📞 Mktg Call</button></td></tr>`).join("")}</tbody></table></div>`:""}
     ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>RATING</th><th>STATUS</th><th>TYPE</th></tr></thead><tbody>${fe.map(e=>`<tr><td>${cName(e.clientId)}</td><td>${e.destination}</td><td>${rBadge(e.rating)}</td><td>${sBadge(e.status)}</td><td>${tBadge(e.type)}</td></tr>`).join("")}</tbody></table></div>`:""}
