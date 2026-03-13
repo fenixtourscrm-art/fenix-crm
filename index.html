@@ -996,6 +996,7 @@ function renderEnquiries(){
     <td>
       <div style="display:flex;gap:3px;flex-wrap:wrap">
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq('${e.id}')">✏️</button>
+        <button class="btn" style="font-size:9px;padding:3px 7px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;white-space:nowrap" onclick="openFollowUpPopup('${e.id}','${e.clientId}')">📅 Follow Up</button>
         ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked('${e.id}')">Book</button>
         <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="markLost('${e.id}')">Lost</button>
         <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk('${e.id}')">Junk</button>`:""}
