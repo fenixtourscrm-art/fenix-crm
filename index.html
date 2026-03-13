@@ -1207,6 +1207,7 @@ function renderBookingList(){
         <button class="btn" style="font-size:9px;padding:3px 6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openFollowUpPopup(null,'${b.clientId}')">📅</button>
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 6px" onclick="editBk('${b.id}')">✏️</button>
         <button class="btn btn-warn" style="font-size:9px;padding:3px 6px" onclick="delBk('${b.id}')">✕</button>
+        <button class="btn" style="font-size:9px;padding:3px 6px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;white-space:nowrap" onclick="revertToEnquiry('${b.id}')">↩ Inquiry</button>
       </div></td>
     </tr>`;
   }).join("")||`<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
@@ -2508,7 +2509,31 @@ async function del(arr,id) {
   } catch(e) { alert("Delete failed: "+e.message); }
 }
 
-async function delBk(id) {
+async async function revertToEnquiry(bookingId) {
+  if(_saving) return;
+  if(!confirm("Are you sure you want to move this booking back to Inquiry?")) return;
+  _saving = true;
+  try {
+    const b = allBookings.find(x => x.id === bookingId);
+    if(!b) return;
+    // Find matching enquiry by clientId with status "Booked"
+    const matchingEnq = enquiries.find(e => e.clientId === b.clientId && e.status === "Booked");
+    if(matchingEnq) {
+      await fbUpdate("enquiries", matchingEnq.id, { status: "Active" });
+      matchingEnq.status = "Active";
+    }
+    await fbDelete("bookings", bookingId);
+    allBookings = allBookings.filter(x => x.id !== bookingId);
+    renderAll();
+    alert("✅ Booking moved back to Inquiry!");
+  } catch(err) {
+    alert("Failed: " + err.message);
+  } finally {
+    _saving = false;
+  }
+}
+
+function delBk(id) {
   if(!confirm("Delete this booking?")) return;
   try {
     await fbDelete("bookings",id);
