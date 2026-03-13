@@ -2533,7 +2533,7 @@ async function revertToEnquiry(bookingId) {
   }
 }
 
-function delBk(id) {
+async function delBk(id) {
   if(!confirm("Delete this booking?")) return;
   try {
     await fbDelete("bookings",id);
