@@ -352,14 +352,28 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
     <!-- CLIENT DATA -->
     <div class="tab" id="tab-data">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div class="section-title" style="margin:0">All Clients</div>
-        <button class="btn btn-primary" onclick="openModal('client')">+ Add Client</button>
-        <button class="btn" style="background:#16a34a;color:#fff;gap:6px" onclick="document.getElementById('excel-import-input').click()">📥 Import Excel</button>
-        <input type="file" id="excel-import-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="importClientExcel(event)"/>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="section-title" style="margin:0" id="client-section-title">All Clients</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="openModal('client')">+ Add Client</button>
+          <button class="btn" style="background:#16a34a;color:#fff;gap:6px" onclick="document.getElementById('excel-import-input').click()">📥 Import Excel</button>
+          <input type="file" id="excel-import-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="promptImportCategory(event)"/>
+        </div>
+      </div>
+      <!-- Client Category Filter Tabs -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <button class="btn btn-ghost client-cat-filter active-filter" onclick="filterClientCat('all',this)">👥 All Clients</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Platinum',this)">💎 Platinum</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Gold',this)">🥇 Gold</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Silver',this)">🥈 Silver</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Regular',this)">👤 Regular</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Social Media',this)">📱 Social Media</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Walking',this)">🚶 Walking</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Corporate',this)">🏢 Corporate</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Inquired',this)">🎯 Inquired</button>
       </div>
       <div class="card"><table><thead><tr>
-        <th>COMPANY NAME</th><th>FIRST NAME</th><th>LAST NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
+        <th>CATEGORY</th><th>COMPANY NAME</th><th>FIRST NAME</th><th>LAST NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
       </tr></thead><tbody id="clients-tbody"></tbody></table></div>
     </div>
 
@@ -777,6 +791,7 @@ const IND_STATES=["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattis
 const RATINGS=["A+","A","B+","B","C"];
 const ENQ_TYPES=["New","Old","Repeated"];
 const INTENTIONS=["Domestic Tickets","Visa","Cruise","Car","Hotels","Travel Insurance","Passport","International Tour","Domestic Tour"];
+const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Social Media","Walking","Corporate","Inquired"];
 const SOURCES=["Social Media – Facebook","Social Media – Instagram","Social Media – LinkedIn","Social Media – Twitter/X","Social Media – YouTube","Social Media – WhatsApp","Family Reference","Friends Reference","Customer Reference","Newspaper","Radio Mirchi","Flyer Distribution – Events","Personal Visit – Office","Influencer Reference","Others"];
 const LOST_REASONS=["Budget issue","No response","Went to another agency","Trip cancelled","Other"];
 const VISA_STATUS=["Pending","Submitted","Approved","Rejected"];
@@ -882,8 +897,33 @@ function renderDashboard(){
 }
 
 // CLIENTS
+let clientCatFilter = "all";
+function filterClientCat(cat, el) {
+  clientCatFilter = cat;
+  document.querySelectorAll(".client-cat-filter").forEach(b => b.classList.remove("active-filter"));
+  el.classList.add("active-filter");
+  const title = document.getElementById("client-section-title");
+  if(title) title.textContent = cat === "all" ? "All Clients" : cat + " Clients";
+  renderClients();
+}
+const CLIENT_CAT_STYLES = {
+  "Platinum":    {bg:"#f5f3ff",color:"#6d28d9",icon:"💎"},
+  "Gold":        {bg:"#fef3c7",color:"#92400e",icon:"🥇"},
+  "Silver":      {bg:"#f1f5f9",color:"#475569",icon:"🥈"},
+  "Regular":     {bg:"#f0fdf4",color:"#166534",icon:"👤"},
+  "Social Media":{bg:"#fdf2f8",color:"#9d174d",icon:"📱"},
+  "Walking":     {bg:"#fff7ed",color:"#c2410c",icon:"🚶"},
+  "Corporate":   {bg:"#eff6ff",color:"#1e40af",icon:"🏢"},
+  "Inquired":    {bg:"#fef9c3",color:"#854d0e",icon:"🎯"},
+};
 function renderClients(){
-  document.getElementById("clients-tbody").innerHTML=clients.map(c=>`<tr>
+  let list = clients;
+  if(clientCatFilter !== "all") list = clients.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
+  document.getElementById("clients-tbody").innerHTML=list.map(c=>{
+    const cat = c.clientCategory || "Regular";
+    const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
+    return `<tr>
+    <td><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap">${cs.icon} ${cat}</span></td>
     <td style="font-size:12px;font-weight:700;color:#0f172a;max-width:140px">${c.companyName?`<div style="font-weight:800;color:#0369a1">${c.companyName}</div>`:'<span style="color:#cbd5e1;font-size:11px">—</span>'}</td>
     <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:9px">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
       <div>
@@ -904,7 +944,8 @@ function renderClients(){
         <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
       </div>
     </td>
-  </tr>`).join("")||`<tr><td colspan="10" class="empty">No clients yet</td></tr>`;
+  </tr>`;
+  }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
 }
 function toggleActionMenu(id){
   document.querySelectorAll(".action-dropdown").forEach(d=>{
@@ -1443,6 +1484,7 @@ function openModal(type){
   if(type==="client"){
     mb.innerHTML=`<div class="modal-title">Add Client <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional – for corporate clients)</span></label><input id="c-company" placeholder="e.g. ABC Pvt. Ltd."/></div></div>
+    <div class="form-grid"><div class="fg"><label>Client Category <span style="color:#dc2626">*</span></label><select id="c-cat"><option value="Regular">Regular</option>${CLIENT_CATS.filter(x=>x!=="Regular").map(x=>`<option value="${x}">${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="c-fn" placeholder="e.g. Rahul"/></div><div class="fg"><label>Last Name</label><input id="c-ln" placeholder="e.g. Sharma"/></div></div>
     <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No</label><input id="c-mob" placeholder="9876543210"/></div></div>
     <div class="form-grid"><div class="fg"><label>Email ID</label><input id="c-email" placeholder="email@example.com"/></div><div class="fg"><label>Occupation</label><input id="c-occ" placeholder="e.g. Businessman"/></div></div>
@@ -1723,6 +1765,7 @@ function openModal(type){
     if(!c)return;
     mb.innerHTML=`<div class="modal-title">✏️ Edit Client <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional)</span></label><input id="ec-company" value="${c.companyName||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Client Category</label><select id="ec-cat">${CLIENT_CATS.map(x=>`<option value="${x}"${x===(c.clientCategory||"Regular")?" selected":""}>${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="ec-fn" value="${c.firstName}"/></div><div class="fg"><label>Last Name</label><input id="ec-ln" value="${c.lastName}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Mobile</label><input id="ec-mob" value="${c.mobile}"/></div><div class="fg"><label>Email</label><input id="ec-email" value="${c.email}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Occupation</label><input id="ec-occ" value="${c.occupation||""}"/></div><div class="fg"><label>City</label><input id="ec-city" value="${c.city||""}"/></div></div>
@@ -1837,6 +1880,7 @@ async function saveEditClient(){
     state:document.getElementById("ec-state")?.value||"",
     pincode:document.getElementById("ec-pin")?.value||"",
     dataType,
+    clientCategory:document.getElementById("ec-cat")?.value||"Regular",
   };
   try {
     await fbUpdate("clients", c.id, data);
@@ -2200,6 +2244,7 @@ async function saveClient() {
     area:document.getElementById("c-area").value.trim(),
     pincode:document.getElementById("c-pin").value.trim(),
     companyName:document.getElementById("c-company")?.value.trim()||"",
+    clientCategory:document.getElementById("c-cat")?.value||"Regular",
   };
   _saving = true;
   try {
@@ -3201,7 +3246,45 @@ function updateBkForm() {
 //  IMPORT CLIENTS FROM EXCEL
 //  Reads: Account Name, Under, Phone, Mobile, e-mail, City, KYC Date, PAN No., GST No.
 // ═══════════════════════════════════════════════
-async function importClientExcel(event) {
+function promptImportCategory(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  // Reset input so same file can be re-imported later
+  event.target.value = "";
+
+  // Show category selection popup
+  document.body.insertAdjacentHTML("beforeend", `
+    <div id="import-cat-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;border-radius:16px;padding:28px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="font-weight:800;font-size:16px;color:#0f172a;margin-bottom:6px">📥 Import Clients</div>
+        <div style="font-size:13px;color:#64748b;margin-bottom:18px">Which Client Category are you importing?</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+          ${CLIENT_CATS.map(cat => {
+            const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
+            return `<button onclick="doImportWithCategory('${cat}')" style="padding:10px 14px;background:${cs.bg};color:${cs.color};border:1.5px solid ${cs.color}40;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;text-align:left">
+              ${cs.icon} ${cat}
+            </button>`;
+          }).join("")}
+        </div>
+        <button onclick="document.getElementById('import-cat-overlay').remove()" style="width:100%;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+      </div>
+    </div>
+  `);
+
+  // Store file reference for later use
+  window._pendingImportFile = file;
+}
+
+async function doImportWithCategory(category) {
+  document.getElementById("import-cat-overlay")?.remove();
+  const file = window._pendingImportFile;
+  if(!file) return;
+  window._pendingImportFile = null;
+  // Create a synthetic event-like object to pass to importClientExcel
+  await importClientExcel({ target: { files: [file], value: "" } }, category);
+}
+
+async function importClientExcel(event, importCategory) {
   const file = event.target.files[0];
   if(!file) return;
   event.target.value = ""; // reset so same file can be re-imported
@@ -3299,6 +3382,7 @@ async function importClientExcel(event) {
           panNo: pan || "",
           gstNo: gst || "",
           kycDate: kycDate || "",
+          clientCategory: importCategory || "Regular",
           importedFrom: file.name,
         };
         await fbAdd("clients", data);
