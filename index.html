@@ -1017,7 +1017,10 @@ function renderEnquiries(){
       </tr>`;
       groups[dk].forEach(e=>{
         const fuColor=fuColors[e.followUpStatus]||"#94a3b8";
-        const totalPax=(e.adults||0)+(e.childBed||0)+(e.childNoBed||0)+(e.infant||0);
+        const isVisaPassport = e.category==="Visa"||e.category==="Passport";
+        const totalPax = isVisaPassport
+          ? (e.numApplicants||e.adults||e.pax||1)
+          : ((e.adults||0)+(e.childBed||0)+(e.childNoBed||0)+(e.infant||0))||e.pax||1;
         const enqTime=e.createdAt?new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}):'';
         rows+=`<tr style="border-left:3px solid ${fuColor}">
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
@@ -1025,7 +1028,7 @@ function renderEnquiries(){
     <td style="font-size:11px;max-width:100px">${e.source.split("–")[0].trim()}</td>
     <td><span class="badge" style="background:#f0fdf4;color:#166534;font-size:9px">${e.category||e.destType}</span></td>
     <td style="font-size:12px">${e.destination}</td>
-    <td style="font-size:11px;text-align:center">${totalPax||e.pax}<br><span style="font-size:9px;color:#94a3b8">${e.adults||0}A ${e.childBed||0}CB</span></td>
+    <td style="font-size:11px;text-align:center">${totalPax||e.pax}<br><span style="font-size:9px;color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${e.adults||0}A ${e.childBed||0}CB`}</span></td>
     <td>${e.budget}</td>
     <td>${rBadge(e.rating)}</td>
     <td style="font-size:11px">
