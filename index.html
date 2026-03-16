@@ -304,7 +304,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('reports',this)"><span class="nav-icon">📊</span>Daily Reports</div>
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
-    <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🧠</span>Travel Quiz<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
+    <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🎓</span>Travel Academy<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
     <div class="nav-item" onclick="showTab('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
@@ -557,12 +557,13 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <!-- Header -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
         <div>
-          <div class="section-title" style="margin:0">🧠 Travel Quiz & Learning</div>
-          <div style="font-size:12px;color:#64748b;margin-top:3px">Learn something new every day. Compete with your team!</div>
+          <div class="section-title" style="margin:0">🎓 Travel Academy</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Learn · Play · Compete — something new every day!</div>
         </div>
-        <div style="display:flex;gap:8px">
-          <button id="quiz-mode-btn" class="btn" onclick="setQuizMode('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
-          <button id="learn-mode-btn" class="btn" onclick="setQuizMode('learn')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">📖 Learn Mode</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="academy-quiz-btn" class="btn" onclick="setAcademyTab('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
+          <button id="academy-fact-btn" class="btn" onclick="setAcademyTab('fact')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🌍 Travel Fact</button>
+          <button id="academy-guess-btn" class="btn" onclick="setAcademyTab('guess')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🗺️ Guess Destination</button>
         </div>
       </div>
 
@@ -603,6 +604,16 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <!-- LEARN MODE PANEL -->
       <div id="learn-panel" style="display:none">
         <div id="learn-content"></div>
+      </div>
+
+      <!-- TRAVEL FACT OF THE DAY PANEL -->
+      <div id="fact-panel" style="display:none">
+        <div id="fact-content"></div>
+      </div>
+
+      <!-- GUESS THE DESTINATION PANEL -->
+      <div id="guess-panel" style="display:none">
+        <div id="guess-content"></div>
       </div>
 
       <!-- LEADERBOARD (always visible below) -->
@@ -3588,6 +3599,333 @@ async function deleteClientDoc(docId, clientId) {
 }
 
 
+// ═══════════════════════════════════════════════
+//  TRAVEL ACADEMY — FACT OF THE DAY
+// ═══════════════════════════════════════════════
+const TRAVEL_FACTS = [
+  { fact:"Dubai International Airport is one of the world's busiest airports for international passengers, serving over 80 million passengers a year.", category:"Airports" },
+  { fact:"The Maldives is the world's lowest-lying country, with an average ground level of just 1.5 metres above sea level.", category:"Geography" },
+  { fact:"Schengen Area visa allows travel across 27 European countries with a single visa — no border checks between member states.", category:"Visa Rules" },
+  { fact:"Singapore's Changi Airport has won the Skytrax World's Best Airport award more than 10 times in a row.", category:"Airports" },
+  { fact:"Japan's bullet train (Shinkansen) has an average delay of less than one minute over its entire history.", category:"Transport" },
+  { fact:"The Great Barrier Reef in Australia is the world's largest coral reef system, stretching over 2,300 km.", category:"Destinations" },
+  { fact:"India issues the most number of international passports annually among South Asian countries.", category:"Passports" },
+  { fact:"Emirates airline operates the world's longest non-stop commercial flight route between Dubai and Auckland.", category:"Airlines" },
+  { fact:"The Eiffel Tower in Paris was originally intended to be a temporary structure, built for the 1889 World's Fair.", category:"Destinations" },
+  { fact:"Switzerland's Zurich Airport consistently ranks among the top 5 most punctual airports in the world.", category:"Airports" },
+  { fact:"A tourist visa for the USA (B1/B2) can be valid for up to 10 years with multiple entries allowed.", category:"Visa Rules" },
+  { fact:"The Burj Khalifa in Dubai, at 828 metres, is the tallest building in the world.", category:"Destinations" },
+  { fact:"IndiGo is currently India's largest domestic airline by market share, operating over 1,500 daily flights.", category:"Airlines" },
+  { fact:"The Trans-Siberian Railway in Russia is the world's longest railway, covering over 9,288 km.", category:"Transport" },
+  { fact:"Bhutan measures national success using Gross National Happiness instead of GDP.", category:"Tourism" },
+  { fact:"London Heathrow airport is one of the busiest airports in Europe, connecting to over 180 destinations worldwide.", category:"Airports" },
+  { fact:"The Amazon Rainforest in Brazil produces 20% of the world's oxygen and is home to 10% of all species on Earth.", category:"Geography" },
+  { fact:"Oman offers visa-on-arrival to Indian passport holders, making it one of the easiest Gulf countries to visit from India.", category:"Visa Rules" },
+  { fact:"The Colosseum in Rome could hold between 50,000 to 80,000 spectators in ancient times.", category:"Destinations" },
+  { fact:"Air India was founded in 1932 as Tata Airlines, making it one of Asia's oldest airlines.", category:"Airlines" },
+  { fact:"Nepal is home to 8 of the world's 14 highest mountain peaks, including Mount Everest at 8,848 metres.", category:"Geography" },
+  { fact:"Thailand's tourism industry accounts for about 20% of its national GDP, making it one of the most tourism-dependent economies.", category:"Tourism" },
+  { fact:"The Maldives became the first country to hold an underwater cabinet meeting to draw attention to climate change.", category:"Destinations" },
+  { fact:"A valid Indian passport allows visa-free or visa-on-arrival access to over 60 countries worldwide.", category:"Passports" },
+  { fact:"Singapore is the only city-state in Southeast Asia and one of the world's top financial centres.", category:"Destinations" },
+  { fact:"The Northern Lights (Aurora Borealis) can best be seen between September and March in countries like Norway and Iceland.", category:"Tourism" },
+  { fact:"Qatar Airways has won the Skytrax World's Best Airline award 7 times, more than any other airline.", category:"Airlines" },
+  { fact:"The Angkor Wat complex in Cambodia is the largest religious monument in the world.", category:"Destinations" },
+  { fact:"UAE residents can enter over 175 countries without a prior visa, holding one of the world's most powerful passports.", category:"Passports" },
+  { fact:"Santorini's iconic blue-domed churches are actually quite few in number — there are about 3 of the famous ones tourists photograph.", category:"Destinations" },
+  { fact:"Kenya's Maasai Mara hosts the Great Wildebeest Migration every year between July and October — one of nature's greatest spectacles.", category:"Tourism" },
+  { fact:"Amsterdam's Schiphol Airport is built on a polder, meaning it sits 4 metres below sea level.", category:"Airports" },
+  { fact:"The Schengen visa short-stay allows a maximum of 90 days within any 180-day period.", category:"Visa Rules" },
+  { fact:"Vietnam has become one of Southeast Asia's fastest-growing tourist destinations, welcoming over 18 million visitors before the pandemic.", category:"Tourism" },
+  { fact:"The Louvre Museum in Paris is the world's most visited art museum, drawing over 9 million visitors annually.", category:"Destinations" },
+  { fact:"Indira Gandhi International Airport (Delhi) is India's busiest airport and among the top 20 busiest in the world.", category:"Airports" },
+  { fact:"New Zealand was the first country in the world to grant women the right to vote, back in 1893.", category:"Geography" },
+  { fact:"South Korea's Incheon International Airport has won the ACI World's Best Airport award multiple times.", category:"Airports" },
+  { fact:"Swiss International Air Lines is consistently ranked among the most punctual airlines in Europe.", category:"Airlines" },
+  { fact:"The Great Wall of China stretches over 21,196 km when all its branches and sections are counted.", category:"Destinations" },
+  { fact:"Morocco offers Indians a 90-day visa-free stay, making it an increasingly popular African destination from India.", category:"Visa Rules" },
+  { fact:"Antarctica is the only continent without a permanent human population and requires special permits to visit.", category:"Geography" },
+  { fact:"Iceland gets about 80% of its electricity from renewable sources including geothermal and hydropower.", category:"Destinations" },
+  { fact:"The passport was standardised in size by the International Civil Aviation Organization (ICAO) in 1980 to fit ATM-sized readers.", category:"Passports" },
+  { fact:"Bali, Indonesia, is one of the world's top 5 most visited tourist islands and is famous for its rice terraces and temples.", category:"Tourism" },
+  { fact:"Air Arabia, based in Sharjah, was the first low-cost carrier in the Middle East and North Africa region.", category:"Airlines" },
+  { fact:"The Amazon River in South America discharges more freshwater into the ocean than any other river in the world.", category:"Geography" },
+  { fact:"Georgia (the country) offers a 365-day visa-free stay for Indian passport holders — the longest of any country.", category:"Visa Rules" },
+  { fact:"The Petronas Twin Towers in Kuala Lumpur were the world's tallest buildings from 1998 to 2004.", category:"Destinations" },
+  { fact:"Japan's Mt. Fuji is not just a tourist attraction — it is also an active stratovolcano.", category:"Geography" },
+];
+
+function getTodaysFact() {
+  const dateStr = todayStr().replace(/-/g,'');
+  let seed = 0;
+  for(let i = 0; i < dateStr.length; i++) seed = (seed * 31 + dateStr.charCodeAt(i)) >>> 0;
+  return TRAVEL_FACTS[seed % TRAVEL_FACTS.length];
+}
+
+function renderFactOfTheDay() {
+  const wrap = document.getElementById('fact-content');
+  if(!wrap) return;
+  const fact = getTodaysFact();
+  const catColors = {
+    'Airports':'#0369a1','Airlines':'#7c3aed','Visa Rules':'#dc2626','Destinations':'#d97706',
+    'Geography':'#059669','Tourism':'#db2777','Transport':'#0891b2','Passports':'#9333ea'
+  };
+  const catColor = catColors[fact.category] || '#475569';
+  const isOwner = CURRENT_USER?.id === 1;
+
+  wrap.innerHTML = `
+    <div style="max-width:600px;margin:0 auto">
+      <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:20px;padding:32px;text-align:center;margin-bottom:20px;box-shadow:0 8px 32px rgba(15,23,42,0.2)">
+        <div style="font-size:48px;margin-bottom:12px">🌍</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:16px">Travel Fact of the Day</div>
+        <div style="display:inline-block;background:${catColor}22;color:${catColor};border:1px solid ${catColor}44;padding:3px 12px;border-radius:99px;font-size:11px;font-weight:700;margin-bottom:16px">${fact.category}</div>
+        <div style="font-size:17px;font-weight:600;color:#f1f5f9;line-height:1.6">"${fact.fact}"</div>
+        <div style="margin-top:16px;font-size:11px;color:#475569">${todayStr()}</div>
+      </div>
+      <div id="fact-list-wrap">
+        ${isOwner ? `<div style="margin-bottom:12px;display:flex;justify-content:flex-end"><button onclick="openAddFactModal()" style="padding:8px 18px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Fact</button></div>` : ''}
+        <div id="fact-list"></div>
+      </div>
+    </div>`;
+  loadFactList();
+}
+
+async function loadFactList() {
+  const el = document.getElementById('fact-list');
+  if(!el) return;
+  try {
+    const snap = await _db.collection('travelfacts').orderBy('createdAt','desc').get();
+    if(snap.empty) { el.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px">No facts added yet.</div>`; return; }
+    const isOwner = CURRENT_USER?.id === 1;
+    el.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      return `<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:flex-start;gap:12px">
+        <div style="font-size:20px;flex-shrink:0">💡</div>
+        <div style="flex:1"><div style="font-size:13px;color:#1e293b;font-weight:500">${d.fact}</div><div style="font-size:10px;color:#94a3b8;margin-top:4px">${d.category||''}</div></div>
+        ${isOwner ? `<div style="display:flex;gap:6px;flex-shrink:0"><button onclick="editFact('${doc.id}','${(d.fact||'').replace(/'/g,'\\\'').replace(/"/g,'&quot;')}','${d.category||''}')" style="padding:4px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:6px;font-size:11px;cursor:pointer">✏️</button><button onclick="deleteFact('${doc.id}')" style="padding:4px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;cursor:pointer">🗑</button></div>` : ''}
+      </div>`;
+    }).join('');
+  } catch(e) { el.innerHTML = `<div style="color:#dc2626;font-size:12px">Error loading facts: ${e.message}</div>`; }
+}
+
+function openAddFactModal(editId, existingFact, existingCat) {
+  document.getElementById('fact-modal-overlay')?.remove();
+  const catOpts = ['Airports','Airlines','Visa Rules','Destinations','Geography','Tourism','Transport','Passports']
+    .map(c => `<option${c===(existingCat||'Destinations')?' selected':''}>${c}</option>`).join('');
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="fact-modal-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+        <div style="font-weight:800;font-size:15px;margin-bottom:16px">${editId ? '✏️ Edit Fact' : '➕ Add Travel Fact'}</div>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Category</label>
+        <select id="fact-cat-inp" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:12px;box-sizing:border-box">${catOpts}</select>
+        <label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:4px">Fact</label>
+        <textarea id="fact-text-inp" rows="4" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical" placeholder="Enter the travel fact...">${existingFact||''}</textarea>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button onclick="saveFact('${editId||''}')" style="flex:1;padding:10px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">💾 Save</button>
+          <button onclick="document.getElementById('fact-modal-overlay').remove()" style="flex:1;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function editFact(id, fact, cat) { openAddFactModal(id, fact, cat); }
+
+async function saveFact(editId) {
+  const fact = document.getElementById('fact-text-inp')?.value.trim();
+  const category = document.getElementById('fact-cat-inp')?.value;
+  if(!fact) return alert('Please enter a fact.');
+  try {
+    if(editId) {
+      await _db.collection('travelfacts').doc(editId).update({ fact, category, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    } else {
+      await _db.collection('travelfacts').add({ fact, category, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedBy: CURRENT_USER?.name||'' });
+    }
+    document.getElementById('fact-modal-overlay')?.remove();
+    loadFactList();
+  } catch(e) { alert('Save failed: ' + e.message); }
+}
+
+async function deleteFact(id) {
+  if(!confirm('Delete this fact?')) return;
+  try { await _db.collection('travelfacts').doc(id).delete(); loadFactList(); }
+  catch(e) { alert('Delete failed: ' + e.message); }
+}
+
+// ═══════════════════════════════════════════════
+//  TRAVEL ACADEMY — GUESS THE DESTINATION
+// ═══════════════════════════════════════════════
+const DEST_BANK = [
+  { dest:"Paris", clues:["Known as the City of Love","Home to the Eiffel Tower","Capital of France","Famous for croissants and fine cuisine"], opts:["Paris","Rome","London","Madrid"], exp:"Paris is the capital of France, famous for the Eiffel Tower, Louvre Museum, and Notre-Dame Cathedral." },
+  { dest:"Dubai", clues:["Home to the world's tallest building","Located in the UAE","Famous for gold souks and luxury shopping","Hosts the busiest international airport in the world"], opts:["Abu Dhabi","Doha","Dubai","Riyadh"], exp:"Dubai is a global city in the UAE, known for the Burj Khalifa, Palm Jumeirah, and being a hub for international travel." },
+  { dest:"Tokyo", clues:["World's most populous metropolitan area","Famous for cherry blossoms","Home to the Shibuya Crossing","Capital of Japan"], opts:["Seoul","Beijing","Tokyo","Bangkok"], exp:"Tokyo is Japan's capital, blending ultra-modern technology with traditional temples, and is famous for sushi, anime, and Mt. Fuji views." },
+  { dest:"Maldives", clues:["World's lowest-lying country","Famous for overwater bungalows","Located in the Indian Ocean","Made up of 26 atolls"], opts:["Seychelles","Maldives","Mauritius","Bali"], exp:"The Maldives is an island nation in the Indian Ocean, famous for crystal-clear lagoons, coral reefs, and luxury resorts." },
+  { dest:"New York", clues:["City that never sleeps","Home to the Statue of Liberty","Has the world-famous Times Square","Located on the east coast of the USA"], opts:["Chicago","Los Angeles","New York","Miami"], exp:"New York City is the most populous city in the USA, famous for Wall Street, Broadway, Central Park, and the Statue of Liberty." },
+  { dest:"Sydney", clues:["Famous for its iconic Opera House","Has the world's largest natural harbour","Located in Australia","Hosts one of the world's most famous New Year fireworks"], opts:["Melbourne","Sydney","Brisbane","Auckland"], exp:"Sydney is Australia's largest city, home to the iconic Sydney Opera House and Harbour Bridge." },
+  { dest:"Rome", clues:["The Eternal City","Home to the Colosseum","Seat of the Vatican","Located in Italy"], opts:["Naples","Rome","Florence","Venice"], exp:"Rome is Italy's capital, home to ancient landmarks like the Colosseum, Roman Forum, and Vatican City." },
+  { dest:"Singapore", clues:["City-state in Southeast Asia","Famous for Gardens by the Bay","One of the world's top financial hubs","Home to Changi Airport"], opts:["Kuala Lumpur","Hong Kong","Singapore","Jakarta"], exp:"Singapore is a sovereign city-state and island country in Southeast Asia, known for its strict laws, modern skyline, and culinary diversity." },
+  { dest:"Santorini", clues:["Famous for blue-domed white churches","Located in the Aegean Sea","Part of Greece","Known for stunning caldera sunsets"], opts:["Mykonos","Santorini","Crete","Corfu"], exp:"Santorini is a Greek island known for its dramatic views, iconic white-washed buildings, and volcanic landscape." },
+  { dest:"Bali", clues:["Island of the Gods","Part of Indonesia","Famous for rice terraces and Hindu temples","Top surf destination"], opts:["Phuket","Bali","Lombok","Goa"], exp:"Bali is an Indonesian island known for forested volcanic mountains, terraced rice paddies, beaches, and coral reefs." },
+  { dest:"Cairo", clues:["Home to the Great Pyramids of Giza","Capital of Egypt","Located beside the Nile River","One of the oldest cities in the world"], opts:["Cairo","Casablanca","Nairobi","Tunis"], exp:"Cairo is Egypt's capital, situated near the ancient wonders of the Great Pyramids and Sphinx at Giza." },
+  { dest:"Kyoto", clues:["Former imperial capital of Japan","Famous for thousands of temples and shrines","Best known for geisha culture","Has over 1,600 Buddhist temples"], opts:["Osaka","Tokyo","Kyoto","Nara"], exp:"Kyoto was Japan's capital for over a millennium and is known for its classical Buddhist temples, gardens, and traditional wooden houses." },
+  { dest:"Istanbul", clues:["The only city on two continents","Former capital of the Ottoman Empire","Home to the Hagia Sophia","Located in Turkey"], opts:["Athens","Istanbul","Beirut","Amman"], exp:"Istanbul straddles Europe and Asia, and is home to iconic landmarks like Hagia Sophia, Topkapi Palace, and the Grand Bazaar." },
+  { dest:"Cape Town", clues:["Located at the tip of Africa","Famous for Table Mountain","Has Boulders Beach with penguins","Hosts Victoria & Alfred Waterfront"], opts:["Johannesburg","Cape Town","Nairobi","Lagos"], exp:"Cape Town is South Africa's legislative capital, known for Table Mountain, Cape Point, Boulders Beach, and beautiful coastal scenery." },
+  { dest:"Barcelona", clues:["Home to Sagrada Familia","Famous architect Antoni Gaudí designed many landmarks here","Capital of Catalonia","Located in Spain"], opts:["Madrid","Seville","Barcelona","Lisbon"], exp:"Barcelona is Spain's second-largest city, known for Gaudí's architecture including Sagrada Família and Park Güell." },
+  { dest:"Zurich", clues:["Switzerland's largest city","Famous for precision watchmaking","Home to one of Europe's most punctual airports","Consistently ranked world's most liveable city"], opts:["Geneva","Bern","Zurich","Basel"], exp:"Zurich is Switzerland's financial and cultural heart, known for its high quality of life, beautiful lake, and Old Town." },
+  { dest:"Agra", clues:["Home to one of the Seven Wonders of the World","Located in Uttar Pradesh, India","The white marble monument here was built by Mughal Emperor Shah Jahan","Famous for the Taj Mahal"], opts:["Jaipur","Agra","Varanasi","Mathura"], exp:"Agra is home to the Taj Mahal, a UNESCO World Heritage Site built by Emperor Shah Jahan in memory of his wife Mumtaz Mahal." },
+  { dest:"Queenstown", clues:["Adventure capital of the world","Located in New Zealand","Birthplace of commercial bungee jumping","Surrounded by the Remarkables mountain range"], opts:["Wellington","Auckland","Christchurch","Queenstown"], exp:"Queenstown in New Zealand is famous as the adventure capital of the world, offering bungee jumping, skydiving, and skiing." },
+  { dest:"Petra", clues:["Known as the Rose City","Famous for rock-cut architecture","Located in Jordan","One of the New Seven Wonders of the World"], opts:["Jerusalem","Petra","Amman","Luxor"], exp:"Petra is an ancient city in Jordan, famous for its rock-cut architecture and water conduit system, and is a UNESCO World Heritage Site." },
+  { dest:"Machu Picchu", clues:["Inca citadel high in the Andes","Located in Peru","Rediscovered in 1911 by Hiram Bingham","One of the New Seven Wonders of the World"], opts:["Cusco","Machu Picchu","La Paz","Bogotá"], exp:"Machu Picchu is a 15th-century Inca citadel set high in the Andes Mountains of Peru, a UNESCO World Heritage Site." },
+];
+
+let guessState = null;
+
+function getTodaysDestination() {
+  const dateStr = todayStr().replace(/-/g,'');
+  let seed = 0;
+  for(let i = 0; i < dateStr.length; i++) seed = (seed * 37 + dateStr.charCodeAt(i)) >>> 0;
+  return DEST_BANK[seed % DEST_BANK.length];
+}
+
+function renderGuessGame() {
+  const wrap = document.getElementById('guess-content');
+  if(!wrap) return;
+
+  const today = todayStr();
+  const userId = CURRENT_USER ? String(CURRENT_USER.id) : '0';
+  const guessKey = 'guess_' + today.replace(/-/g,'');
+  const myData = quizScores[userId] || {};
+  const alreadyGuessed = myData[guessKey] !== undefined;
+
+  if(alreadyGuessed) {
+    const dest = getTodaysDestination();
+    wrap.innerHTML = buildGuessAlreadyDone(dest, myData[guessKey]);
+    return;
+  }
+
+  if(!guessState || guessState.date !== today) {
+    guessState = { date: today, dest: getTodaysDestination(), revealed: 1, answered: false };
+  }
+  renderGuessUI(wrap);
+}
+
+function renderGuessUI(wrap) {
+  if(!wrap) wrap = document.getElementById('guess-content');
+  if(!wrap) return;
+  const g = guessState;
+  if(!g) return;
+  const dest = g.dest;
+  const cluesShown = dest.clues.slice(0, g.revealed);
+  const pointsAvailable = 5 - (g.revealed - 1); // 5 pts for 1 clue, 4 for 2, etc.
+
+  wrap.innerHTML = `
+    <div style="max-width:560px;margin:0 auto">
+      <div style="background:linear-gradient(135deg,#1e3a5f,#0f172a);border-radius:20px;padding:28px;margin-bottom:16px;text-align:center">
+        <div style="font-size:42px;margin-bottom:10px">🗺️</div>
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin-bottom:6px">Guess the Destination</div>
+        <div style="font-size:13px;color:#bae6fd">Guess with fewer clues to earn more points!</div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:12px">Clues Revealed (${g.revealed}/${dest.clues.length})</div>
+        ${cluesShown.map((clue,i) => `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i>0?'border-top:1px solid #f1f5f9':''}">
+            <div style="width:24px;height:24px;background:#f0f9ff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#0369a1;flex-shrink:0">${i+1}</div>
+            <div style="font-size:14px;color:#1e293b;font-weight:500">${clue}</div>
+          </div>`).join('')}
+        ${g.revealed < dest.clues.length ? `
+          <button onclick="revealNextClue()" style="width:100%;margin-top:12px;padding:9px;background:#f8fafc;color:#475569;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+            🔍 Reveal Next Clue (costs 1 point)
+          </button>` : ''}
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:14px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:12px">Choose the Destination</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          ${dest.opts.map(opt => `
+            <button onclick="submitGuess('${opt}')" style="padding:12px;background:#f8fafc;color:#1e293b;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:.15s" onmouseover="this.style.borderColor='#8b5cf6'" onmouseout="this.style.borderColor='#e2e8f0'">
+              ${opt}
+            </button>`).join('')}
+        </div>
+      </div>
+
+      <div style="text-align:center;font-size:12px;color:#94a3b8">
+        🏅 Current clue count: <strong>${g.revealed}</strong> · Points available: <strong style="color:#8b5cf6">${pointsAlailable(g.revealed)}</strong>
+      </div>
+    </div>`;
+}
+
+function pointsAlailable(clueCount) {
+  return Math.max(1, 5 - (clueCount - 1));
+}
+
+function revealNextClue() {
+  if(!guessState) return;
+  guessState.revealed = Math.min(guessState.revealed + 1, guessState.dest.clues.length);
+  renderGuessUI();
+}
+
+async function submitGuess(chosen) {
+  if(!guessState) return;
+  const g = guessState;
+  const correct = chosen === g.dest.dest;
+  const pts = correct ? pointsAlailable(g.revealed) : 0;
+  const wrap = document.getElementById('guess-content');
+
+  // Save result to Firestore
+  if(CURRENT_USER) {
+    try {
+      const userId = String(CURRENT_USER.id);
+      const guessKey = 'guess_' + todayStr().replace(/-/g,'');
+      const ref = _db.collection('quizscores').doc(userId);
+      const snap = await ref.get();
+      const data = snap.exists ? snap.data() : {};
+      data[guessKey] = pts;
+      // Add points to monthly total
+      const monthKey = 'mon_' + monthStr().replace(/-/g,'');
+      data[monthKey] = (data[monthKey] || 0) + pts;
+      data.totalPoints = (data.totalPoints || 0) + pts;
+      await ref.set(data, { merge: true });
+    } catch(e) { console.error('Guess save error:', e); }
+  }
+
+  // Show result
+  if(wrap) wrap.innerHTML = buildGuessResult(g.dest, chosen, correct, pts);
+}
+
+function buildGuessResult(dest, chosen, correct, pts) {
+  return `
+    <div style="max-width:560px;margin:0 auto;text-align:center">
+      <div style="background:${correct?'linear-gradient(135deg,#059669,#10b981)':'linear-gradient(135deg,#dc2626,#ef4444)'};border-radius:20px;padding:28px;margin-bottom:16px">
+        <div style="font-size:48px;margin-bottom:10px">${correct?'🎉':'😔'}</div>
+        <div style="font-size:22px;font-weight:800;color:#fff;margin-bottom:6px">${correct?'Correct!':'Not Quite!'}</div>
+        <div style="font-size:14px;color:${correct?'#d1fae5':'#fecaca'};margin-bottom:12px">The answer was <strong>${dest.dest}</strong></div>
+        ${pts > 0 ? `<div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:10px 20px;display:inline-block;color:#fff;font-size:20px;font-weight:800">+${pts} pts</div>` : ''}
+      </div>
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:20px;text-align:left">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:8px">About ${dest.dest}</div>
+        <div style="font-size:14px;color:#374151;line-height:1.6">${dest.exp}</div>
+      </div>
+      <div style="margin-top:14px;font-size:12px;color:#94a3b8">Come back tomorrow for a new destination! 🌍</div>
+    </div>`;
+}
+
+function buildGuessAlreadyDone(dest, pts) {
+  return `
+    <div style="max-width:560px;margin:0 auto;text-align:center">
+      <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:20px;padding:28px;margin-bottom:16px">
+        <div style="font-size:48px;margin-bottom:10px">✅</div>
+        <div style="font-size:20px;font-weight:800;color:#fff;margin-bottom:6px">Already Played Today!</div>
+        <div style="font-size:13px;color:#ddd6fe;margin-bottom:12px">Today's destination was <strong>${dest.dest}</strong></div>
+        <div style="background:rgba(255,255,255,0.2);border-radius:10px;padding:8px 20px;display:inline-block;color:#fff;font-size:18px;font-weight:800">You scored: ${pts} pts</div>
+      </div>
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;padding:20px;text-align:left">
+        <div style="font-size:14px;color:#374151;line-height:1.6">${dest.exp}</div>
+      </div>
+      <div style="margin-top:14px;font-size:12px;color:#94a3b8">Come back tomorrow for a new destination! 🗺️</div>
+    </div>`;
+}
+
+
 function promptImportCategory(event) {
   const file = event.target.files[0];
   if(!file) return;
@@ -4265,19 +4603,56 @@ function getTodaysQuestions() {
 }
 
 // ── Init Quiz ──
+let academyTab = 'quiz'; // 'quiz' | 'fact' | 'guess'
+
 function initQuiz() {
   loadQuizScores();
-  setQuizMode(quizMode);
+  setAcademyTab(academyTab);
+}
+
+function setAcademyTab(tab) {
+  academyTab = tab;
+  // Update button styles
+  ['quiz','fact','guess'].forEach(t => {
+    const btn = document.getElementById('academy-'+t+'-btn');
+    if(btn) {
+      btn.style.background = t === tab ? '#8b5cf6' : '#f1f5f9';
+      btn.style.color      = t === tab ? '#fff'    : '#64748b';
+    }
+  });
+  // Show/hide panels
+  const panels = {
+    quiz:  ['quiz-panel',  'quiz-stats-bar'],
+    fact:  ['fact-panel'],
+    guess: ['guess-panel'],
+  };
+  ['quiz-panel','learn-panel','fact-panel','guess-panel','quiz-stats-bar'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+  (panels[tab] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = '';
+  });
+  // Hide leaderboard only on non-quiz tabs
+  const lb = document.querySelector('#tab-quiz > div[style*="margin-top:24px"]');
+  if(lb) lb.style.display = tab === 'quiz' ? '' : 'none';
+
+  if(tab === 'quiz') {
+    setQuizMode('quiz');
+  } else if(tab === 'fact') {
+    renderFactOfTheDay();
+  } else if(tab === 'guess') {
+    renderGuessGame();
+  }
 }
 
 function setQuizMode(mode) {
   quizMode = mode;
-  document.getElementById('quiz-panel').style.display  = mode === 'quiz'  ? '' : 'none';
-  document.getElementById('learn-panel').style.display = mode === 'learn' ? '' : 'none';
-  document.getElementById('quiz-mode-btn').style.background  = mode === 'quiz'  ? '#8b5cf6' : '#f1f5f9';
-  document.getElementById('quiz-mode-btn').style.color       = mode === 'quiz'  ? '#fff'    : '#64748b';
-  document.getElementById('learn-mode-btn').style.background = mode === 'learn' ? '#8b5cf6' : '#f1f5f9';
-  document.getElementById('learn-mode-btn').style.color      = mode === 'learn' ? '#fff'    : '#64748b';
+  const qPanel = document.getElementById('quiz-panel');
+  const lPanel = document.getElementById('learn-panel');
+  if(qPanel) qPanel.style.display = mode === 'quiz'  ? '' : 'none';
+  if(lPanel) lPanel.style.display = mode === 'learn' ? '' : 'none';
   if(mode === 'learn') renderLearnMode();
   else {
     // Show loading spinner while Firestore scores load — renderQuiz() is called
