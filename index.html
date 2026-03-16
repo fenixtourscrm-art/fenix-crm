@@ -1615,7 +1615,8 @@ function openModal(type){
     const isEditBk=type==="editbooking";
     const exBk=isEditBk?allBookings.find(x=>x.id===window._editBkId):null;
     const preCat=window._bkPreCat||"International Tours";
-    const BK_CAT_OPTS=BK_CATS.filter(c=>c.id!=="all").map(c=>`<option>${c.id}</option>`).join("");
+    const activeCat = isEditBk ? (exBk?.category||"International Tours") : preCat;
+    const BK_CAT_OPTS=BK_CATS.filter(c=>c.id!=="all").map(c=>`<option${c.id===activeCat?' selected':''}>${c.id}</option>`).join("");
     const VISA_STATUS_OPT=["Pending","Submitted","Approved","Rejected"].map(s=>`<option>${s}</option>`).join("");
     mb.innerHTML=`<div class="modal-title">${isEditBk?"Edit":"Add"} Booking <button class="x" onclick="closeOverlay()">✕</button></div>
     <div class="form-grid">
@@ -1634,11 +1635,13 @@ function openModal(type){
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveBooking(${isEditBk})">Save Booking</button>`;
     setTimeout(()=>{
       const catEl=document.getElementById("b-cat");
+      // Category is already pre-selected via activeCat in the HTML — render dynamic fields now
+      updateBkForm();
       if(!isEditBk && catEl) catEl.value=preCat;
       if(isEditBk && exBk && catEl) {
-        // Step 1: Set category first
+        // Step 1: Ensure category is set (already pre-selected but confirm)
         catEl.value = exBk.category || "International Tours";
-        // Step 2: Render dynamic fields for this category
+        // Step 2: Re-render dynamic fields to be sure
         updateBkForm();
         // Step 3: Now fill all dynamic fields (they exist now)
         const sv = (id, val) => { const el=document.getElementById(id); if(el && val!==undefined && val!==null) el.value=val; };
@@ -1670,6 +1673,7 @@ function openModal(type){
         sv("b-rooms",         exBk.rooms);
         sv("b-nights",        exBk.nights);
         sv("b-visa-type",     exBk.visaType);
+        sv("b-num-applicants", exBk.numApplicants || exBk.pax || 1);
         sv("b-visa-status",   exBk.visaStatus);
         sv("b-applicant",     exBk.applicantName);
         sv("b-passport",      exBk.passportNo);
@@ -2389,15 +2393,19 @@ async function saveBooking(isEdit) {
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
   // Destination: could be select (b-dest) or input depending on category
   const dest = gv("b-dest") || "N/A";
+  const cat = gv("b-cat") || "International Tours";
+  const isVisaPassport = cat === "Visa" || cat === "Passport";
   const adults=gi("b-adults"), childBed=gi("b-childbed"), childNoBed=gi("b-childnobed"), infant=gi("b-infant");
+  const numApplicants = gi("b-num-applicants") || 1;
   const data = {
-    category: gv("b-cat") || "International Tours",
+    category: cat,
     clientId: clientId,
     destination: dest,
     travelDate: gv("b-date"),
     returnDate: gv("b-return-date"),
     adults, childBed, childNoBed, infant,
-    pax: adults+childBed+childNoBed+infant || 1,
+    numApplicants: isVisaPassport ? numApplicants : (adults+childBed+childNoBed+infant||1),
+    pax: isVisaPassport ? numApplicants : (adults+childBed+childNoBed+infant||1),
     amount: gi("b-amt"),
     paid: gi("b-paid"),
     status: gv("b-status") || "Confirmed",
@@ -3217,12 +3225,16 @@ function updateBkForm() {
       <div class="form-grid"><div class="fg"><label>Visa Country <span style="color:#dc2626">*</span></label>
         <select id="b-dest"><option value="">Select Country...</option>$<option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
       </div><div class="fg"><label>Visa Type</label><select id="b-visa-type"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option></select></div></div>
+      <div class="form-grid">
+        <div class="fg"><label>Visa Type</label><input id="b-visa-type" placeholder="e.g. Tourist, Business, Student"/></div>
+        <div class="fg"><label>No. of Applicants</label><input type="number" id="b-num-applicants" value="1" min="1"/></div>
+      </div>
       <div style="font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.05em;margin:8px 0 4px">📘 Passport Details</div>
       <div class="form-grid"><div class="fg"><label>Applicant Name</label><input id="b-applicant" placeholder="Name on passport"/></div>
       <div class="fg"><label>Passport No</label><input id="b-passport" placeholder="e.g. Z1234567"/></div></div>
       <div class="form-grid"><div class="fg"><label>Submission Date</label><input type="date" id="b-date"/></div>
       <div class="fg"><label>Visa Status</label><select id="b-visa-status"><option>Pending</option><option>Submitted</option><option>Approved</option><option>Rejected</option></select></div></div>
-      ${paxFields}${amtFields}`;
+      ${amtFields}`;
   } else if(cat==="Passport") {
     wrap.innerHTML = `
       <div style="font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.05em;margin:4px 0 6px">📘 Passport Details</div>
