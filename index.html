@@ -617,8 +617,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
 
       <!-- LEADERBOARD (always visible below) -->
-      <div style="margin-top:24px">
-        <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">🏆 Team Leaderboard — This Month</div>
+      <div id="academy-leaderboard-wrap" style="margin-top:24px">
+        <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">🏆 Travel Academy Leaderboard — This Month</div>
         <div id="quiz-leaderboard"></div>
       </div>
     </div>
@@ -3849,12 +3849,12 @@ function renderGuessUI(wrap) {
       </div>
 
       <div style="text-align:center;font-size:12px;color:#94a3b8">
-        🏅 Current clue count: <strong>${g.revealed}</strong> · Points available: <strong style="color:#8b5cf6">${pointsAlailable(g.revealed)}</strong>
+        🏅 Current clue count: <strong>${g.revealed}</strong> · Points available: <strong style="color:#8b5cf6">${pointsAvailable(g.revealed)}</strong>
       </div>
     </div>`;
 }
 
-function pointsAlailable(clueCount) {
+function pointsAvailable(clueCount) {
   return Math.max(1, 5 - (clueCount - 1));
 }
 
@@ -3868,7 +3868,7 @@ async function submitGuess(chosen) {
   if(!guessState) return;
   const g = guessState;
   const correct = chosen === g.dest.dest;
-  const pts = correct ? pointsAlailable(g.revealed) : 0;
+  const pts = correct ? pointsAvailable(g.revealed) : 0;
   const wrap = document.getElementById('guess-content');
 
   // Save result to Firestore
@@ -3876,20 +3876,26 @@ async function submitGuess(chosen) {
     try {
       const userId = String(CURRENT_USER.id);
       const guessKey = 'guess_' + todayStr().replace(/-/g,'');
+      const monthKey = 'mon_' + monthStr().replace(/-/g,'');
       const ref = _db.collection('quizscores').doc(userId);
       const snap = await ref.get();
       const data = snap.exists ? snap.data() : {};
-      data[guessKey] = pts;
-      // Add points to monthly total
-      const monthKey = 'mon_' + monthStr().replace(/-/g,'');
-      data[monthKey] = (data[monthKey] || 0) + pts;
-      data.totalPoints = (data.totalPoints || 0) + pts;
-      await ref.set(data, { merge: true });
+      // Only save if not already answered today
+      if(data[guessKey] === undefined) {
+        data[guessKey] = pts;
+        if(pts > 0) {
+          data[monthKey] = (data[monthKey] || 0) + pts;
+          data.totalPoints = (data.totalPoints || 0) + pts;
+        }
+        await ref.set(data, { merge: true });
+      }
     } catch(e) { console.error('Guess save error:', e); }
   }
 
   // Show result
   if(wrap) wrap.innerHTML = buildGuessResult(g.dest, chosen, correct, pts);
+  // Refresh leaderboard with new points
+  setTimeout(renderLeaderboard, 1000);
 }
 
 function buildGuessResult(dest, chosen, correct, pts) {
@@ -4620,9 +4626,9 @@ function setAcademyTab(tab) {
       btn.style.color      = t === tab ? '#fff'    : '#64748b';
     }
   });
-  // Show/hide panels
+  // Show/hide content panels
   const panels = {
-    quiz:  ['quiz-panel',  'quiz-stats-bar'],
+    quiz:  ['quiz-panel', 'quiz-stats-bar'],
     fact:  ['fact-panel'],
     guess: ['guess-panel'],
   };
@@ -4634,9 +4640,9 @@ function setAcademyTab(tab) {
     const el = document.getElementById(id);
     if(el) el.style.display = '';
   });
-  // Hide leaderboard only on non-quiz tabs
-  const lb = document.querySelector('#tab-quiz > div[style*="margin-top:24px"]');
-  if(lb) lb.style.display = tab === 'quiz' ? '' : 'none';
+  // Leaderboard always visible on all tabs
+  const lb = document.getElementById('academy-leaderboard-wrap');
+  if(lb) lb.style.display = '';
 
   if(tab === 'quiz') {
     setQuizMode('quiz');
@@ -5008,6 +5014,7 @@ function renderLeaderboard() {
     {id:'2', name:'Mr. Paresh Gajera', initials:'PG'},
     {id:'3', name:'Ms. Nusaiba Puthawala', initials:'NP'},
     {id:'4', name:'Mr. Ahyan Shaikh', initials:'AS'},
+    {id:'5', name:'Mr. Taha Rangwala', initials:'TR'},
   ];
 
   const rows = STAFF_LIST.map(s => {
@@ -5021,8 +5028,8 @@ function renderLeaderboard() {
     };
   }).sort((a,b) => b.monthPts - a.monthPts);
 
-  const medals = ['🥇','🥈','🥉','4️⃣'];
-  const avatarColors = ['#f97316','#8b5cf6','#0ea5e9','#10b981'];
+  const medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+  const avatarColors = ['#f97316','#8b5cf6','#0ea5e9','#10b981','#6366f1'];
 
   el.innerHTML = `
     <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;overflow:hidden">
@@ -5039,7 +5046,7 @@ function renderLeaderboard() {
               <div style="font-size:13px;font-weight:700;color:#0f172a">${r.name}${isMe?' <span style="font-size:10px;background:#8b5cf6;color:#fff;padding:1px 6px;border-radius:99px;font-weight:700">You</span>':''}</div>
             </div>
           </div>
-          <div style="text-align:center;font-size:13px;font-weight:700;color:${r.todayPts!==null?'#8b5cf6':'#94a3b8'}">${r.todayPts!==null?r.todayPts+'/8':'—'}</div>
+          <div style="text-align:center;font-size:13px;font-weight:700;color:${r.todayPts!==null?'#8b5cf6':'#94a3b8'}">${r.todayPts!==null?r.todayPts+'pts':'—'}</div>
           <div style="text-align:center;font-size:13px;font-weight:800;color:#0f172a">${r.monthPts}</div>
           <div style="text-align:center;font-size:13px;font-weight:700;color:#f97316">${r.streak>0?'🔥'+r.streak:'—'}</div>
           <div style="text-align:center;font-size:13px;font-weight:700;color:#64748b">${r.total}</div>
