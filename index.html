@@ -4228,14 +4228,40 @@ function dayOfYear() {
 
 // ── Pick today's 8 questions (deterministic by day) ──
 function getTodaysQuestions() {
-  const seed = dayOfYear();
+  // Generate a numeric seed from today's date string (YYYYMMDD)
+  const dateStr = todayStr().replace(/-/g, '');
+  let seed = 0;
+  for(let i = 0; i < dateStr.length; i++) {
+    seed = (seed * 31 + dateStr.charCodeAt(i)) >>> 0;
+  }
+  // Seeded pseudo-random number generator (mulberry32)
+  function rand() {
+    seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+    return (seed >>> 0) / 4294967296;
+  }
+  // Shuffle a copy of the full bank
   const shuffled = [...QUIZ_BANK];
-  // Fisher-Yates with seed
   for(let i = shuffled.length - 1; i > 0; i--) {
-    const j = (seed * 31 + i * 17 + i) % (i + 1);
+    const j = Math.floor(rand() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return shuffled.slice(0, 8);
+  // Pick 8 questions spread across categories for variety
+  const cats = [...new Set(QUIZ_BANK.map(q => q.cat))];
+  const picked = [];
+  const perCat = Math.ceil(8 / cats.length);
+  cats.forEach(cat => {
+    shuffled.filter(q => q.cat === cat).slice(0, perCat).forEach(q => {
+      if(picked.length < 8) picked.push(q);
+    });
+  });
+  // Top up if needed
+  shuffled.forEach(q => { if(picked.length < 8 && !picked.includes(q)) picked.push(q); });
+  // Final shuffle of the picked set
+  for(let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
+  return picked;
 }
 
 // ── Init Quiz ──
@@ -4253,9 +4279,19 @@ function setQuizMode(mode) {
   document.getElementById('learn-mode-btn').style.background = mode === 'learn' ? '#8b5cf6' : '#f1f5f9';
   document.getElementById('learn-mode-btn').style.color      = mode === 'learn' ? '#fff'    : '#64748b';
   if(mode === 'learn') renderLearnMode();
-  else renderQuiz();
+  else {
+    // Show loading spinner while Firestore scores load — renderQuiz() is called
+    // from loadQuizScores snapshot once data arrives, preventing bypass on refresh
+    const loading = document.getElementById('quiz-loading');
+    const content = document.getElementById('quiz-content');
+    const result  = document.getElementById('quiz-result');
+    if(loading) loading.style.display = '';
+    if(content) content.style.display = 'none';
+    if(result)  result.style.display  = 'none';
+    // If scores already loaded (e.g. switching back to quiz tab), render immediately
+    if(Object.keys(quizScores).length > 0) renderQuiz();
+  }
 }
-
 // ── Load scores from Firestore ──
 function loadQuizScores() {
   if(_quizUnsub) _quizUnsub();
@@ -4264,6 +4300,8 @@ function loadQuizScores() {
     snap.docs.forEach(d => { quizScores[d.id] = d.data(); });
     updateQuizStats();
     renderLeaderboard();
+    // Re-render quiz now that scores are loaded — this enforces the daily lock
+    if(quizMode === 'quiz') renderQuiz();
   }, err => console.error('Quiz scores error:', err));
 }
 
