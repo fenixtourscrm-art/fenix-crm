@@ -237,6 +237,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
 
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -306,6 +308,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
     <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🎓</span>Travel Academy<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
     <div class="nav-item" onclick="showTab('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</div>
+    <div class="nav-item" onclick="showTab('destinations',this)"><span class="nav-icon">🗺️</span>Destination Map</div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -682,6 +685,60 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
     </div>
 
+    
+    <!-- DESTINATION KNOWLEDGE MAP TAB -->
+    <div class="tab" id="tab-destinations">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="section-title" style="margin:0">🗺️ Destination Knowledge Map</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Click any country to explore visa info, best season, attractions & package costs</div>
+        </div>
+        <div id="dest-owner-btns" style="display:none">
+          <button onclick="openDestModal()" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Destination</button>
+        </div>
+      </div>
+
+      <!-- Search Bar -->
+      <div style="position:relative;margin-bottom:14px">
+        <input id="dest-search" type="text" placeholder="🔍  Search destination (e.g. Japan, Turkey, Bali)..."
+          oninput="destSearch(this.value)"
+          style="width:100%;padding:11px 16px 11px 40px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;color:#1e293b;background:#f8fafc;box-sizing:border-box;outline:none"
+          onfocus="this.style.borderColor='#0369a1'" onblur="this.style.borderColor='#e2e8f0'"/>
+        <div id="dest-search-results" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:999;display:none;max-height:240px;overflow-y:auto;margin-top:4px"></div>
+      </div>
+
+      <!-- Main Layout: Map + Info Panel -->
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:500px" id="dest-main-grid">
+
+        <!-- LEFT: Map -->
+        <div style="background:#e8f4fd;border-radius:16px;overflow:hidden;position:relative;min-height:460px;border:1.5px solid #bae6fd">
+          <div id="dest-map" style="width:100%;height:100%;min-height:460px"></div>
+          <div id="dest-map-hint" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.75);color:#fff;padding:6px 14px;border-radius:99px;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap">
+            🖱️ Click any country to explore
+          </div>
+        </div>
+
+        <!-- RIGHT: Info Panel -->
+        <div id="dest-info-panel" style="background:#f8fafc;border-radius:16px;border:1.5px solid #e2e8f0;padding:20px;overflow-y:auto;max-height:500px">
+          <div id="dest-info-content">
+            <div style="text-align:center;padding:40px 20px;color:#94a3b8">
+              <div style="font-size:48px;margin-bottom:12px">🌍</div>
+              <div style="font-size:14px;font-weight:600">Select a destination</div>
+              <div style="font-size:12px;margin-top:6px">Click a country on the map or search above to view travel information</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Destination Cards Grid (all saved destinations) -->
+      <div style="margin-top:20px">
+        <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">📚 All Destinations in Database</div>
+        <div id="dest-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+          <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;grid-column:1/-1">Loading destinations...</div>
+        </div>
+      </div>
+    </div>
+
     <!-- BUG REPORTS TAB -->
     <div class="tab" id="tab-bugreports">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -850,6 +907,7 @@ function showTab(tab,el){
   }
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
+  if(tab==="destinations"){initDestinations();}
 }
 
 function renderAll(){
@@ -2058,11 +2116,11 @@ const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","aut
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
 const PERM_MAP  = {
-  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
-  "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes"], "canDelete": false, "canEditClients": false, "canSetTargets": false}
+  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
+  "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false}
 }
 
 try {
@@ -3931,6 +3989,490 @@ function buildGuessAlreadyDone(dest, pts) {
     </div>`;
 }
 
+
+
+// ═══════════════════════════════════════════════
+//  DESTINATION KNOWLEDGE MAP
+// ═══════════════════════════════════════════════
+let destMap = null;
+let destMapLayer = null;
+let destData = [];       // loaded from Firestore
+let destSelected = null; // currently selected country name
+
+// Pre-loaded destination data (seed data — owners can add/edit/delete)
+const DEST_SEED = [
+  {
+    country: "France", flag: "🇫🇷", continent: "Europe",
+    visa: "Schengen Visa required for Indians. Apply at VFS/BLS. Processing 15–20 days.",
+    season: "April – June & September – November",
+    cities: ["Paris", "Nice", "Lyon", "Bordeaux", "Strasbourg"],
+    attractions: ["Eiffel Tower", "Louvre Museum", "Palace of Versailles", "Mont Saint-Michel", "French Riviera"],
+    price: "₹80,000 – ₹1,50,000 per person",
+    tip: "Book Eiffel Tower tickets online in advance — queues can be 2–3 hours long.",
+    visaTime: "15–20 working days"
+  },
+  {
+    country: "Turkey", flag: "🇹🇷", continent: "Asia/Europe",
+    visa: "eVisa for Indians — apply online at evisa.gov.tr. Simple and fast.",
+    season: "April – June & September – October",
+    cities: ["Istanbul", "Cappadocia", "Antalya", "Bodrum", "Ephesus"],
+    attractions: ["Hagia Sophia", "Blue Mosque", "Cappadocia Hot Air Balloons", "Pamukkale", "Grand Bazaar"],
+    price: "₹65,000 – ₹1,10,000 per person",
+    tip: "Book hot air balloon rides in Cappadocia well in advance, especially for sunrise slots.",
+    visaTime: "24–48 hours"
+  },
+  {
+    country: "Japan", flag: "🇯🇵", continent: "Asia",
+    visa: "Tourist Visa required. Apply at Japanese consulate. Interview may be needed.",
+    season: "March – May (Cherry Blossom) & October – November (Autumn)",
+    cities: ["Tokyo", "Kyoto", "Osaka", "Hiroshima", "Nara"],
+    attractions: ["Mount Fuji", "Senso-ji Temple", "Arashiyama Bamboo Grove", "Dotonbori", "Hiroshima Peace Memorial"],
+    price: "₹1,20,000 – ₹2,00,000 per person",
+    tip: "Get an IC card (Suica/Pasmo) at the airport for seamless travel on all public transport.",
+    visaTime: "5–7 working days"
+  },
+  {
+    country: "Maldives", flag: "🇲🇻", continent: "Asia",
+    visa: "Visa on arrival for all nationalities including Indians. Free 30-day stay.",
+    season: "November – April (dry season)",
+    cities: ["Malé", "Maafushi", "Addu Atoll", "Baa Atoll", "Raa Atoll"],
+    attractions: ["Overwater Bungalows", "Coral Reef Snorkeling", "Whale Shark Diving", "Sunset Dolphin Cruise", "Sandbank Picnics"],
+    price: "₹80,000 – ₹3,00,000+ per couple",
+    tip: "Choose a guesthouse island like Maafushi for budget trips or a resort island for luxury.",
+    visaTime: "On arrival — free"
+  },
+  {
+    country: "Singapore", flag: "🇸🇬", continent: "Asia",
+    visa: "Visa required for Indian passport holders. Apply at VFS.",
+    season: "February – April & July – September",
+    cities: ["Singapore City"],
+    attractions: ["Gardens by the Bay", "Marina Bay Sands", "Sentosa Island", "Universal Studios", "Chinatown & Little India"],
+    price: "₹60,000 – ₹1,00,000 per person",
+    tip: "Get the Singapore Tourist Pass for unlimited MRT rides. It saves a lot on transport.",
+    visaTime: "3–5 working days"
+  },
+  {
+    country: "Thailand", flag: "🇹🇭", continent: "Asia",
+    visa: "Visa on arrival (30 days) OR e-Visa available. Very easy for Indians.",
+    season: "November – February (cool season)",
+    cities: ["Bangkok", "Phuket", "Chiang Mai", "Pattaya", "Koh Samui"],
+    attractions: ["Grand Palace", "Wat Phra Kaew", "Phi Phi Islands", "Elephant Sanctuary Chiang Mai", "Floating Markets"],
+    price: "₹35,000 – ₹75,000 per person",
+    tip: "Carry Thai Baht in cash — many small shops and street food stalls don't accept cards.",
+    visaTime: "On arrival or 3–5 days for e-Visa"
+  },
+  {
+    country: "United Arab Emirates", flag: "🇦🇪", continent: "Asia",
+    visa: "Visa on arrival for Indian passport holders (30 days free).",
+    season: "October – April (cool season)",
+    cities: ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"],
+    attractions: ["Burj Khalifa", "Dubai Mall", "Palm Jumeirah", "Sheikh Zayed Grand Mosque", "Desert Safari"],
+    price: "₹55,000 – ₹1,20,000 per person",
+    tip: "Book Dubai Frame and Burj Khalifa tickets in advance to get the best time slots and prices.",
+    visaTime: "On arrival — free for Indians"
+  },
+  {
+    country: "Switzerland", flag: "🇨🇭", continent: "Europe",
+    visa: "Schengen Visa required. Apply through Swiss consulate or VFS.",
+    season: "June – September (summer) & December – February (snow)",
+    cities: ["Zurich", "Geneva", "Interlaken", "Lucerne", "Zermatt"],
+    attractions: ["Jungfraujoch", "Matterhorn", "Lake Geneva", "Rhine Falls", "Château de Chillon"],
+    price: "₹1,20,000 – ₹2,20,000 per person",
+    tip: "Buy the Swiss Travel Pass for unlimited trains, buses and boats — it's the best value for exploring.",
+    visaTime: "15–20 working days"
+  },
+  {
+    country: "Italy", flag: "🇮🇹", continent: "Europe",
+    visa: "Schengen Visa required. Apply at Italian consulate or VFS.",
+    season: "April – June & September – October",
+    cities: ["Rome", "Venice", "Florence", "Milan", "Amalfi Coast"],
+    attractions: ["Colosseum", "Vatican Museums", "Grand Canal Venice", "Uffizi Gallery", "Amalfi Drive"],
+    price: "₹90,000 – ₹1,60,000 per person",
+    tip: "Book Vatican Museums tickets online — the lines without reservations can be 3+ hours long.",
+    visaTime: "15–20 working days"
+  },
+  {
+    country: "Indonesia", flag: "🇮🇩", continent: "Asia",
+    visa: "Visa on arrival (30 days) for Indians. Available at major airports.",
+    season: "April – October (dry season in Bali)",
+    cities: ["Bali", "Jakarta", "Lombok", "Yogyakarta", "Komodo"],
+    attractions: ["Tanah Lot Temple", "Ubud Rice Terraces", "Komodo Dragon Island", "Mount Bromo", "Nusa Penida"],
+    price: "₹40,000 – ₹85,000 per person",
+    tip: "Hire a private driver in Bali for the day (~₹2,500) — much easier than taxis for sightseeing.",
+    visaTime: "On arrival"
+  },
+  {
+    country: "Australia", flag: "🇦🇺", continent: "Oceania",
+    visa: "Tourist visa (subclass 600) required. Apply online on Australian immigration portal.",
+    season: "September – November (spring) & March – May (autumn)",
+    cities: ["Sydney", "Melbourne", "Brisbane", "Perth", "Cairns"],
+    attractions: ["Sydney Opera House", "Great Barrier Reef", "Uluru", "Great Ocean Road", "Bondi Beach"],
+    price: "₹1,50,000 – ₹2,50,000 per person",
+    tip: "Book Great Barrier Reef diving tours from Cairns — it is one of the world's top diving spots.",
+    visaTime: "7–21 working days"
+  },
+  {
+    country: "Greece", flag: "🇬🇷", continent: "Europe",
+    visa: "Schengen Visa required. Apply at Greek consulate or VFS.",
+    season: "May – October",
+    cities: ["Athens", "Santorini", "Mykonos", "Crete", "Rhodes"],
+    attractions: ["Acropolis Athens", "Santorini Caldera", "Meteora Monasteries", "Delphi", "Palace of Knossos"],
+    price: "₹85,000 – ₹1,50,000 per person",
+    tip: "Santorini sunsets are best viewed from Oia village — arrive 2 hours early to get a good spot.",
+    visaTime: "15–20 working days"
+  },
+  {
+    country: "Nepal", flag: "🇳🇵", continent: "Asia",
+    visa: "No visa required for Indian passport holders. Free entry.",
+    season: "October – December & March – May (trekking season)",
+    cities: ["Kathmandu", "Pokhara", "Chitwan", "Lumbini", "Nagarkot"],
+    attractions: ["Pashupatinath Temple", "Boudhanath Stupa", "Everest Base Camp Trek", "Annapurna Circuit", "Phewa Lake"],
+    price: "₹20,000 – ₹50,000 per person",
+    tip: "Acclimatize properly before high-altitude treks. Altitude sickness is common above 3,500m.",
+    visaTime: "No visa required for Indians"
+  },
+  {
+    country: "Sri Lanka", flag: "🇱🇰", continent: "Asia",
+    visa: "ETA (Electronic Travel Authorization) required. Apply online easily.",
+    season: "December – March (west coast) & May – September (east coast)",
+    cities: ["Colombo", "Kandy", "Galle", "Sigiriya", "Nuwara Eliya"],
+    attractions: ["Sigiriya Rock Fortress", "Temple of the Tooth Relic", "Yala National Park", "Adam's Peak", "Mirissa Beach"],
+    price: "₹25,000 – ₹60,000 per person",
+    tip: "Train journey from Kandy to Ella through tea plantations is one of the world's most scenic rail rides.",
+    visaTime: "24–48 hours online"
+  },
+  {
+    country: "Egypt", flag: "🇪🇬", continent: "Africa",
+    visa: "Visa on arrival OR eVisa available. Easy for Indian passport holders.",
+    season: "October – April",
+    cities: ["Cairo", "Luxor", "Aswan", "Hurghada", "Alexandria"],
+    attractions: ["Pyramids of Giza", "Sphinx", "Valley of the Kings", "Karnak Temple", "Abu Simbel"],
+    price: "₹55,000 – ₹1,00,000 per person",
+    tip: "Hire a licensed guide at Giza — they know hidden passages and the best photography spots.",
+    visaTime: "On arrival or 3–5 days online"
+  },
+  {
+    country: "Morocco", flag: "🇲🇦", continent: "Africa",
+    visa: "Visa free for Indian passport holders — 90-day stay.",
+    season: "March – May & September – November",
+    cities: ["Marrakech", "Fez", "Casablanca", "Chefchaouen", "Merzouga"],
+    attractions: ["Jemaa el-Fnaa Square", "Sahara Desert Safari", "Blue City Chefchaouen", "Hassan II Mosque", "Majorelle Garden"],
+    price: "₹60,000 – ₹1,10,000 per person",
+    tip: "Bargaining is expected in Moroccan souks — start at 30% of the asking price.",
+    visaTime: "No visa required"
+  },
+  {
+    country: "South Africa", flag: "🇿🇦", continent: "Africa",
+    visa: "Visa required. Apply at South African embassy/consulate.",
+    season: "May – September (dry season — best for safaris)",
+    cities: ["Cape Town", "Johannesburg", "Durban", "Kruger Area", "Knysna"],
+    attractions: ["Table Mountain", "Kruger National Park Safari", "Cape of Good Hope", "Boulders Beach Penguins", "Garden Route"],
+    price: "₹1,10,000 – ₹2,00,000 per person",
+    tip: "Book Kruger National Park safari lodges 6–12 months in advance for peak season.",
+    visaTime: "10–15 working days"
+  },
+  {
+    country: "United States", flag: "🇺🇸", continent: "America",
+    visa: "B1/B2 Tourist Visa required. Interview at US Embassy mandatory.",
+    season: "March – May & September – November (varies by region)",
+    cities: ["New York", "Los Angeles", "Las Vegas", "San Francisco", "Miami"],
+    attractions: ["Statue of Liberty", "Grand Canyon", "Times Square", "Hollywood", "Niagara Falls"],
+    price: "₹1,50,000 – ₹3,00,000 per person",
+    tip: "Apply for US visa at least 3–6 months in advance due to long interview appointment wait times.",
+    visaTime: "Interview + 2–10 weeks processing"
+  },
+  {
+    country: "Canada", flag: "🇨🇦", continent: "America",
+    visa: "Visitor Visa (TRV) required. Apply online through IRCC.",
+    season: "June – August (summer) & December – February (winter/skiing)",
+    cities: ["Toronto", "Vancouver", "Montreal", "Banff", "Quebec City"],
+    attractions: ["Niagara Falls", "Banff National Park", "CN Tower", "Old Quebec", "Whistler Ski Resort"],
+    price: "₹1,40,000 – ₹2,50,000 per person",
+    tip: "Apply for Canadian visa with strong financial documents and a clear itinerary — refusals are common without them.",
+    visaTime: "4–8 weeks"
+  },
+  {
+    country: "Malaysia", flag: "🇲🇾", continent: "Asia",
+    visa: "Visa on arrival for 30 days for Indians. Simple and free.",
+    season: "March – October (west coast) & November – February (east coast)",
+    cities: ["Kuala Lumpur", "Penang", "Langkawi", "Malacca", "Kota Kinabalu"],
+    attractions: ["Petronas Twin Towers", "Batu Caves", "Langkawi Sky Bridge", "George Town Penang", "Mount Kinabalu"],
+    price: "₹35,000 – ₹70,000 per person",
+    tip: "KL has excellent food — street food in Jalan Alor and Petaling Street Chinatown is outstanding.",
+    visaTime: "On arrival — free for Indians"
+  },
+];
+
+function initDestinations() {
+  // Show add button for owners
+  const isOwner = CURRENT_USER && (CURRENT_USER.id === 1);
+  const ownerBtns = document.getElementById('dest-owner-btns');
+  if(ownerBtns) ownerBtns.style.display = isOwner ? '' : 'none';
+
+  // Init Leaflet map
+  if(!destMap) {
+    destMap = L.map('dest-map', { zoomControl: true, scrollWheelZoom: false }).setView([20, 0], 2);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; OpenStreetMap & CartoDB',
+      subdomains: 'abcd', maxZoom: 19
+    }).addTo(destMap);
+  }
+
+  loadDestinations();
+}
+
+async function loadDestinations() {
+  try {
+    const snap = await _db.collection('destinations').orderBy('country').get();
+    if(!snap.empty) {
+      destData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } else {
+      // Use seed data if Firestore is empty
+      destData = DEST_SEED.map((d, i) => ({ id: 'seed_'+i, ...d }));
+    }
+  } catch(e) {
+    // Fallback to seed data
+    destData = DEST_SEED.map((d, i) => ({ id: 'seed_'+i, ...d }));
+  }
+  renderDestCards();
+  addMapClickListeners();
+}
+
+function addMapClickListeners() {
+  if(!destMap) return;
+  // Remove old layer if exists
+  if(destMapLayer) { destMapLayer.remove(); destMapLayer = null; }
+
+  // Use a click on the map to detect country name via reverse geocoding
+  destMap.off('click');
+  destMap.on('click', async function(e) {
+    const lat = e.latlng.lat, lng = e.latlng.lng;
+    try {
+      const hint = document.getElementById('dest-map-hint');
+      if(hint) hint.textContent = '🔍 Loading...';
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=3`);
+      const data = await res.json();
+      const country = data.address?.country;
+      if(hint) hint.textContent = country ? `📍 ${country}` : '🖱️ Click any country to explore';
+      if(country) showDestInfo(country);
+    } catch(e) {
+      const hint = document.getElementById('dest-map-hint');
+      if(hint) hint.textContent = '🖱️ Click any country to explore';
+    }
+  });
+}
+
+function showDestInfo(countryName) {
+  destSelected = countryName;
+  // Find in our database (case-insensitive)
+  const found = destData.find(d => d.country.toLowerCase() === countryName.toLowerCase());
+  const panel = document.getElementById('dest-info-content');
+  if(!panel) return;
+
+  if(!found) {
+    panel.innerHTML = `
+      <div style="text-align:center;padding:30px 10px">
+        <div style="font-size:36px;margin-bottom:10px">🔍</div>
+        <div style="font-weight:700;font-size:15px;color:#0f172a;margin-bottom:6px">${countryName}</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:16px">No travel data saved yet for this destination.</div>
+        ${CURRENT_USER?.id === 1 ? `<button onclick="openDestModal('','${countryName.replace(/'/g,"\'")}')" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Info for ${countryName}</button>` : ''}
+      </div>`;
+    return;
+  }
+
+  const isOwner = CURRENT_USER?.id === 1;
+  panel.innerHTML = `
+    <div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="font-size:36px">${found.flag||'🌍'}</div>
+          <div>
+            <div style="font-size:18px;font-weight:800;color:#0f172a">${found.country}</div>
+            <div style="font-size:11px;color:#64748b">${found.continent||''}</div>
+          </div>
+        </div>
+        ${isOwner ? `<div style="display:flex;gap:6px">
+          <button onclick="openDestModal('${found.id}')" style="padding:5px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏️ Edit</button>
+          <button onclick="deleteDestination('${found.id}')" style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>
+        </div>` : ''}
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#0369a1;margin-bottom:4px">🛂 Visa Requirements</div>
+          <div style="font-size:13px;color:#1e293b">${found.visa||'—'}</div>
+          ${found.visaTime ? `<div style="font-size:11px;color:#0369a1;margin-top:4px;font-weight:600">⏱ Processing: ${found.visaTime}</div>` : ''}
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#16a34a;margin-bottom:4px">🌤️ Best Season</div>
+          <div style="font-size:13px;color:#1e293b">${found.season||'—'}</div>
+        </div>
+
+        <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#7c3aed;margin-bottom:6px">🏙️ Top Cities</div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px">
+            ${(found.cities||[]).map(city => `<span style="background:#ede9fe;color:#5b21b6;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600">${city}</span>`).join('')}
+          </div>
+        </div>
+
+        <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#c2410c;margin-bottom:6px">🎯 Top Attractions</div>
+          <div style="display:flex;flex-direction:column;gap:3px">
+            ${(found.attractions||[]).map(a => `<div style="font-size:12px;color:#1e293b;display:flex;align-items:center;gap:6px"><span style="color:#f97316">▸</span>${a}</div>`).join('')}
+          </div>
+        </div>
+
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;margin-bottom:4px">💰 Average Package Cost</div>
+          <div style="font-size:15px;font-weight:800;color:#0f172a">${found.price||'—'}</div>
+        </div>
+
+        ${found.tip ? `<div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#a16207;margin-bottom:4px">💡 Travel Tip</div>
+          <div style="font-size:12px;color:#1e293b;font-style:italic">"${found.tip}"</div>
+        </div>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderDestCards() {
+  const grid = document.getElementById('dest-cards-grid');
+  if(!grid) return;
+  if(!destData.length) {
+    grid.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:13px;grid-column:1/-1;padding:20px">No destinations yet.</div>';
+    return;
+  }
+  grid.innerHTML = destData.map(d => `
+    <div onclick="showDestInfo('${d.country}')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;cursor:pointer;transition:.15s" onmouseover="this.style.borderColor='#0369a1';this.style.background='#f0f9ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+      <div style="font-size:28px;margin-bottom:6px">${d.flag||'🌍'}</div>
+      <div style="font-weight:700;font-size:13px;color:#0f172a">${d.country}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">${d.continent||''}</div>
+      <div style="font-size:10px;color:#0369a1;margin-top:6px;font-weight:600">${d.price||''}</div>
+    </div>`).join('');
+}
+
+function destSearch(query) {
+  const box = document.getElementById('dest-search-results');
+  if(!query.trim()) { box.style.display = 'none'; return; }
+  const q = query.toLowerCase();
+  const matches = destData.filter(d => d.country.toLowerCase().includes(q));
+  if(!matches.length) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  box.innerHTML = matches.map(d => `
+    <div onclick="selectDestSearch('${d.country}')" style="padding:10px 16px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px;color:#1e293b" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+      <span style="font-size:20px">${d.flag||'🌍'}</span>
+      <div><div style="font-weight:600">${d.country}</div><div style="font-size:11px;color:#64748b">${d.continent||''}</div></div>
+    </div>`).join('');
+}
+
+function selectDestSearch(country) {
+  document.getElementById('dest-search').value = country;
+  document.getElementById('dest-search-results').style.display = 'none';
+  showDestInfo(country);
+  // Zoom map to approximate coordinates of country
+  const coords = DEST_COORDS[country];
+  if(coords && destMap) destMap.flyTo(coords, 5, { duration: 1.5 });
+}
+
+// Approximate centre coordinates for countries with data
+const DEST_COORDS = {
+  "France": [46.6, 2.3], "Turkey": [39.0, 35.2], "Japan": [36.2, 138.3],
+  "Maldives": [3.2, 73.2], "Singapore": [1.35, 103.8], "Thailand": [15.9, 100.9],
+  "United Arab Emirates": [23.4, 53.8], "Switzerland": [46.8, 8.2], "Italy": [41.9, 12.6],
+  "Indonesia": [-0.8, 113.9], "Australia": [-25.3, 133.8], "Greece": [39.1, 21.8],
+  "Nepal": [28.4, 84.1], "Sri Lanka": [7.9, 80.8], "Egypt": [26.8, 30.8],
+  "Morocco": [31.8, -7.1], "South Africa": [-30.6, 22.9], "United States": [37.1, -95.7],
+  "Canada": [56.1, -106.3], "Malaysia": [4.2, 108.0],
+};
+
+// Close search dropdown when clicking outside
+document.addEventListener('click', e => {
+  if(!e.target.closest('#dest-search') && !e.target.closest('#dest-search-results')) {
+    const box = document.getElementById('dest-search-results');
+    if(box) box.style.display = 'none';
+  }
+});
+
+// ── Destination CRUD (owner only) ──
+function openDestModal(editId, prefillCountry) {
+  const found = editId ? destData.find(d => d.id === editId) : null;
+  const d = found || {};
+  document.getElementById('dest-crud-overlay')?.remove();
+
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="dest-crud-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
+        <div style="font-weight:800;font-size:15px;margin-bottom:18px">${editId ? '✏️ Edit Destination' : '➕ Add Destination'}</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Country Name *</label>
+            <input id="dc-country" value="${d.country||prefillCountry||''}" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Flag Emoji</label>
+            <input id="dc-flag" value="${d.flag||''}" placeholder="🇯🇵" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Continent</label>
+            <input id="dc-continent" value="${d.continent||''}" placeholder="Asia / Europe..." style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Avg Package Cost</label>
+            <input id="dc-price" value="${d.price||''}" placeholder="₹60,000 – ₹1,00,000" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+        </div>
+        <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Visa Requirements *</label>
+          <textarea id="dc-visa" rows="2" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical" placeholder="eVisa, on arrival, consulate visa...">${d.visa||''}</textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Visa Processing Time</label>
+            <input id="dc-visatime" value="${d.visaTime||''}" placeholder="3–5 working days" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Best Season</label>
+            <input id="dc-season" value="${d.season||''}" placeholder="Oct – April" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+        </div>
+        <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Top Cities (comma separated)</label>
+          <input id="dc-cities" value="${(d.cities||[]).join(', ')}" placeholder="Istanbul, Cappadocia, Antalya" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+        <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Popular Attractions (comma separated)</label>
+          <input id="dc-attractions" value="${(d.attractions||[]).join(', ')}" placeholder="Hagia Sophia, Blue Mosque..." style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+        <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Travel Tip</label>
+          <textarea id="dc-tip" rows="2" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical" placeholder="Best insider tip for agents...">${d.tip||''}</textarea></div>
+        <div style="display:flex;gap:10px;margin-top:16px">
+          <button onclick="saveDestination('${editId||''}')" style="flex:1;padding:10px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">💾 Save</button>
+          <button onclick="document.getElementById('dest-crud-overlay').remove()" style="flex:1;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+async function saveDestination(editId) {
+  const country = document.getElementById('dc-country')?.value.trim();
+  if(!country) return alert('Country name is required.');
+  const data = {
+    country,
+    flag:        document.getElementById('dc-flag')?.value.trim()||'🌍',
+    continent:   document.getElementById('dc-continent')?.value.trim()||'',
+    visa:        document.getElementById('dc-visa')?.value.trim()||'',
+    visaTime:    document.getElementById('dc-visatime')?.value.trim()||'',
+    season:      document.getElementById('dc-season')?.value.trim()||'',
+    cities:      document.getElementById('dc-cities')?.value.split(',').map(s=>s.trim()).filter(Boolean)||[],
+    attractions: document.getElementById('dc-attractions')?.value.split(',').map(s=>s.trim()).filter(Boolean)||[],
+    price:       document.getElementById('dc-price')?.value.trim()||'',
+    tip:         document.getElementById('dc-tip')?.value.trim()||'',
+    updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
+  };
+  try {
+    if(editId) {
+      await _db.collection('destinations').doc(editId).set(data, { merge: true });
+    } else {
+      data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await _db.collection('destinations').add(data);
+    }
+    document.getElementById('dest-crud-overlay')?.remove();
+    await loadDestinations();
+    showDestInfo(country);
+  } catch(e) { alert('Save failed: ' + e.message); }
+}
+
+async function deleteDestination(id) {
+  if(!confirm('Delete this destination?')) return;
+  try {
+    await _db.collection('destinations').doc(id).delete();
+    document.getElementById('dest-info-content').innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94a3b8"><div style="font-size:48px;margin-bottom:12px">🌍</div><div style="font-size:14px;font-weight:600">Select a destination</div></div>';
+    await loadDestinations();
+  } catch(e) { alert('Delete failed: ' + e.message); }
+}
 
 function promptImportCategory(event) {
   const file = event.target.files[0];
