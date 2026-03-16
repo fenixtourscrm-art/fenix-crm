@@ -375,6 +375,12 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Walking',this)">🚶 Walking</button>
         <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Corporate',this)">🏢 Corporate</button>
         <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Inquired',this)">🎯 Inquired</button>
+        <div style="position:relative;display:inline-block">
+          <button id="staff-filter-btn" class="btn btn-ghost client-cat-filter" onclick="toggleStaffFilterMenu(this)" style="display:flex;align-items:center;gap:5px">👨‍💼 Staff <span id="staff-filter-arrow">▾</span></button>
+          <div id="staff-filter-menu" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:200px;margin-top:4px;padding:6px 0">
+            <div id="staff-filter-list"></div>
+          </div>
+        </div>
       </div>
       <div class="card"><table><thead><tr>
         <th>CATEGORY</th><th>COMPANY NAME</th><th>FIRST NAME</th><th>LAST NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
@@ -1014,8 +1020,80 @@ function renderDashboard(){
 
 // CLIENTS
 let clientCatFilter = "all";
+let clientStaffFilter = null; // null = no staff filter, or staff name string
+
+function toggleStaffFilterMenu(btn) {
+  const menu = document.getElementById("staff-filter-menu");
+  const arrow = document.getElementById("staff-filter-arrow");
+  if(!menu) return;
+  const isOpen = menu.style.display !== "none";
+  if(isOpen) {
+    menu.style.display = "none";
+    if(arrow) arrow.textContent = "▾";
+  } else {
+    // Build staff list from STAFF array
+    const list = document.getElementById("staff-filter-list");
+    if(list) {
+      const allStaff = typeof STAFF !== "undefined" ? STAFF : [];
+      list.innerHTML = [
+        `<div onclick="selectStaffFilter(null)" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''"><span>👥</span> All Staff</div>`,
+        ...allStaff.map(s =>
+          `<div onclick="selectStaffFilter('${s.name.replace(/'/g,"\'")}')" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+            <div style="width:24px;height:24px;border-radius:50%;background:#0369a1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${s.initials||s.name[0]}</div>
+            <span>${s.name}</span>
+          </div>`
+        )
+      ].join("");
+    }
+    menu.style.display = "";
+    if(arrow) arrow.textContent = "▴";
+  }
+}
+
+function selectStaffFilter(staffName) {
+  clientStaffFilter = staffName;
+  const menu = document.getElementById("staff-filter-menu");
+  const btn = document.getElementById("staff-filter-btn");
+  const arrow = document.getElementById("staff-filter-arrow");
+  if(menu) menu.style.display = "none";
+  if(arrow) arrow.textContent = "▾";
+
+  // Update button text and active state
+  document.querySelectorAll(".client-cat-filter").forEach(b => b.classList.remove("active-filter"));
+  if(btn) {
+    btn.classList.add("active-filter");
+    if(staffName) {
+      const shortName = staffName.split(" ").slice(-1)[0]; // last name
+      btn.innerHTML = `👨‍💼 ${shortName} <span id="staff-filter-arrow">▾</span>`;
+    } else {
+      btn.innerHTML = `👨‍💼 Staff <span id="staff-filter-arrow">▾</span>`;
+      btn.classList.remove("active-filter");
+    }
+  }
+  // Also reset category filter to all when using staff filter
+  if(staffName) clientCatFilter = "all";
+
+  const title = document.getElementById("client-section-title");
+  if(title) title.textContent = staffName ? `${staffName}'s Clients` : "All Clients";
+  renderClients();
+}
+
+// Close staff menu when clicking outside
+document.addEventListener("click", e => {
+  if(!e.target.closest("#staff-filter-btn") && !e.target.closest("#staff-filter-menu")) {
+    const menu = document.getElementById("staff-filter-menu");
+    const arrow = document.getElementById("staff-filter-arrow");
+    if(menu) menu.style.display = "none";
+    if(arrow) arrow.textContent = "▾";
+  }
+});
+
 function filterClientCat(cat, el) {
   clientCatFilter = cat;
+  clientStaffFilter = null; // clear staff filter when using category filter
+  // Reset staff button text
+  const staffBtn = document.getElementById("staff-filter-btn");
+  if(staffBtn) staffBtn.innerHTML = `👨‍💼 Staff <span id="staff-filter-arrow">▾</span>`;
   document.querySelectorAll(".client-cat-filter").forEach(b => b.classList.remove("active-filter"));
   el.classList.add("active-filter");
   const title = document.getElementById("client-section-title");
@@ -1035,6 +1113,7 @@ const CLIENT_CAT_STYLES = {
 function renderClients(){
   let list = clients;
   if(clientCatFilter !== "all") list = clients.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
+  if(clientStaffFilter) list = list.filter(cl => cl.createdByName === clientStaffFilter);
   document.getElementById("clients-tbody").innerHTML=list.map(c=>{
     const cat = c.clientCategory || "Regular";
     const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
@@ -2355,7 +2434,7 @@ async function fbDelete(col, id) {
 
 // ── Override save functions ──────────────────────
 
-const toTitleCase = s => s.replace(/\b\w/g, c => c.toUpperCase()).trim();
+const toTitleCase = s => (s||"").trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
 async function saveClient() {
   if(_saving) return;
