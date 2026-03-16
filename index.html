@@ -419,6 +419,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
               <div id="enq-staff-list"></div>
             </div>
           </div>
+        </div>
         <button class="btn btn-primary" onclick="openModal('enquiry')">+ Add Enquiry</button>
       </div>
       <div class="card"><table><thead><tr>
@@ -1179,24 +1180,18 @@ function toggleEnqStaffMenu(btn) {
   const menu = document.getElementById("enq-staff-menu");
   const arrow = document.getElementById("enq-staff-arrow");
   if(!menu) return;
-  if(menu.style.display !== "none") {
-    menu.style.display = "none";
-    if(arrow) arrow.textContent = "▾";
-    return;
-  }
-  // Build list with counts
+  if(menu.style.display !== "none") { menu.style.display="none"; if(arrow) arrow.textContent="▾"; return; }
   const allStaff = typeof STAFF !== "undefined" ? STAFF : [];
   const list = document.getElementById("enq-staff-list");
   if(list) {
-    const allCount = enquiries.length;
     list.innerHTML = [
       `<div onclick="selectEnqStaff(null)" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
         <span style="display:flex;align-items:center;gap:8px">👥 All Staff</span>
-        <span style="background:#f1f5f9;color:#64748b;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">${allCount}</span>
+        <span style="background:#f1f5f9;color:#64748b;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">${enquiries.length}</span>
       </div>`,
       ...allStaff.map(s => {
         const cnt = enquiries.filter(e => e.staffId === s.id).length;
-        return `<div onclick="selectEnqStaff(${s.id},'${s.name.replace(/'/g,"\\'")}\')" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+        return `<div onclick="selectEnqStaff(${s.id},'${s.name.replace(/'/g,"\'")}')" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
           <span style="display:flex;align-items:center;gap:8px">
             <div style="width:24px;height:24px;border-radius:50%;background:#0369a1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${s.initials||s.name[0]}</div>
             ${s.name}
@@ -1206,8 +1201,7 @@ function toggleEnqStaffMenu(btn) {
       })
     ].join("");
   }
-  menu.style.display = "";
-  if(arrow) arrow.textContent = "▴";
+  menu.style.display = ""; if(arrow) arrow.textContent = "▴";
 }
 
 function selectEnqStaff(staffId, staffName) {
@@ -1231,15 +1225,11 @@ function selectEnqStaff(staffId, staffName) {
   renderEnquiries();
 }
 
-// Close enq staff menu on outside click
 document.addEventListener("click", e => {
   if(!e.target.closest("#enq-staff-btn") && !e.target.closest("#enq-staff-menu")) {
     const menu = document.getElementById("enq-staff-menu");
     const arrow = document.getElementById("enq-staff-arrow");
-    if(menu && menu.style.display !== "none") {
-      menu.style.display = "none";
-      if(arrow) arrow.textContent = "▾";
-    }
+    if(menu && menu.style.display !== "none") { menu.style.display="none"; if(arrow) arrow.textContent="▾"; }
   }
 });
 
