@@ -2079,7 +2079,7 @@ async function saveEditClient(){
   const dtCustom = document.getElementById("ec-custom-datatype")?.value.trim()||"";
   const dataType = dtSel === "Other" ? (dtCustom||"Other") : dtSel;
   const data = {
-    companyName:document.getElementById("ec-company")?.value.trim()||"",
+    companyName:toTitleCase(document.getElementById("ec-company")?.value.trim()||""),
     firstName:toTitleCase(document.getElementById("ec-fn").value),
     lastName:toTitleCase(document.getElementById("ec-ln").value),
     mobile:document.getElementById("ec-mob").value,
@@ -2453,7 +2453,7 @@ async function saveClient() {
     city:document.getElementById("c-city").value.trim(),
     area:document.getElementById("c-area").value.trim(),
     pincode:document.getElementById("c-pin").value.trim(),
-    companyName:document.getElementById("c-company")?.value.trim()||"",
+    companyName:toTitleCase(document.getElementById("c-company")?.value.trim()||""),
     clientCategory:document.getElementById("c-cat")?.value||"Regular",
   };
   _saving = true;
