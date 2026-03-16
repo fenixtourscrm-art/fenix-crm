@@ -309,6 +309,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('quiz',this)"><span class="nav-icon">🎓</span>Travel Academy<span class="nav-badge" id="quiz-badge" style="display:none;background:#8b5cf6;color:#fff">!</span></div>
     <div class="nav-item" onclick="showTab('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</div>
     <div class="nav-item" onclick="showTab('destinations',this)"><span class="nav-icon">🗺️</span>Destination Map</div>
+    <div class="nav-item" onclick="showTab('trash',this)"><span class="nav-icon">🗑️</span>Trash<span class="nav-badge" id="trash-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -739,6 +740,49 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
     </div>
 
+    
+    <!-- TRASH / RECYCLE BIN TAB -->
+    <div class="tab" id="tab-trash">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="section-title" style="margin:0">🗑️ Trash — Recycle Bin</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Deleted items are kept here for 30 days before permanent removal</div>
+        </div>
+        <div id="trash-owner-actions" style="display:none;gap:8px;display:flex">
+          <button onclick="emptyTrash()" style="padding:8px 16px;background:#dc2626;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑 Empty Trash</button>
+        </div>
+      </div>
+
+      <!-- Filter row -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px" id="trash-filters">
+        <button class="btn btn-ghost trash-filter active-filter" onclick="filterTrash('all',this)">All Items</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('clients',this)">👤 Clients</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('enquiries',this)">📋 Enquiries</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('bookings',this)">🎫 Bookings</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('tasks',this)">✅ Tasks</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('marketing',this)">📢 Marketing</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('destinations',this)">🗺️ Destinations</button>
+        <button class="btn btn-ghost trash-filter" onclick="filterTrash('travelfacts',this)">🌍 Facts</button>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr>
+            <th>TYPE</th>
+            <th>ITEM NAME</th>
+            <th>DELETED BY</th>
+            <th>DELETED ON</th>
+            <th>ORIGINAL SECTION</th>
+            <th>EXPIRES IN</th>
+            <th>ACTIONS</th>
+          </tr></thead>
+          <tbody id="trash-tbody">
+            <tr><td colspan="7" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
     <!-- BUG REPORTS TAB -->
     <div class="tab" id="tab-bugreports">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -908,6 +952,7 @@ function showTab(tab,el){
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
   if(tab==="destinations"){initDestinations();}
+  if(tab==="trash"){initTrash();}
 }
 
 function renderAll(){
@@ -2116,11 +2161,11 @@ const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","aut
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
 const PERM_MAP  = {
-  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
-  "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations"], "canDelete": false, "canEditClients": false, "canSetTargets": false}
+  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
+  "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
+  "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash"], "canDelete": false, "canEditClients": false, "canSetTargets": false}
 }
 
 try {
@@ -2750,16 +2795,24 @@ function escHtml(str) {
 async function del(arr,id) {
   const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
   if(!isOwner) return alert("⚠️ Only Ms. Rehana Ansari (Owner) can delete records.");
-  if(!confirm("Delete this record?")) return;
+  if(!confirm("Move this record to Trash?")) return;
   const colMap={clients:"clients",enquiries:"enquiries",bookings:"bookings",tasks:"tasks",marketing:"marketing"};
+  const col = colMap[arr]||arr;
+  const sectionLabels={clients:"Client Data",enquiries:"Enquiries",bookings:"Bookings",tasks:"Tasks",marketing:"Marketing"};
   try {
-    await fbDelete(colMap[arr]||arr, id);
+    // Fetch the record first so we can save it to trash
+    const snap = await db.collection(col).doc(id).get();
+    const data = snap.exists ? snap.data() : {};
+    const itemName = data.firstName ? (data.firstName+' '+(data.lastName||'')).trim()
+                   : data.name||data.clientName||data.destination||data.title||id;
+    await trashMove(col, id, data, sectionLabels[arr]||arr, itemName);
     if(arr==="clients")   clients   =clients.filter(x=>x.id!==id);
     if(arr==="enquiries") enquiries =enquiries.filter(x=>x.id!==id);
     if(arr==="bookings")  allBookings=allBookings.filter(x=>x.id!==id);
     if(arr==="tasks")     tasks     =tasks.filter(x=>x.id!==id);
     if(arr==="marketing") marketing =marketing.filter(x=>x.id!==id);
     renderAll();
+    updateTrashBadge();
   } catch(e) { alert("Delete failed: "+e.message); }
 }
 
@@ -2788,10 +2841,14 @@ async function revertToEnquiry(bookingId) {
 }
 
 async function delBk(id) {
-  if(!confirm("Delete this booking?")) return;
+  if(!confirm("Move this booking to Trash?")) return;
   try {
-    await fbDelete("bookings",id);
+    const snap = await db.collection("bookings").doc(id).get();
+    const data = snap.exists ? snap.data() : {};
+    const itemName = (data.destination||'Booking') + (data.clientId ? ' — '+cName(data.clientId) : '');
+    await trashMove("bookings", id, data, "Bookings", itemName);
     allBookings=allBookings.filter(x=>x.id!==id); renderBookings();
+    updateTrashBadge();
   } catch(e) { alert("Delete failed: "+e.message); }
 }
 
@@ -3804,9 +3861,14 @@ async function saveFact(editId) {
 }
 
 async function deleteFact(id) {
-  if(!confirm('Delete this fact?')) return;
-  try { await _db.collection('travelfacts').doc(id).delete(); loadFactList(); }
-  catch(e) { alert('Delete failed: ' + e.message); }
+  if(!confirm('Move this fact to Trash?')) return;
+  try {
+    const snap = await _db.collection('travelfacts').doc(id).get();
+    const data = snap.exists ? snap.data() : {};
+    await trashMove('travelfacts', id, data, 'Travel Academy – Facts', (data.fact||'').substring(0,60)+'...');
+    loadFactList();
+    updateTrashBadge();
+  } catch(e) { alert('Delete failed: ' + e.message); }
 }
 
 // ═══════════════════════════════════════════════
@@ -4466,13 +4528,221 @@ async function saveDestination(editId) {
 }
 
 async function deleteDestination(id) {
-  if(!confirm('Delete this destination?')) return;
+  if(!confirm('Move this destination to Trash?')) return;
   try {
-    await _db.collection('destinations').doc(id).delete();
+    const snap = await _db.collection('destinations').doc(id).get();
+    const data = snap.exists ? snap.data() : {};
+    await trashMove('destinations', id, data, 'Destination Map', data.country||id);
     document.getElementById('dest-info-content').innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94a3b8"><div style="font-size:48px;margin-bottom:12px">🌍</div><div style="font-size:14px;font-weight:600">Select a destination</div></div>';
     await loadDestinations();
+    updateTrashBadge();
   } catch(e) { alert('Delete failed: ' + e.message); }
 }
+
+
+// ═══════════════════════════════════════════════
+//  TRASH / RECYCLE BIN SYSTEM
+// ═══════════════════════════════════════════════
+let trashItems = [];
+let trashFilter = 'all';
+
+const TRASH_COLLECTION_ICONS = {
+  clients: '👤', enquiries: '📋', bookings: '🎫', tasks: '✅',
+  marketing: '📢', destinations: '🗺️', travelfacts: '🌍', other: '📁'
+};
+
+// Core helper: move a doc to trash before deleting from original collection
+async function trashMove(collection, docId, data, sectionLabel, itemName) {
+  const trashEntry = {
+    originalCollection: collection,
+    originalDocId: docId,
+    originalData: data,
+    sectionLabel: sectionLabel || collection,
+    itemName: itemName || docId,
+    deletedBy: CURRENT_USER ? CURRENT_USER.name : 'Unknown',
+    deletedById: CURRENT_USER ? CURRENT_USER.id : 0,
+    deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+  };
+  // Save to trash collection
+  await db.collection('trash').add(trashEntry);
+  // Delete from original collection
+  await db.collection(collection).doc(docId).delete();
+}
+
+async function loadTrash() {
+  try {
+    const snap = await db.collection('trash').orderBy('deletedAt', 'desc').get();
+    trashItems = snap.docs.map(d => ({ trashId: d.id, ...d.data() }));
+    renderTrashTable();
+    updateTrashBadge();
+  } catch(e) {
+    document.getElementById('trash-tbody').innerHTML = `<tr><td colspan="7" style="text-align:center;color:#dc2626;padding:20px;font-size:13px">Error loading trash: ${e.message}</td></tr>`;
+  }
+}
+
+function updateTrashBadge() {
+  const badge = document.getElementById('trash-badge');
+  if(!badge) return;
+  // Count non-expired items
+  const count = trashItems.filter(t => {
+    if(!t.expiresAt) return true;
+    const exp = t.expiresAt.toDate ? t.expiresAt.toDate() : new Date(t.expiresAt);
+    return exp > new Date();
+  }).length;
+  badge.textContent = count;
+  badge.style.display = count > 0 ? 'inline' : 'none';
+}
+
+function filterTrash(filter, el) {
+  trashFilter = filter;
+  document.querySelectorAll('.trash-filter').forEach(b => b.classList.remove('active-filter'));
+  el.classList.add('active-filter');
+  renderTrashTable();
+}
+
+function renderTrashTable() {
+  const tbody = document.getElementById('trash-tbody');
+  if(!tbody) return;
+
+  const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
+  const ownerActions = document.getElementById('trash-owner-actions');
+  if(ownerActions) ownerActions.style.display = isOwner ? 'flex' : 'none';
+
+  const now = new Date();
+  let list = trashItems;
+  if(trashFilter !== 'all') {
+    list = trashItems.filter(t => t.originalCollection === trashFilter);
+  }
+
+  if(!list.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty" style="padding:40px">
+      <div style="font-size:32px;margin-bottom:8px">✨</div>
+      <div style="font-weight:600">${trashFilter === 'all' ? 'Trash is empty' : 'No items in this category'}</div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = list.map(item => {
+    // Parse deletedAt
+    let deletedDate = '—';
+    if(item.deletedAt) {
+      const d = item.deletedAt.toDate ? item.deletedAt.toDate() : new Date(item.deletedAt);
+      deletedDate = d.toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+    }
+
+    // Expiry calculation
+    let expiryText = '—';
+    let expiredClass = '';
+    if(item.expiresAt) {
+      const exp = item.expiresAt.toDate ? item.expiresAt.toDate() : new Date(item.expiresAt);
+      const daysLeft = Math.ceil((exp - now) / (1000 * 60 * 60 * 24));
+      if(daysLeft <= 0) {
+        expiryText = '<span style="color:#dc2626;font-weight:700">Expired</span>';
+        expiredClass = 'opacity:.5;';
+      } else if(daysLeft <= 7) {
+        expiryText = `<span style="color:#f97316;font-weight:700">${daysLeft}d left</span>`;
+      } else {
+        expiryText = `<span style="color:#64748b">${daysLeft}d left</span>`;
+      }
+    }
+
+    const icon = TRASH_COLLECTION_ICONS[item.originalCollection] || '📁';
+    const typeLabel = item.sectionLabel || item.originalCollection;
+
+    return `<tr style="${expiredClass}">
+      <td><span style="font-size:16px">${icon}</span></td>
+      <td style="font-weight:600;font-size:13px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${item.itemName||''}">${item.itemName||'—'}</td>
+      <td style="font-size:12px;color:#374151">${item.deletedBy||'—'}</td>
+      <td style="font-size:12px;color:#64748b">${deletedDate}</td>
+      <td><span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600">${typeLabel}</span></td>
+      <td style="font-size:12px">${expiryText}</td>
+      <td style="white-space:nowrap">
+        <div style="display:flex;gap:6px">
+          <button onclick="restoreItem('${item.trashId}')" style="padding:5px 10px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">↩ Restore</button>
+          ${isOwner ? `<button onclick="permanentDelete('${item.trashId}')" style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✕ Delete</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function restoreItem(trashId) {
+  const item = trashItems.find(t => t.trashId === trashId);
+  if(!item) return alert('Item not found in trash.');
+  if(!confirm(`Restore "${item.itemName}" to ${item.sectionLabel}?`)) return;
+
+  try {
+    // Restore to original collection with original doc ID
+    const data = item.originalData || {};
+    await db.collection(item.originalCollection).doc(item.originalDocId).set(data);
+    // Remove from trash
+    await db.collection('trash').doc(trashId).delete();
+    trashItems = trashItems.filter(t => t.trashId !== trashId);
+    renderTrashTable();
+    updateTrashBadge();
+    // Refresh the relevant section's local data
+    alert(`✅ "${item.itemName}" restored to ${item.sectionLabel}`);
+  } catch(e) {
+    alert('Restore failed: ' + e.message);
+  }
+}
+
+async function permanentDelete(trashId) {
+  if(!(CURRENT_USER && CURRENT_USER.id === 1)) return alert('Only owners can permanently delete items.');
+  const item = trashItems.find(t => t.trashId === trashId);
+  if(!confirm(`⚠️ Permanently delete "${item?.itemName||'this item'}"? This CANNOT be undone.`)) return;
+
+  try {
+    await db.collection('trash').doc(trashId).delete();
+    trashItems = trashItems.filter(t => t.trashId !== trashId);
+    renderTrashTable();
+    updateTrashBadge();
+  } catch(e) {
+    alert('Delete failed: ' + e.message);
+  }
+}
+
+async function emptyTrash() {
+  if(!(CURRENT_USER && CURRENT_USER.id === 1)) return alert('Only owners can empty the trash.');
+  if(!confirm('⚠️ Permanently delete ALL items in trash? This cannot be undone.')) return;
+  try {
+    const batch = db.batch();
+    trashItems.forEach(item => {
+      batch.delete(db.collection('trash').doc(item.trashId));
+    });
+    await batch.commit();
+    trashItems = [];
+    renderTrashTable();
+    updateTrashBadge();
+  } catch(e) {
+    alert('Empty trash failed: ' + e.message);
+  }
+}
+
+// Auto-clean expired items (called when trash tab opens)
+async function cleanExpiredTrash() {
+  const now = new Date();
+  const expired = trashItems.filter(t => {
+    if(!t.expiresAt) return false;
+    const exp = t.expiresAt.toDate ? t.expiresAt.toDate() : new Date(t.expiresAt);
+    return exp < now;
+  });
+  if(!expired.length) return;
+  const batch = db.batch();
+  expired.forEach(item => batch.delete(db.collection('trash').doc(item.trashId)));
+  await batch.commit();
+  trashItems = trashItems.filter(t => {
+    if(!t.expiresAt) return true;
+    const exp = t.expiresAt.toDate ? t.expiresAt.toDate() : new Date(t.expiresAt);
+    return exp >= now;
+  });
+}
+
+function initTrash() {
+  loadTrash().then(() => cleanExpiredTrash().then(() => renderTrashTable()));
+}
+
 
 function promptImportCategory(event) {
   const file = event.target.files[0];
