@@ -1646,7 +1646,9 @@ function openModal(type){
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEnquiry(${isEdit})">Save Enquiry</button>`;
 
     // Set pre-filled client
-    if(preClient) document.getElementById("e-client").value=preClient;
+    // Set client dropdown: use saved clientId when editing, or prefilledClientId for new
+    if(ex && ex.clientId) document.getElementById("e-client").value = ex.clientId;
+    else if(preClient) document.getElementById("e-client").value = preClient;
     if(ex && ex.staffId) document.getElementById("e-staff").value=ex.staffId;
     updateSourceSub();
     updateEnqForm(ex);
@@ -2803,8 +2805,15 @@ async function del(arr,id) {
     // Fetch the record first so we can save it to trash
     const snap = await db.collection(col).doc(id).get();
     const data = snap.exists ? snap.data() : {};
-    const itemName = data.firstName ? (data.firstName+' '+(data.lastName||'')).trim()
-                   : data.name||data.clientName||data.destination||data.title||id;
+    // For enquiries, resolve client name via cName(); for others use name fields
+    let itemName;
+    if(arr === 'enquiries') {
+      const clientName = cName(data.clientId) || data.clientId || id;
+      itemName = clientName + (data.destination ? ' → ' + data.destination : '');
+    } else {
+      itemName = data.firstName ? (data.firstName+' '+(data.lastName||'')).trim()
+                 : data.name||data.clientName||data.destination||data.title||id;
+    }
     await trashMove(col, id, data, sectionLabels[arr]||arr, itemName);
     if(arr==="clients")   clients   =clients.filter(x=>x.id!==id);
     if(arr==="enquiries") enquiries =enquiries.filter(x=>x.id!==id);
