@@ -413,7 +413,12 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('New',this)">🟢 New</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Old',this)">🟠 Old</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Repeated',this)">🟣 Repeated</button>
-        </div>
+          <div style="position:relative;display:inline-block">
+            <button id="enq-staff-btn" class="btn btn-ghost enq-filter" onclick="toggleEnqStaffMenu(this)" style="display:flex;align-items:center;gap:5px">👨‍💼 Staff <span id="enq-staff-arrow">▾</span></button>
+            <div id="enq-staff-menu" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:220px;margin-top:4px;padding:6px 0">
+              <div id="enq-staff-list"></div>
+            </div>
+          </div>
         <button class="btn btn-primary" onclick="openModal('enquiry')">+ Add Enquiry</button>
       </div>
       <div class="card"><table><thead><tr>
@@ -1166,14 +1171,84 @@ function editClient(id){
 }
 
 // ENQUIRIES
-let enqFilter="all", catFilter="all";
-function filterEnq(f,el){enqFilter=f;document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
+let enqFilter="all", catFilter="all", enqStaffFilter=null;
+function filterEnq(f,el){enqFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
 function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
+
+function toggleEnqStaffMenu(btn) {
+  const menu = document.getElementById("enq-staff-menu");
+  const arrow = document.getElementById("enq-staff-arrow");
+  if(!menu) return;
+  if(menu.style.display !== "none") {
+    menu.style.display = "none";
+    if(arrow) arrow.textContent = "▾";
+    return;
+  }
+  // Build list with counts
+  const allStaff = typeof STAFF !== "undefined" ? STAFF : [];
+  const list = document.getElementById("enq-staff-list");
+  if(list) {
+    const allCount = enquiries.length;
+    list.innerHTML = [
+      `<div onclick="selectEnqStaff(null)" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+        <span style="display:flex;align-items:center;gap:8px">👥 All Staff</span>
+        <span style="background:#f1f5f9;color:#64748b;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">${allCount}</span>
+      </div>`,
+      ...allStaff.map(s => {
+        const cnt = enquiries.filter(e => e.staffId === s.id).length;
+        return `<div onclick="selectEnqStaff(${s.id},'${s.name.replace(/'/g,"\\'")}\')" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+          <span style="display:flex;align-items:center;gap:8px">
+            <div style="width:24px;height:24px;border-radius:50%;background:#0369a1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${s.initials||s.name[0]}</div>
+            ${s.name}
+          </span>
+          <span style="background:${cnt>0?'#eff6ff':'#f1f5f9'};color:${cnt>0?'#2563eb':'#94a3b8'};padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">${cnt}</span>
+        </div>`;
+      })
+    ].join("");
+  }
+  menu.style.display = "";
+  if(arrow) arrow.textContent = "▴";
+}
+
+function selectEnqStaff(staffId, staffName) {
+  enqStaffFilter = staffId;
+  const menu = document.getElementById("enq-staff-menu");
+  const btn = document.getElementById("enq-staff-btn");
+  const arrow = document.getElementById("enq-staff-arrow");
+  if(menu) menu.style.display = "none";
+  if(arrow) arrow.textContent = "▾";
+  document.querySelectorAll(".enq-filter").forEach(b => b.classList.remove("active-filter"));
+  if(btn) {
+    btn.classList.add("active-filter");
+    if(staffId) {
+      const shortName = staffName ? staffName.split(" ").slice(-1)[0] : "Staff";
+      btn.innerHTML = `👨‍💼 ${shortName} <span id="enq-staff-arrow">▾</span>`;
+    } else {
+      btn.innerHTML = `👨‍💼 Staff <span id="enq-staff-arrow">▾</span>`;
+      btn.classList.remove("active-filter");
+    }
+  }
+  renderEnquiries();
+}
+
+// Close enq staff menu on outside click
+document.addEventListener("click", e => {
+  if(!e.target.closest("#enq-staff-btn") && !e.target.closest("#enq-staff-menu")) {
+    const menu = document.getElementById("enq-staff-menu");
+    const arrow = document.getElementById("enq-staff-arrow");
+    if(menu && menu.style.display !== "none") {
+      menu.style.display = "none";
+      if(arrow) arrow.textContent = "▾";
+    }
+  }
+});
+
 function renderEnquiries(){
   let list=enquiries;
   if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk") list=list.filter(e=>e.status===enqFilter);
   else if(enqFilter==="New"||enqFilter==="Old"||enqFilter==="Repeated") list=list.filter(e=>e.type===enqFilter);
   if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||(Array.isArray(e.intentions)&&e.intentions.includes(catFilter)));
+  if(enqStaffFilter!==null) list=list.filter(e=>e.staffId===enqStaffFilter);
   const fuColors={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
 
   // Sort newest first
