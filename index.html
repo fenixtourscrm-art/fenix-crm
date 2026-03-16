@@ -1120,6 +1120,7 @@ async function saveBookingFromEnquiry() {
       childNoBed:     e.childNoBed || 0,
       infant:         e.infant     || 0,
       pax:            e.pax || 1,
+      numApplicants:  e.numApplicants || e.pax || 1,
       amount:         amount,
       paid:           paid,
       pendingAmount:  pending,
@@ -1266,7 +1267,10 @@ function renderBookingList(){
   document.getElementById("book-tbody").innerHTML=list.map(b=>{
     const st=CAT_STYLES[b.category]||{bg:"#f1f5f9",color:"#374151"};
     const icon=BK_CATS.find(c=>c.id===b.category)?.icon||"📁";
-    const totalPax=(b.adults||0)+(b.childBed||0)+(b.childNoBed||0)+(b.infant||0)||b.pax||1;
+    const isVisaPassport = b.category==="Visa"||b.category==="Passport";
+    const totalPax = isVisaPassport
+      ? (b.numApplicants||b.adults||b.pax||1)
+      : ((b.adults||0)+(b.childBed||0)+(b.childNoBed||0)+(b.infant||0))||b.pax||1;
     const totalAmt = parseFloat(b.amount)||0;
     const paidAmt  = parseFloat(b.paid)||0;
     const pendingAmt = Math.max(0, totalAmt - paidAmt);
@@ -1279,7 +1283,7 @@ function renderBookingList(){
       <td><span class="cat-tag" style="background:${st.bg};color:${st.color}">${icon} ${b.category}</span></td>
       <td><strong>${cName(b.clientId)}</strong></td>
       <td style="font-size:11px"><div style="font-weight:600">${b.destination||"—"}</div>${b.tourType?`<div style="color:#94a3b8;font-size:10px">${b.tourType}</div>`:""}</td>
-      <td style="text-align:center;font-size:11px">${totalPax}<br><span style="color:#94a3b8">${b.adults||0}A ${b.childBed||0}C ${b.infant||0}I</span></td>
+      <td style="text-align:center;font-size:11px">${totalPax}<br><span style="color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${b.adults||0}A ${b.childBed||0}C ${b.infant||0}I`}</span></td>
       <td style="font-size:11px">${b.travelDate||"—"}</td>
       <td style="font-size:12px;font-weight:700;color:#0f172a">${fmt(totalAmt)}</td>
       <td>
