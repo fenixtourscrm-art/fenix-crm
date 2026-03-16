@@ -854,7 +854,8 @@ function renderAll(){
 }
 function updateBadges(){
   document.getElementById("enq-badge").textContent=enquiries.filter(e=>e.status==="Active").length;
-  const od=tasks.filter(t=>!t.done&&t.dueDate<today()).length;
+  const activeTasks = tasks.filter(t=>!t.done);
+  const od = activeTasks.length;
   const ob=document.getElementById("task-badge");ob.textContent=od;ob.style.display=od>0?"inline":"none";
 }
 
@@ -1169,13 +1170,13 @@ function bfeCalcPending() {
 
 // BOOKINGS (unified)
 let calState={book:{y:new Date().getFullYear(),m:new Date().getMonth()},visa:{y:new Date().getFullYear(),m:new Date().getMonth()},fu:{y:new Date().getFullYear(),m:new Date().getMonth()}};
-function prevMonth(t){calState[t].m--;if(calState[t].m<0){calState[t].m=11;calState[t].y--;}renderCalendar(t);}
-function nextMonth(t){calState[t].m++;if(calState[t].m>11){calState[t].m=0;calState[t].y++;}renderCalendar(t);}
+function prevMonth(t){calState[t].m--;if(calState[t].m<0){calState[t].m=11;calState[t].y--;}t==="fu"?renderFollowUpCalendar():renderCalendar(t);}
+function nextMonth(t){calState[t].m++;if(calState[t].m>11){calState[t].m=0;calState[t].y++;}t==="fu"?renderFollowUpCalendar():renderCalendar(t);}
 function renderCalendar(type){
   const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
   const DAYS=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const s=calState[type];
-  const prefix=type==="book"?"book":"visa";
+  const prefix = type==="book" ? "book" : type==="fu" ? "fu" : "visa";
   document.getElementById(prefix+"-cal-label").textContent=`${MONTHS[s.m]} ${s.y}`;
   document.getElementById(prefix+"-cal-names").innerHTML=DAYS.map(d=>`<div class="cal-day-name">${d}</div>`).join("");
   const firstDay=new Date(s.y,s.m,1).getDay();
