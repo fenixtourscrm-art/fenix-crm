@@ -361,6 +361,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary" onclick="openModal('client')">+ Add Client</button>
           <button class="btn" style="background:#16a34a;color:#fff;gap:6px" onclick="document.getElementById('excel-import-input').click()">📥 Import Excel</button>
+          <button id="fix-names-btn" class="btn" style="background:#7c3aed;color:#fff;font-size:12px;display:none" onclick="fixSplitNames()" title="Split full names into First + Last for clients where Last Name is empty">🔧 Fix Names</button>
+          <button id="fix-states-btn" class="btn" style="background:#dc2626;color:#fff;font-size:12px;display:none" onclick="fixWrongStates()" title="Clear states that were auto-filled as Andhra Pradesh when they should be blank">🔧 Fix States</button>
           <input type="file" id="excel-import-input" accept=".xls,.xlsx,.csv" style="display:none" onchange="promptImportCategory(event)"/>
         </div>
       </div>
@@ -1149,6 +1151,18 @@ const CLIENT_CAT_STYLES = {
   "Inquired":    {bg:"#fef9c3",color:"#854d0e",icon:"🎯"},
 };
 function renderClients(){
+  // Show Fix Names button only for owner
+  const fixBtn = document.getElementById('fix-names-btn');
+  if(fixBtn) {
+    const needsFix = clients.some(cl => !cl.lastName && cl.firstName && cl.firstName.trim().includes(' '));
+    fixBtn.style.display = (CURRENT_USER?.id === 1 && needsFix) ? '' : 'none';
+  }
+  // Show Fix States button only for owner when imported clients have Andhra Pradesh
+  const stateBtn = document.getElementById('fix-states-btn');
+  if(stateBtn) {
+    const needsStateFix = clients.some(cl => cl.state === "Andhra Pradesh" && cl.importedFrom);
+    stateBtn.style.display = (CURRENT_USER?.id === 1 && needsStateFix) ? '' : 'none';
+  }
   let list = clients;
   if(clientCatFilter !== "all") list = clients.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
   if(clientStaffFilter) list = list.filter(cl => cl.createdByName === clientStaffFilter);
@@ -1791,7 +1805,7 @@ function openModal(type){
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="c-fn" placeholder="e.g. Rahul"/></div><div class="fg"><label>Last Name</label><input id="c-ln" placeholder="e.g. Sharma"/></div></div>
     <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No</label><input id="c-mob" placeholder="9876543210"/></div></div>
     <div class="form-grid"><div class="fg"><label>Email ID</label><input id="c-email" placeholder="email@example.com"/></div><div class="fg"><label>Occupation</label><input id="c-occ" placeholder="e.g. Businessman"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Country</label><input id="c-country" value="India"/></div><div class="fg"><label>State</label><select id="c-state">${IND_STATES.map(s=>`<option>${s}</option>`).join("")}</select></div></div>
+    <div class="form-grid"><div class="fg"><label>Country</label><input id="c-country" value="India"/></div><div class="fg"><label>State</label><select id="c-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option>${s}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>City</label><input id="c-city" placeholder="e.g. Ahmedabad"/></div><div class="fg"><label>Area</label><input id="c-area" placeholder="e.g. Navrangpura"/></div></div>
     <div class="form-grid single g1"><div class="fg"><label>Pincode</label><input id="c-pin" placeholder="380009"/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveClient()">Save Client</button>`;
@@ -2078,7 +2092,7 @@ function openModal(type){
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="ec-fn" value="${c.firstName}"/></div><div class="fg"><label>Last Name</label><input id="ec-ln" value="${c.lastName}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Mobile</label><input id="ec-mob" value="${c.mobile}"/></div><div class="fg"><label>Email</label><input id="ec-email" value="${c.email}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Occupation</label><input id="ec-occ" value="${c.occupation||""}"/></div><div class="fg"><label>City</label><input id="ec-city" value="${c.city||""}"/></div></div>
-    <div class="form-grid"><div class="fg"><label>State</label><select id="ec-state">${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>State</label><select id="ec-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode||""}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Data Type / Lead Source</label>
       <select id="ec-datatype" onchange="toggleCustomDataType(this)">
         <option value="">-- Select Source --</option>
@@ -5214,6 +5228,74 @@ function renderInsightReport(client, aiText, enqs, bks, totalSpend, paidAmt) {
 
     <div style="text-align:center;font-size:10px;color:#94a3b8;margin-top:14px">Generated by Fenix AI · Based on live CRM data</div>
   `;
+}
+
+
+// ── Fix combined names: split "Shoeb Kapa sufiyan Kapa" → First: "Shoeb" Last: "Kapa Sufiyan Kapa" ──
+async function fixSplitNames() {
+  const toFix = clients.filter(cl => !cl.lastName && cl.firstName && cl.firstName.trim().includes(' '));
+  if(!toFix.length) return alert('✅ All client names are already split correctly!');
+
+  const preview = toFix.slice(0, 5).map(cl => {
+    const parts = cl.firstName.trim().split(/\s+/);
+    const first = parts[0];
+    const last  = parts.slice(1).join(' ');
+    return `"${cl.firstName}" → First: "${first}" · Last: "${last}"`;
+  }).join('\n');
+
+  const more = toFix.length > 5 ? `\n...and ${toFix.length - 5} more` : '';
+  if(!confirm(`Split names for ${toFix.length} clients?\n\nPreview:\n${preview}${more}\n\nThis will update Firestore.`)) return;
+
+  let fixed = 0, failed = 0;
+  for(const cl of toFix) {
+    try {
+      const parts = cl.firstName.trim().split(/\s+/);
+      const newFirst = toTitleCase(parts[0]);
+      const newLast  = toTitleCase(parts.slice(1).join(' '));
+      await db.collection('clients').doc(cl.id).update({
+        firstName: newFirst,
+        lastName:  newLast,
+        updatedAt: new Date().toISOString(),
+        updatedBy: CURRENT_USER?.id || 1,
+      });
+      cl.firstName = newFirst;
+      cl.lastName  = newLast;
+      fixed++;
+    } catch(e) {
+      console.warn('Fix failed for', cl.id, e);
+      failed++;
+    }
+  }
+  renderClients();
+  alert(`✅ Fixed ${fixed} client names.${failed ? '\n⚠️ ' + failed + ' failed — check console.' : ''}`);
+}
+
+
+// ── Fix wrongly auto-assigned "Andhra Pradesh" states ──
+async function fixWrongStates() {
+  // Find clients where state = "Andhra Pradesh" but city is NOT in Andhra Pradesh
+  // Since we can't know for sure, we show all "Andhra Pradesh" clients for owner to decide
+  const apClients = clients.filter(cl => cl.state === "Andhra Pradesh" && cl.importedFrom);
+  if(!apClients.length) return alert("✅ No imported clients with Andhra Pradesh state found.");
+
+  if(!confirm(`Found ${apClients.length} imported clients with state "Andhra Pradesh".\n\nThese were likely auto-filled when the state column was blank.\n\nClick OK to clear their state to blank so you can correct them manually.`)) return;
+
+  let fixed = 0;
+  for(const cl of apClients) {
+    try {
+      await db.collection("clients").doc(cl.id).update({
+        state: "",
+        updatedAt: new Date().toISOString(),
+        updatedBy: CURRENT_USER?.id || 1,
+      });
+      cl.state = "";
+      fixed++;
+    } catch(e) {
+      console.warn("Fix state failed for", cl.id, e);
+    }
+  }
+  renderClients();
+  alert(`✅ Cleared state for ${fixed} clients. You can now edit each client to set the correct state.`);
 }
 
 function promptImportCategory(event) {
