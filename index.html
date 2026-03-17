@@ -2558,6 +2558,15 @@ function loadFromFirestore() {
 
       loadedSet.add(col);
 
+      // Real-time notification update whenever tasks/enquiries/bookings change
+      if(initialRenderDone && _notifShown && CURRENT_USER) {
+        clearTimeout(window._notifDebounce);
+        window._notifDebounce = setTimeout(() => {
+          checkForNewNotifications(col, docs);
+          buildNotifications();
+        }, 500);
+      }
+
       if(!initialRenderDone) {
         // Render as soon as clients + enquiries loaded (most critical)
         const coreLoaded = loadedSet.has("clients") && loadedSet.has("enquiries");
@@ -2837,6 +2846,7 @@ async function saveBooking(isEdit) {
       closeOverlay();
     }
     window._bkPreCat=null; renderCalendar("book");
+    if(!isEdit) fireEventNotif('booking', `New booking confirmed for ${cName(data.clientId)} — ${data.destination||data.category||''}`);
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
 }
@@ -2858,8 +2868,13 @@ async function saveTask() {
   };
   _saving = true;
   try {
-    await fbAdd("tasks", data);
+    const newTaskId = await fbAdd("tasks", data);
     closeOverlay();
+    // Notify the assigned staff member
+    const assignedStaff = STAFF.find(s => s.id === assignedTo);
+    if(assignedStaff && assignedTo !== CURRENT_USER?.id) {
+      fireEventNotif('task_assigned', `New task assigned to ${assignedStaff.name}: "${data.title}"`);
+    }
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
 }
@@ -5711,6 +5726,173 @@ function showWelcomeNotif(notifs) {
 function showAIGreeting(msg) {
   window._pendingAIGreeting = msg;
 }
+
+
+
+// ═══════════════════════════════════════════════
+//  REAL-TIME NOTIFICATION ENGINE
+// ═══════════════════════════════════════════════
+let _seenNotifIds   = new Set(); // track shown notifications this session
+let _audioCtx       = null;
+
+// ── Sound Engine (Web Audio API — no external files needed) ──
+function playNotifSound(type) {
+  try {
+    if(!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if(type === 'overdue') {
+      // Urgent — two descending beeps
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } else if(type === 'booking') {
+      // Success — ascending chime
+      osc.frequency.setValueAtTime(523, ctx.currentTime);
+      osc.frequency.setValueAtTime(659, ctx.currentTime + 0.1);
+      osc.frequency.setValueAtTime(784, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.5);
+    } else {
+      // Default — gentle ding
+      osc.frequency.setValueAtTime(740, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.3);
+    }
+  } catch(e) { /* Audio blocked — ignore */ }
+}
+
+// ── Event Notification (fires when something happens NOW) ──
+function fireEventNotif(type, message) {
+  playNotifSound(type);
+  showToastNotif(type, message);
+  buildNotifications(); // refresh bell
+}
+
+// ── Toast popup (bottom-right, auto-dismiss) ──
+function showToastNotif(type, message) {
+  const configs = {
+    task_assigned: { icon:'📋', color:'#0369a1', bg:'#eff6ff', border:'#bfdbfe', title:'Task Assigned' },
+    booking:       { icon:'🎫', color:'#059669', bg:'#f0fdf4', border:'#bbf7d0', title:'Booking Confirmed' },
+    followup:      { icon:'📅', color:'#d97706', bg:'#fffbeb', border:'#fde68a', title:'Follow-Up Due' },
+    overdue:       { icon:'🔴', color:'#dc2626', bg:'#fef2f2', border:'#fca5a5', title:'Overdue Alert' },
+    default:       { icon:'🔔', color:'#7c3aed', bg:'#faf5ff', border:'#e9d5ff', title:'Notification' },
+  };
+  const cfg = configs[type] || configs.default;
+
+  const toastId = 'toast_' + Date.now();
+  document.body.insertAdjacentHTML('beforeend', `
+    <div id="${toastId}" style="
+      position:fixed;bottom:${24 + document.querySelectorAll('.notif-toast').length * 80}px;right:24px;
+      z-index:9995;max-width:300px;min-width:260px;
+      background:${cfg.bg};border:1.5px solid ${cfg.border};border-radius:12px;
+      box-shadow:0 4px 20px rgba(0,0,0,0.15);
+      display:flex;align-items:flex-start;gap:10px;padding:12px 14px;
+      animation:slideInRight .3s ease;
+    " class="notif-toast">
+      <div style="font-size:20px;flex-shrink:0">${cfg.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${cfg.color}">${cfg.title}</div>
+        <div style="font-size:12px;font-weight:600;color:#0f172a;margin-top:2px;line-height:1.4">${message}</div>
+      </div>
+      <button onclick="document.getElementById('${toastId}').remove()"
+        style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:14px;padding:0;flex-shrink:0;line-height:1">✕</button>
+    </div>
+  `);
+
+  // Auto-dismiss after 6 seconds
+  setTimeout(() => document.getElementById(toastId)?.remove(), 6000);
+}
+
+// ── Real-time change detection (called by onSnapshot) ──
+function checkForNewNotifications(col, newDocs) {
+  if(!CURRENT_USER || !_notifShown) return;
+  const uid   = CURRENT_USER.id;
+  const today = new Date().toISOString().slice(0,10);
+
+  if(col === 'tasks') {
+    newDocs.forEach(t => {
+      // New task assigned to me
+      const notifId = 'new_task_' + t.id;
+      if(t.assignedTo === uid && !t.done && t.createdAt && !_seenNotifIds.has(notifId)) {
+        // Only fire if task was created in last 2 minutes (truly new)
+        const created = new Date(t.createdAt);
+        const ageMin = (Date.now() - created.getTime()) / 60000;
+        if(ageMin < 2 && t.assignedBy !== uid) {
+          _seenNotifIds.add(notifId);
+          const assigner = STAFF.find(s => s.id === t.assignedBy);
+          const assignerName = assigner ? assigner.name : 'someone';
+          playNotifSound('default');
+          showToastNotif('task_assigned', `${assignerName} assigned you: "${t.title}"`);
+        }
+      }
+      // Overdue task (newly overdue — due date just passed)
+      const overdueId = 'overdue_task_' + t.id;
+      if(t.assignedTo === uid && !t.done && t.dueDate === today && !_seenNotifIds.has(overdueId)) {
+        _seenNotifIds.add(overdueId);
+      }
+    });
+  }
+
+  if(col === 'enquiries') {
+    newDocs.forEach(e => {
+      // Follow-up due today
+      if(e.followUpDate === today && (e.followUpStaff === uid || e.staffId === uid) && e.status !== 'Booked') {
+        const fuId = 'fu_today_' + e.id;
+        if(!_seenNotifIds.has(fuId)) {
+          _seenNotifIds.add(fuId);
+          const time = e.followUpTime ? ` at ${e.followUpTime}` : '';
+          playNotifSound('default');
+          showToastNotif('followup', `Follow-up with ${cName(e.clientId)}${time}`);
+        }
+      }
+    });
+  }
+
+  if(col === 'bookings') {
+    newDocs.forEach(b => {
+      // New booking for my client
+      const bkId = 'new_bk_' + b.id;
+      if(!_seenNotifIds.has(bkId) && b.staffId === uid) {
+        const created = b.createdAt ? new Date(b.createdAt) : null;
+        const ageMin = created ? (Date.now() - created.getTime()) / 60000 : 999;
+        if(ageMin < 2) {
+          _seenNotifIds.add(bkId);
+          playNotifSound('booking');
+          showToastNotif('booking', `Booking confirmed: ${cName(b.clientId)} → ${b.destination || b.category}`);
+        }
+      }
+    });
+  }
+}
+
+// ── Check for overdue items every minute ──
+setInterval(() => {
+  if(CURRENT_USER && _notifShown) {
+    buildNotifications();
+    // Check for newly overdue follow-ups
+    const today = new Date().toISOString().slice(0,10);
+    const uid = CURRENT_USER.id;
+    enquiries.filter(e => e.followUpDate === today && (e.followUpStaff===uid||e.staffId===uid) && e.status!=='Booked')
+      .forEach(e => {
+        const alertId = 'interval_fu_' + e.id + '_' + today;
+        if(!_seenNotifIds.has(alertId)) {
+          _seenNotifIds.add(alertId);
+        }
+      });
+  }
+}, 60000);
 
 
 function promptImportCategory(event) {
