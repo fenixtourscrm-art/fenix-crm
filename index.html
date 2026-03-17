@@ -350,15 +350,35 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <span id="notif-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:#dc2626;color:#fff;font-size:9px;font-weight:800;border-radius:99px;min-width:16px;height:16px;display:none;align-items:center;justify-content:center;padding:0 3px">0</span>
         </button>
         <!-- Notification Panel -->
-        <div id="notif-panel" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:340px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.18);z-index:9997;overflow:hidden">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid #f1f5f9;background:#f8fafc">
-            <div style="font-weight:800;font-size:14px;color:#0f172a">🔔 Notifications</div>
-            <div style="display:flex;gap:8px">
-              <button onclick="markAllNotifsRead()" style="background:none;border:none;font-size:11px;color:#0369a1;font-weight:700;cursor:pointer">Mark all read</button>
+        <div id="notif-panel" style="display:none;position:absolute;top:calc(100% + 8px);right:0;width:380px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.18);z-index:9997;overflow:hidden">
+          <!-- Panel Header with tabs -->
+          <div style="background:#f8fafc;border-bottom:1px solid #f1f5f9">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0">
+              <div style="font-weight:800;font-size:14px;color:#0f172a">Smart Assistant</div>
               <button onclick="document.getElementById('notif-panel').style.display='none'" style="background:none;border:none;font-size:16px;color:#94a3b8;cursor:pointer">✕</button>
             </div>
+            <div style="display:flex;gap:0;padding:8px 16px 0">
+              <button id="notif-tab-alerts" onclick="switchNotifTab('alerts')" style="flex:1;padding:8px 4px;background:none;border:none;border-bottom:2px solid #0369a1;font-size:12px;font-weight:700;color:#0369a1;cursor:pointer">🔔 Alerts</button>
+              <button id="notif-tab-briefing" onclick="switchNotifTab('briefing')" style="flex:1;padding:8px 4px;background:none;border:none;border-bottom:2px solid transparent;font-size:12px;font-weight:700;color:#94a3b8;cursor:pointer">🧠 AI Briefing</button>
+            </div>
           </div>
-          <div id="notif-list" style="max-height:380px;overflow-y:auto"></div>
+          <!-- Alerts tab -->
+          <div id="notif-tab-alerts-content">
+            <div style="display:flex;justify-content:flex-end;padding:8px 16px 0">
+              <button onclick="markAllNotifsRead()" style="background:none;border:none;font-size:11px;color:#0369a1;font-weight:700;cursor:pointer">Mark all read</button>
+            </div>
+            <div id="notif-list" style="max-height:360px;overflow-y:auto"></div>
+          </div>
+          <!-- AI Briefing tab -->
+          <div id="notif-tab-briefing-content" style="display:none">
+            <div id="notif-briefing-body" style="max-height:420px;overflow-y:auto;padding:16px">
+              <div style="text-align:center;padding:20px;color:#94a3b8">
+                <div style="font-size:28px;margin-bottom:8px">🧠</div>
+                <div style="font-size:13px;font-weight:600">Click to generate your daily briefing</div>
+                <button onclick="generateDailyBriefing()" style="margin-top:12px;padding:10px 20px;background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">✨ Generate Briefing</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="topbar-date" id="topbar-date"></div>
@@ -5345,7 +5365,7 @@ async function fixWrongStates() {
 
 
 // ═══════════════════════════════════════════════
-//  SMART NOTIFICATION & AI REMINDER SYSTEM
+//  SMART NOTIFICATION & AI REMINDER SYSTEM — ADVANCED
 // ═══════════════════════════════════════════════
 let _notifShown = false;
 
@@ -5360,13 +5380,32 @@ function initNotifications() {
   });
 }
 
+function switchNotifTab(tab) {
+  document.getElementById('notif-tab-alerts-content').style.display = tab==='alerts' ? '' : 'none';
+  document.getElementById('notif-tab-briefing-content').style.display = tab==='briefing' ? '' : 'none';
+  document.getElementById('notif-tab-alerts').style.borderBottomColor = tab==='alerts' ? '#0369a1' : 'transparent';
+  document.getElementById('notif-tab-alerts').style.color = tab==='alerts' ? '#0369a1' : '#94a3b8';
+  document.getElementById('notif-tab-briefing').style.borderBottomColor = tab==='briefing' ? '#0369a1' : 'transparent';
+  document.getElementById('notif-tab-briefing').style.color = tab==='briefing' ? '#0369a1' : '#94a3b8';
+  if(tab === 'briefing') {
+    const body = document.getElementById('notif-briefing-body');
+    // Auto-generate if not yet done today
+    const todayKey = 'briefing_' + new Date().toISOString().slice(0,10) + '_' + (CURRENT_USER?.id||0);
+    const cached = sessionStorage.getItem(todayKey);
+    if(cached) {
+      renderBriefing(JSON.parse(cached));
+    }
+    // else show button to generate
+  }
+}
+
 function buildNotifications() {
   if(!CURRENT_USER) return;
   const uid   = CURRENT_USER.id;
   const today = new Date().toISOString().slice(0,10);
   const notifs = [];
 
-  // Overdue tasks
+  // ── Overdue tasks ──
   tasks.filter(t => !t.done && t.dueDate && t.dueDate < today && t.assignedTo === uid)
     .sort((a,b) => a.dueDate > b.dueDate ? 1 : -1)
     .forEach(t => {
@@ -5375,55 +5414,80 @@ function buildNotifications() {
         title:'Overdue Task', body:t.title, sub: daysAgo===1?'Was due yesterday':`${daysAgo} days overdue`, priority:1 });
     });
 
-  // Today's tasks
-  tasks.filter(t => !t.done && t.dueDate === today && t.assignedTo === uid)
-    .forEach(t => {
-      notifs.push({ id:'task_td_'+t.id, type:'today', icon:'🟡', color:'#d97706', bg:'#fffbeb',
-        title:'Due Today', body:t.title, sub: t.dueTime?`Today at ${t.dueTime}`:'Due today', priority:2 });
-    });
-
-  // Today's follow-ups
-  enquiries.filter(e => e.followUpDate === today && (e.followUpStaff === uid || e.staffId === uid) && e.status !== 'Booked')
-    .forEach(e => {
-      const cn = cName(e.clientId);
-      notifs.push({ id:'fu_td_'+e.id, type:'followup', icon:'📅', color:'#0369a1', bg:'#f0f9ff',
-        title:'Follow-Up Today', body:`Follow-up with ${cn}`,
-        sub: e.followUpTime?`Today at ${e.followUpTime}`:(e.destination||e.category||''), priority:2 });
-    });
-
-  // Overdue follow-ups
-  enquiries.filter(e => e.followUpDate && e.followUpDate < today && (e.followUpStaff === uid || e.staffId === uid) && e.status === 'Active')
+  // ── Missed follow-ups ──
+  enquiries.filter(e => e.followUpDate && e.followUpDate < today && (e.followUpStaff===uid||e.staffId===uid) && e.status==='Active')
     .sort((a,b) => a.followUpDate > b.followUpDate ? 1 : -1).slice(0,5)
     .forEach(e => {
-      const cn = cName(e.clientId);
       const daysAgo = Math.floor((new Date(today) - new Date(e.followUpDate)) / 86400000);
       notifs.push({ id:'fu_od_'+e.id, type:'overdue', icon:'🔴', color:'#dc2626', bg:'#fef2f2',
-        title:'Missed Follow-Up', body:cn, sub: daysAgo===1?'Was due yesterday':`${daysAgo} days overdue`, priority:1 });
+        title:'Missed Follow-Up', body:cName(e.clientId),
+        sub: daysAgo===1?'Was due yesterday':`${daysAgo} days overdue`, priority:1 });
     });
 
-  // Upcoming (next 3 days)
+  // ── Today's tasks ──
+  tasks.filter(t => !t.done && t.dueDate===today && t.assignedTo===uid)
+    .forEach(t => {
+      notifs.push({ id:'task_td_'+t.id, type:'today', icon:'🟡', color:'#d97706', bg:'#fffbeb',
+        title:'Due Today', body:t.title, sub:t.dueTime?`Today at ${t.dueTime}`:'Due today', priority:2 });
+    });
+
+  // ── Today's follow-ups ──
+  enquiries.filter(e => e.followUpDate===today && (e.followUpStaff===uid||e.staffId===uid) && e.status!=='Booked')
+    .forEach(e => {
+      notifs.push({ id:'fu_td_'+e.id, type:'followup', icon:'📅', color:'#0369a1', bg:'#f0f9ff',
+        title:'Follow-Up Today', body:`Follow-up with ${cName(e.clientId)}`,
+        sub:e.followUpTime?`Today at ${e.followUpTime}`:(e.destination||e.category||''), priority:2 });
+    });
+
+  // ── Bookings travelling soon (3 days) ──
   const in3 = new Date(); in3.setDate(in3.getDate()+3);
   const in3str = in3.toISOString().slice(0,10);
-  tasks.filter(t => !t.done && t.dueDate > today && t.dueDate <= in3str && t.assignedTo === uid)
+  allBookings.filter(b => b.travelDate && b.travelDate >= today && b.travelDate <= in3str && (b.staffId===uid||!b.staffId))
+    .forEach(b => {
+      const dLeft = Math.ceil((new Date(b.travelDate)-new Date(today))/86400000);
+      notifs.push({ id:'bk_soon_'+b.id, type:'booking', icon:'✈️', color:'#7c3aed', bg:'#faf5ff',
+        title:'Travel Soon', body:`${cName(b.clientId)} — ${b.destination||b.category}`,
+        sub: dLeft===0?'Travels TODAY':`Travels in ${dLeft} day${dLeft>1?'s':''}`, priority:2 });
+    });
+
+  // ── Pending payments (unpaid bookings) ──
+  const myPending = allBookings.filter(b => b.staffId===uid && b.pendingAmount>0 && b.status!=='Cancelled');
+  if(myPending.length) {
+    const totalPend = myPending.reduce((s,b)=>s+(parseFloat(b.pendingAmount)||0),0);
+    notifs.push({ id:'pending_pay', type:'payment', icon:'💰', color:'#c2410c', bg:'#fff7ed',
+      title:'Pending Payments', body:`₹${totalPend.toLocaleString('en-IN')} due from ${myPending.length} booking${myPending.length>1?'s':''}`,
+      sub:'Click to view bookings', priority:2 });
+  }
+
+  // ── Upcoming tasks (3 days) ──
+  tasks.filter(t => !t.done && t.dueDate>today && t.dueDate<=in3str && t.assignedTo===uid)
     .forEach(t => {
       const dLeft = Math.ceil((new Date(t.dueDate)-new Date(today))/86400000);
       notifs.push({ id:'task_up_'+t.id, type:'upcoming', icon:'🟢', color:'#059669', bg:'#f0fdf4',
-        title:'Upcoming', body:t.title, sub: dLeft===1?'Due tomorrow':`Due in ${dLeft} days`, priority:3 });
+        title:'Upcoming', body:t.title, sub:dLeft===1?'Due tomorrow':`Due in ${dLeft} days`, priority:3 });
     });
+
+  // ── At-risk enquiries (active but no follow-up in 30+ days) ──
+  const myEnqs = enquiries.filter(e => e.staffId===uid && e.status==='Active');
+  myEnqs.filter(e => {
+    if(!e.followUpDate) return false;
+    const daysSince = Math.floor((new Date(today)-new Date(e.followUpDate))/86400000);
+    return daysSince >= 30;
+  }).slice(0,3).forEach(e => {
+    notifs.push({ id:'risk_'+e.id, type:'risk', icon:'⚠️', color:'#b45309', bg:'#fffbeb',
+      title:'At-Risk Enquiry', body:cName(e.clientId),
+      sub:`No contact in ${Math.floor((new Date(today)-new Date(e.followUpDate))/86400000)} days`, priority:2 });
+  });
 
   notifs.sort((a,b) => a.priority - b.priority);
   window._notifications = notifs;
 
-  // Badge
+  // Badge — count everything except "upcoming green"
   const urgentCount = notifs.filter(n => n.type !== 'upcoming').length;
   const badge = document.getElementById('notif-badge');
   if(badge) {
-    if(urgentCount > 0) {
-      badge.textContent = urgentCount > 9 ? '9+' : urgentCount;
-      badge.style.display = 'flex';
-    } else {
-      badge.style.display = 'none';
-    }
+    if(urgentCount > 0) { badge.textContent = urgentCount>9?'9+':urgentCount; badge.style.display='flex'; }
+    else { badge.style.display='none'; }
   }
 
   renderNotifList(notifs);
@@ -5449,7 +5513,7 @@ function renderNotifList(notifs) {
       <div style="font-size:20px;flex-shrink:0;margin-top:1px">${n.icon}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${n.color};margin-bottom:2px">${n.title}</div>
-        <div style="font-size:13px;font-weight:600;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.body}</div>
+        <div style="font-size:13px;font-weight:600;color:#0f172a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n.body}</div>
         <div style="font-size:11px;color:#64748b;margin-top:1px">${n.sub}</div>
       </div>
     </div>`).join('');
@@ -5469,17 +5533,137 @@ function markAllNotifsRead() {
   document.getElementById('notif-panel').style.display = 'none';
 }
 
+// ── DAILY AI BRIEFING ──────────────────────────
+async function generateDailyBriefing() {
+  const body = document.getElementById('notif-briefing-body');
+  if(!body) return;
+  body.innerHTML = `<div style="text-align:center;padding:24px;color:#64748b">
+    <div style="font-size:28px;margin-bottom:8px;animation:spin-slow 2s linear infinite">🧠</div>
+    <div style="font-size:13px;font-weight:600">Analysing your CRM data...</div>
+    <div style="font-size:11px;margin-top:4px;color:#94a3b8">Reading tasks, follow-ups, bookings & payments</div>
+  </div>`;
+
+  const uid   = CURRENT_USER.id;
+  const today = new Date().toISOString().slice(0,10);
+  const name  = CURRENT_USER.name;
+
+  // Gather data for this staff member
+  const myTasks      = tasks.filter(t => t.assignedTo===uid);
+  const overdueTasks = myTasks.filter(t => !t.done && t.dueDate < today);
+  const todayTasks   = myTasks.filter(t => !t.done && t.dueDate===today);
+  const myEnqs       = enquiries.filter(e => e.staffId===uid && e.status==='Active');
+  const overdueEnqs  = myEnqs.filter(e => e.followUpDate && e.followUpDate < today);
+  const todayEnqs    = myEnqs.filter(e => e.followUpDate===today);
+  const myBookings   = allBookings.filter(b => b.staffId===uid);
+  const pendingBks   = myBookings.filter(b => (b.pendingAmount||0)>0 && b.status!=='Cancelled');
+  const pendingAmt   = pendingBks.reduce((s,b)=>s+(parseFloat(b.pendingAmount)||0),0);
+  const travelSoon   = myBookings.filter(b => { if(!b.travelDate) return false; const d=Math.ceil((new Date(b.travelDate)-new Date(today))/86400000); return d>=0&&d<=7; });
+  const thisMonth    = today.slice(0,7);
+  const monthBookings = myBookings.filter(b => b.travelDate && b.travelDate.startsWith(thisMonth));
+  const monthRevenue  = monthBookings.reduce((s,b)=>s+(parseFloat(b.paid)||0),0);
+
+  // Build rich context for AI
+  const ctx = `
+Staff Member: ${name} (ID: ${uid})
+Date: ${today}
+
+MY TASKS SUMMARY:
+- Overdue tasks: ${overdueTasks.length} ${overdueTasks.slice(0,3).map(t=>`"${t.title}"(${t.dueDate})`).join(', ')}
+- Due today: ${todayTasks.length} ${todayTasks.slice(0,3).map(t=>`"${t.title}"`).join(', ')}
+- Total pending: ${myTasks.filter(t=>!t.done).length}
+
+MY ENQUIRIES:
+- Active enquiries: ${myEnqs.length}
+- Overdue follow-ups: ${overdueEnqs.length} ${overdueEnqs.slice(0,3).map(e=>`${cName(e.clientId)}(${e.followUpDate})`).join(', ')}
+- Follow-ups today: ${todayEnqs.length} ${todayEnqs.slice(0,3).map(e=>`${cName(e.clientId)}${e.followUpTime?' at '+e.followUpTime:''}`).join(', ')}
+
+MY BOOKINGS:
+- Pending payments: ${pendingBks.length} bookings, ₹${pendingAmt.toLocaleString('en-IN')} total
+- Travelling soon (7 days): ${travelSoon.length} ${travelSoon.slice(0,3).map(b=>`${cName(b.clientId)} to ${b.destination||b.category}(${b.travelDate})`).join(', ')}
+- This month revenue collected: ₹${monthRevenue.toLocaleString('en-IN')} from ${monthBookings.length} bookings
+  `.trim();
+
+  const prompt = `You are Fenix AI, a smart CRM assistant for Fenix Tours and Travels, Ahmedabad.
+
+Generate a concise, actionable daily briefing for ${name} based on this data:
+
+${ctx}
+
+Write the briefing in this format using **bold** for key info:
+1. Start with a 1-sentence status summary (good/needs attention/critical)
+2. 🔴 URGENT section: list overdue items needing action TODAY
+3. 📅 TODAY section: what to do today (tasks + follow-ups)
+4. ✈️ TRAVEL ALERTS: clients travelling soon who need preparation
+5. 💰 PAYMENT ALERTS: pending amounts to collect
+6. 💡 ONE KEY RECOMMENDATION: single most impactful action for today
+
+Keep it SHORT and ACTIONABLE. Use bullet points. No fluff. Speak directly to ${name.split(' ').pop()}.`;
+
+  try {
+    const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`, {
+      method:'GET', headers:{'Accept':'text/plain'}
+    });
+    const text = await res.text();
+    const todayKey = 'briefing_'+today+'_'+(CURRENT_USER?.id||0);
+    const data = { text, generatedAt: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) };
+    sessionStorage.setItem(todayKey, JSON.stringify(data));
+    renderBriefing(data);
+  } catch(err) {
+    body.innerHTML = `<div style="color:#dc2626;padding:16px;font-size:13px">⚠️ Could not generate briefing: ${err.message}</div>`;
+  }
+}
+
+function renderBriefing(data) {
+  const body = document.getElementById('notif-briefing-body');
+  if(!body) return;
+  const formatted = (data.text||'')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>')
+    .split('\n').map(line => {
+      line = line.trim();
+      if(!line) return '';
+      if(line.startsWith('🔴')||line.startsWith('📅')||line.startsWith('✈️')||line.startsWith('💰')||line.startsWith('💡')) {
+        return `<div style="font-weight:800;font-size:12px;color:#0f172a;margin-top:12px;margin-bottom:4px">${line}</div>`;
+      }
+      if(line.startsWith('-')||line.startsWith('•')) {
+        return `<div style="font-size:12px;color:#374151;padding:3px 0 3px 12px;border-left:2px solid #e2e8f0">${line.replace(/^[-•]\s*/,'')}</div>`;
+      }
+      return `<div style="font-size:12px;color:#374151;margin:3px 0">${line}</div>`;
+    }).filter(Boolean).join('');
+
+  body.innerHTML = `
+    <div style="padding:4px 0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:10px;color:#94a3b8">Generated at ${data.generatedAt} · Based on live CRM data</div>
+        <button onclick="generateDailyBriefing()" style="background:none;border:none;font-size:10px;color:#0369a1;font-weight:700;cursor:pointer">🔄 Refresh</button>
+      </div>
+      ${formatted}
+      <div style="margin-top:14px;padding-top:10px;border-top:1px solid #f1f5f9;display:flex;gap:8px">
+        <button onclick="showTab('tasks',document.querySelector('[onclick*=tasks]'));document.getElementById('notif-panel').style.display='none'"
+          style="flex:1;padding:7px;background:#0369a1;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">📋 Open Tasks</button>
+        <button onclick="showTab('enquiries',document.querySelector('[onclick*=enquiries]'));document.getElementById('notif-panel').style.display='none'"
+          style="flex:1;padding:7px;background:#f97316;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🎯 Enquiries</button>
+      </div>
+    </div>`;
+}
+
 function showWelcomeNotif(notifs) {
   const name = (CURRENT_USER.name||'').split(' ').slice(-1)[0];
   const hour = new Date().getHours();
-  const greet = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  const overdue  = notifs.filter(n => n.type==='overdue').length;
-  const todayFu  = notifs.filter(n => n.type==='followup').length;
-  const todayTsk = notifs.filter(n => n.type==='today').length;
+  const greet = hour<12?'Good morning':hour<17?'Good afternoon':'Good evening';
+  const overdue  = notifs.filter(n=>n.type==='overdue').length;
+  const todayFu  = notifs.filter(n=>n.type==='followup').length;
+  const todayTsk = notifs.filter(n=>n.type==='today').length;
+  const travelN  = notifs.filter(n=>n.type==='booking').length;
+  const payN     = notifs.filter(n=>n.type==='payment').length;
+  const riskN    = notifs.filter(n=>n.type==='risk').length;
+
   const lines = [];
-  if(overdue > 0)  lines.push(`<span style="color:#dc2626;font-weight:700">⚠️ ${overdue} overdue item${overdue>1?'s':''}</span>`);
-  if(todayFu > 0)  lines.push(`<span style="color:#0369a1">📅 ${todayFu} follow-up${todayFu>1?'s':''} today</span>`);
-  if(todayTsk > 0) lines.push(`<span style="color:#d97706">✅ ${todayTsk} task${todayTsk>1?'s':''} due today</span>`);
+  if(overdue>0)  lines.push(`<span style="color:#dc2626;font-weight:700">🔴 ${overdue} overdue item${overdue>1?'s':''}</span>`);
+  if(todayFu>0)  lines.push(`<span style="color:#0369a1">📅 ${todayFu} follow-up${todayFu>1?'s':''} today</span>`);
+  if(todayTsk>0) lines.push(`<span style="color:#d97706">✅ ${todayTsk} task${todayTsk>1?'s':''} due today</span>`);
+  if(travelN>0)  lines.push(`<span style="color:#7c3aed">✈️ ${travelN} client${travelN>1?'s':''} travelling soon</span>`);
+  if(payN>0)     lines.push(`<span style="color:#c2410c">💰 Pending payment alerts</span>`);
+  if(riskN>0)    lines.push(`<span style="color:#b45309">⚠️ ${riskN} at-risk enquir${riskN>1?'ies':'y'}</span>`);
 
   if(!lines.length) {
     showAIGreeting(`${greet}, ${name}! 👋 You're all caught up — no pending items today. Have a great day! ✅`);
@@ -5495,32 +5679,32 @@ function showWelcomeNotif(notifs) {
           <button onclick="document.getElementById('welcome-notif-overlay').remove()" style="background:rgba(255,255,255,0.2);border:none;border-radius:6px;padding:3px 8px;cursor:pointer;color:#fff;font-size:14px">✕</button>
         </div>
         <div style="padding:14px 16px">
-          <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:12px">
             ${lines.map(l=>`<div style="font-size:13px">${l}</div>`).join('')}
           </div>
-          <div style="margin-top:12px;display:flex;gap:8px">
+          <div style="display:flex;gap:8px">
+            <button onclick="toggleNotifPanel();switchNotifTab('briefing');generateDailyBriefing();document.getElementById('welcome-notif-overlay').remove()"
+              style="flex:1;padding:8px;background:linear-gradient(135deg,#0369a1,#0284c7);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🧠 AI Briefing</button>
             <button onclick="showTab('tasks',document.querySelector('[onclick*=tasks]'));document.getElementById('welcome-notif-overlay').remove()"
-              style="flex:1;padding:8px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">View Tasks</button>
+              style="flex:1;padding:8px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📋 Tasks</button>
             <button onclick="document.getElementById('welcome-notif-overlay').remove()"
-              style="flex:1;padding:8px;background:#f1f5f9;color:#475569;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Dismiss</button>
+              style="padding:8px 10px;background:#f1f5f9;color:#94a3b8;border:none;border-radius:8px;font-size:11px;cursor:pointer">✕</button>
           </div>
         </div>
       </div>
     </div>
   `);
-  setTimeout(() => document.getElementById('welcome-notif-overlay')?.remove(), 12000);
+  setTimeout(() => document.getElementById('welcome-notif-overlay')?.remove(), 15000);
 
-  // Build AI greeting message
-  let aiMsg = `${greet}, ${name}! 👋`;
+  // AI chat greeting
+  let aiMsg = `${greet}, ${name}! 👋 `;
   const parts = [];
-  if(overdue > 0)  parts.push(`**${overdue} overdue item${overdue>1?'s':''}** needing immediate attention`);
-  if(todayFu > 0)  parts.push(`**${todayFu} follow-up${todayFu>1?'s':''} today**`);
-  if(todayTsk > 0) parts.push(`**${todayTsk} task${todayTsk>1?'s':''} due today**`);
-  if(parts.length) aiMsg += ' You have ' + parts.join(', ') + '.';
-  const firstOverdue = notifs.find(n => n.type==='overdue');
-  if(firstOverdue) aiMsg += `\n\n⚠️ **Urgent:** ${firstOverdue.body} — ${firstOverdue.sub}.`;
-  const firstFu = notifs.find(n => n.type==='followup');
-  if(firstFu) aiMsg += `\n\n📅 **Today:** ${firstFu.body}${firstFu.sub?' — '+firstFu.sub:''}.`;
+  if(overdue>0)  parts.push(`**${overdue} overdue item${overdue>1?'s':''}**`);
+  if(todayFu>0)  parts.push(`**${todayFu} follow-up${todayFu>1?'s':''} today**`);
+  if(todayTsk>0) parts.push(`**${todayTsk} task${todayTsk>1?'s':''} due today**`);
+  if(travelN>0)  parts.push(`**${travelN} client${travelN>1?'s':''} travelling soon**`);
+  if(parts.length) aiMsg += 'You have ' + parts.join(', ') + '. ';
+  aiMsg += '\n\nClick the **🔔 bell icon** → **🧠 AI Briefing** for your full personalised daily report.';
   showAIGreeting(aiMsg);
 }
 
