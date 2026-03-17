@@ -5276,25 +5276,31 @@ async function importClientExcel(event, importCategory) {
         return "";
       };
 
-      const accountName = getCol("Account Name", "Name", "account name");
-      const mobile      = getCol("Mobile", "mobile", "Mobile No", "Mobile Number");
-      const phone       = getCol("Phone", "phone", "Phone No");
-      const email       = getCol("e-mail", "Email", "email", "E-mail", "E Mail");
-      const city        = getCol("City", "city");
-      const pan         = getCol("PAN No.", "PAN No", "PAN", "pan");
-      const gst         = getCol("GST No.", "GST No", "GST", "gst");
-      const kycDate     = getCol("KYC Date", "kyc date");
+      // Support both separate first/last name columns AND combined "Name" column
+      const firstName   = toTitleCase(getCol("First Name","firstname","first_name","fname") ||
+                          getCol("Account Name","Name","name","account name","full name","fullname").split(/\s+/)[0] || "");
+      const lastNameRaw = getCol("Last Name","lastname","last_name","lname","surname") ||
+                          (() => { const n = getCol("Account Name","Name","name","account name","full name","fullname").trim().split(/\s+/); return n.slice(1).join(" "); })();
+      const lastName    = toTitleCase(lastNameRaw);
+      const companyName = toTitleCase(getCol("Company Name","company","company name","firm","organisation","organization","firm name"));
+      const mobile      = getCol("Mobile","mobile","Mobile No","Mobile Number","mob","phone","Phone","Phone No","contact");
+      const email       = getCol("Email","email","e-mail","E-mail","E Mail","mail");
+      const city        = toTitleCase(getCol("City","city","town"));
+      const state       = toTitleCase(getCol("State","state"));
+      const pincode     = getCol("Pincode","pincode","pin code","pin","zip","zipcode","postal code");
+      const gender      = (() => { const g = getCol("Gender","gender","sex").toLowerCase(); return g.startsWith("f") ? "Female" : g.startsWith("m") ? "Male" : "Male"; })();
+      const occupation  = toTitleCase(getCol("Occupation","occupation","job","profession","designation"));
+      const area        = toTitleCase(getCol("Area","area","locality","address"));
+      const pan         = getCol("PAN No.","PAN No","PAN","pan");
+      const gst         = getCol("GST No.","GST No","GST","gst");
+      const kycDate     = getCol("KYC Date","kyc date");
+      const phone       = getCol("Phone","phone","Phone No","landline");
 
       // Skip empty rows
-      if(!accountName) { skipped++; continue; }
+      if(!firstName && !lastName && !companyName) { skipped++; continue; }
 
-      // Split name: first word = firstName, rest = lastName
-      const nameParts = accountName.trim().split(/\s+/);
-      const firstName = nameParts[0] || accountName;
-      const lastName  = nameParts.slice(1).join(" ") || "";
-
-      // Clean mobile - use mobile first, fallback to phone
-      const cleanMobile = String(mobile||phone).replace(/\D/g,"").slice(-10);
+      // Clean mobile
+      const cleanMobile = String(mobile||phone||"").replace(/\D/g,"").slice(-10);
 
       // Skip duplicate mobiles
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
@@ -5304,12 +5310,16 @@ async function importClientExcel(event, importCategory) {
       try {
         const data = {
           firstName, lastName,
-          mobile: cleanMobile || mobile || phone || "",
-          phone: phone || "",
+          companyName: companyName || "",
+          mobile: cleanMobile || mobile || "",
           email: email || "",
+          gender: gender || "Male",
+          occupation: occupation || "",
           city: city || "",
-          state: "", area: "", pincode: "", country: "India",
-          gender: "Male", occupation: "",
+          state: state || "",
+          area: area || "",
+          pincode: pincode || "",
+          country: "India",
           panNo: pan || "",
           gstNo: gst || "",
           kycDate: kycDate || "",
