@@ -908,6 +908,7 @@ let STAFF = [
   {id:2,name:"Mr. Paresh Gajera",role:"Sales Executive",initials:"PG"},
   {id:3,name:"Ms. Nusaiba Puthawala",role:"Visa Executive",initials:"NP"},
   {id:4,name:"Mr. Ahyan Shaikh",role:"Operation Dept",initials:"AS"},
+  {id:5,name:"Mr. Taha Rangwala",role:"Accountant",initials:"TR"},
 ];
 let mktCalls=[];
 let nxtStaff=10;
@@ -965,7 +966,7 @@ let targets=[];
 let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
-const cName=id=>{const sid=String(id);const c=clients.find(x=>String(x.id)===sid);return c?`${c.firstName} ${c.lastName}`:"Unknown";};
+const cName=id=>{const sid=String(id);const cl=clients.find(x=>String(x.id)===sid);if(!cl) return "Unknown";const n=`${cl.firstName||''} ${cl.lastName||''}`.trim();return n||cl.mobile||cl.companyName||"Unknown";};
 const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
@@ -975,7 +976,7 @@ const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🧠 Travel Quiz",ai:"🤖 AI Travel Assistant"};
+const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -1010,17 +1011,17 @@ function renderAll(){
   try{updateBadges();}catch(e){console.error('updateBadges:',e);}
 }
 function updateBadges(){
-  document.getElementById("enq-badge").textContent=enquiries.filter(e=>e.status==="Active").length;
+  const enqBadge=document.getElementById("enq-badge"); if(enqBadge) enqBadge.textContent=enquiries.filter(e=>e.status==="Active").length;
   const activeTasks = tasks.filter(t=>!t.done);
   const od = activeTasks.length;
-  const ob=document.getElementById("task-badge");ob.textContent=od;ob.style.display=od>0?"inline":"none";
+  const ob=document.getElementById("task-badge");if(!ob) return;ob.textContent=od;ob.style.display=od>0?"inline":"none";
 }
 
 // DASHBOARD
 function renderDashboard(){
   const tm=thisMonth();
   const mb=allBookings.filter(b=>b.travelDate&&b.travelDate.startsWith(tm)).length;
-  const rev=allBookings.reduce((s,b)=>s+b.paid,0);
+  const rev=allBookings.reduce((s,b)=>s+(parseFloat(b.paid)||0),0);
   const pt=tasks.filter(t=>!t.done).length;
   document.getElementById("dash-kpis").innerHTML=`
     <div class="kpi"><div class="kpi-icon">🎯</div><div class="kpi-label">Active Enquiries</div><div class="kpi-value">${enquiries.filter(e=>e.status==="Active").length}</div><div class="kpi-sub">being followed up</div></div>
@@ -1205,7 +1206,7 @@ function editClient(id){
 // ENQUIRIES
 let enqFilter="all", catFilter="all", enqStaffFilter=null;
 function filterEnq(f,el){enqFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
-function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
+function filterCat(f,el){catFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
 
 function toggleEnqStaffMenu(btn) {
   const menu = document.getElementById("enq-staff-menu");
@@ -1428,7 +1429,10 @@ async function saveBookingFromEnquiry() {
       status:         bkStatus,
       paymentStatus:  payStatus,
       staffId:        CURRENT_USER ? CURRENT_USER.id : (e.staffId || 0),
-      notes:          notes || "Converted from Enquiry"
+      notes:          notes || "Converted from Enquiry",
+      createdBy:      CURRENT_USER ? CURRENT_USER.id : 0,
+      createdByName:  CURRENT_USER ? CURRENT_USER.name : "Unknown",
+      createdAt:      new Date().toISOString(),
     };
 
     await fbUpdate("enquiries", enqId, { status: "Booked" });
@@ -2187,7 +2191,13 @@ async function saveEditClient(){
     dataType,
     clientCategory:document.getElementById("ec-cat")?.value||"Regular",
   };
+  data.updatedBy = CURRENT_USER ? CURRENT_USER.id : 0;
+  data.updatedByName = CURRENT_USER ? CURRENT_USER.name : "Unknown";
+  data.updatedAt = new Date().toISOString();
   try {
+    // Preserve original creator info on edit
+    if(c.createdByName && !data.createdByName) data.createdByName = c.createdByName;
+    if(c.createdBy && !data.createdBy) data.createdBy = c.createdBy;
     await fbUpdate("clients", c.id, data);
     Object.assign(c, data);
     window._editClientId=null; closeOverlay(); renderClients();
@@ -2520,7 +2530,7 @@ async function fbAdd(col, data) {
 
 async function fbUpdate(col, id, data) {
   data.updatedAt  = new Date().toISOString();
-  data.updatedBy  = CURRENT_USER.id;
+  data.updatedBy  = CURRENT_USER ? CURRENT_USER.id : 0;
   await db.collection(col).doc(id).update(data);
 }
 
@@ -2538,6 +2548,10 @@ async function saveClient() {
   const mob = document.getElementById("c-mob").value.trim();
   if(!fn) return alert("⚠️ First Name is required!");
   if(!mob) return alert("⚠️ Mobile Number is required!");
+  const cleanMob = mob.replace(/\D/g,"");
+  if(cleanMob.length !== 10) return alert("⚠️ Mobile Number must be 10 digits!");
+  const duplicate = clients.find(x => x.mobile && x.mobile.replace(/\D/g,"") === cleanMob);
+  if(duplicate) return alert(`⚠️ Mobile number already exists for client: ${duplicate.firstName} ${duplicate.lastName}`);
   const data = {
     firstName:toTitleCase(fn), lastName:toTitleCase(document.getElementById("c-ln").value.trim()),
     gender:document.getElementById("c-gen").value,
@@ -2574,6 +2588,10 @@ async function saveEnquiry(isEdit) {
   else if(cat==="Domestic Tours") dest = gv("e-dest-custom") || gv("e-dest-dom");
   else if(cat==="Domestic Hotel") dest = gv("e-dest-custom") || gv("e-dest-dom");
   else dest = gv("e-dest-custom");
+
+  // Validate destination for relevant categories
+  const destRequiredCats = ["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Cruise"];
+  if(destRequiredCats.includes(cat) && !dest.trim()) return alert("⚠️ Please enter a Destination!");
 
   // ── Pax (shared by tours, tickets, hotel, insurance, cruise) ──
   const adults    = gi("e-adults");
@@ -2684,7 +2702,9 @@ async function saveBooking(isEdit) {
   if(!clientId || clientId === "0" || clientId === "") return alert("⚠️ Please select a Client!");
   const gv = id => document.getElementById(id)?.value || "";
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
-  // Destination: could be select (b-dest) or input depending on category
+  // Validate amount
+  const rawAmt = parseFloat(document.getElementById("b-amt")?.value)||0;
+  if(rawAmt <= 0) return alert("⚠️ Please enter the Total Amount for this booking!");estination: could be select (b-dest) or input depending on category
   const dest = gv("b-dest") || "N/A";
   const cat = gv("b-cat") || "International Tours";
   const isVisaPassport = cat === "Visa" || cat === "Passport";
@@ -2743,6 +2763,8 @@ async function saveBooking(isEdit) {
   try {
     if(isEdit) {
       const b=allBookings.find(x=>x.id===window._editBkId);
+      // Preserve existing payment history — never overwrite on edit
+      if(b && b.paymentHistory && b.paymentHistory.length) data.paymentHistory = b.paymentHistory;
       await fbUpdate("bookings",b.id,data); Object.assign(b,data);
       closeOverlay(); renderBookings();
     } else {
@@ -2763,6 +2785,7 @@ async function saveTask() {
     title,
     assignedTo,
     assignedBy: CURRENT_USER ? CURRENT_USER.id : parseInt(document.getElementById("t-by").value),
+    createdByName: CURRENT_USER ? CURRENT_USER.name : "Unknown",
     clientId:document.getElementById("t-client").value||"",
     dueDate:document.getElementById("t-due").value,
     priority:document.getElementById("t-pri").value,
@@ -2971,7 +2994,9 @@ function escHtml(str) {
 
 async function del(arr,id) {
   const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
-  if(!isOwner) return alert("⚠️ Only Ms. Rehana Ansari (Owner) can delete records.");
+  // Staff can delete their own tasks and marketing entries; owner can delete anything
+  const staffOwnedTypes = ["tasks","marketing"];
+  if(!isOwner && !staffOwnedTypes.includes(arr)) return alert("⚠️ Only Ms. Rehana Ansari (Owner) can delete client, enquiry, and booking records.");
   if(!confirm("Move this record to Trash?")) return;
   const colMap={clients:"clients",enquiries:"enquiries",bookings:"bookings",tasks:"tasks",marketing:"marketing"};
   const col = colMap[arr]||arr;
@@ -3013,9 +3038,14 @@ async function revertToEnquiry(bookingId) {
       await fbUpdate("enquiries", matchingEnq.id, { status: "Active" });
       matchingEnq.status = "Active";
     }
-    await fbDelete("bookings", bookingId);
+    // Move booking to trash instead of hard delete
+    const bkSnap = await db.collection("bookings").doc(bookingId).get();
+    const bkData = bkSnap.exists ? bkSnap.data() : {};
+    const itemName = (bkData.destination||'Booking') + (bkData.clientId ? ' — '+cName(bkData.clientId) : '') + ' [Reverted]';
+    await trashMove("bookings", bookingId, bkData, "Bookings", itemName);
     allBookings = allBookings.filter(x => x.id !== bookingId);
     renderAll();
+    updateTrashBadge();
     alert("✅ Booking moved back to Inquiry!");
   } catch(err) {
     alert("Failed: " + err.message);
@@ -3025,6 +3055,7 @@ async function revertToEnquiry(bookingId) {
 }
 
 async function delBk(id) {
+  if(!(CURRENT_USER && CURRENT_USER.id === 1)) return alert("⚠️ Only Ms. Rehana Ansari (Owner) can delete bookings.");
   if(!confirm("Move this booking to Trash?")) return;
   try {
     const snap = await db.collection("bookings").doc(id).get();
@@ -3677,7 +3708,7 @@ async function loadClientDocs(clientId) {
   if(!listEl) return;
 
   try {
-    const snap = await _db.collection("clients").doc(clientId).collection("documents").orderBy("uploadedAt","desc").get();
+    const snap = await db.collection("clients").doc(clientId).collection("documents").orderBy("uploadedAt","desc").get();
 
     if(snap.empty) {
       listEl.innerHTML = `<div style="text-align:center;padding:30px;color:#94a3b8">
@@ -3768,7 +3799,7 @@ async function uploadClientDoc() {
     progressText.textContent = "Saving to database...";
     progressBar.style.width = "70%";
 
-    await _db.collection("clients").doc(clientId).collection("documents").add({
+    await db.collection("clients").doc(clientId).collection("documents").add({
       docType,
       fileName: file.name,
       fileType,
@@ -3849,7 +3880,7 @@ async function compressImageToBase64(file, quality = 0.82, maxDim = 1200) {
 
 async function viewClientDoc(docId, clientId) {
   try {
-    const docSnap = await _db.collection("clients").doc(clientId).collection("documents").doc(docId).get();
+    const docSnap = await db.collection("clients").doc(clientId).collection("documents").doc(docId).get();
     if(!docSnap.exists) return alert("Document not found.");
     const d = docSnap.data();
     const mimeType = d.fileType || "image/jpeg";
@@ -3872,7 +3903,7 @@ async function viewClientDoc(docId, clientId) {
 
 async function downloadClientDoc(docId, clientId, docType) {
   try {
-    const docSnap = await _db.collection("clients").doc(clientId).collection("documents").doc(docId).get();
+    const docSnap = await db.collection("clients").doc(clientId).collection("documents").doc(docId).get();
     if(!docSnap.exists) return alert("Document not found.");
     const d = docSnap.data();
     const mimeType = d.fileType || "image/jpeg";
@@ -3890,7 +3921,7 @@ async function downloadClientDoc(docId, clientId, docType) {
 async function deleteClientDoc(docId, clientId) {
   if(!confirm("Delete this document? This cannot be undone.")) return;
   try {
-    await _db.collection("clients").doc(clientId).collection("documents").doc(docId).delete();
+    await db.collection("clients").doc(clientId).collection("documents").doc(docId).delete();
     loadClientDocs(clientId);
   } catch(err) {
     alert("Delete failed: " + err.message);
@@ -3993,7 +4024,7 @@ async function loadFactList() {
   const el = document.getElementById('fact-list');
   if(!el) return;
   try {
-    const snap = await _db.collection('travelfacts').orderBy('createdAt','desc').get();
+    const snap = await db.collection('travelfacts').orderBy('createdAt','desc').get();
     if(snap.empty) { el.innerHTML = `<div style="text-align:center;color:#94a3b8;padding:20px;font-size:13px">No facts added yet.</div>`; return; }
     const isOwner = CURRENT_USER?.id === 1;
     el.innerHTML = snap.docs.map(doc => {
@@ -4035,9 +4066,9 @@ async function saveFact(editId) {
   if(!fact) return alert('Please enter a fact.');
   try {
     if(editId) {
-      await _db.collection('travelfacts').doc(editId).update({ fact, category, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+      await db.collection('travelfacts').doc(editId).update({ fact, category, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
     } else {
-      await _db.collection('travelfacts').add({ fact, category, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedBy: CURRENT_USER?.name||'' });
+      await db.collection('travelfacts').add({ fact, category, createdAt: firebase.firestore.FieldValue.serverTimestamp(), addedBy: CURRENT_USER?.name||'' });
     }
     document.getElementById('fact-modal-overlay')?.remove();
     loadFactList();
@@ -4047,7 +4078,7 @@ async function saveFact(editId) {
 async function deleteFact(id) {
   if(!confirm('Move this fact to Trash?')) return;
   try {
-    const snap = await _db.collection('travelfacts').doc(id).get();
+    const snap = await db.collection('travelfacts').doc(id).get();
     const data = snap.exists ? snap.data() : {};
     await trashMove('travelfacts', id, data, 'Travel Academy – Facts', (data.fact||'').substring(0,60)+'...');
     loadFactList();
@@ -4181,7 +4212,7 @@ async function submitGuess(chosen) {
       const userId = String(CURRENT_USER.id);
       const guessKey = 'guess_' + todayStr().replace(/-/g,'');
       const monthKey = 'mon_' + monthStr().replace(/-/g,'');
-      const ref = _db.collection('quizscores').doc(userId);
+      const ref = db.collection('quizscores').doc(userId);
       const snap = await ref.get();
       const data = snap.exists ? snap.data() : {};
       // Only save if not already answered today
@@ -4469,7 +4500,7 @@ function initDestinations() {
 
 async function loadDestinations() {
   try {
-    const snap = await _db.collection('destinations').orderBy('country').get();
+    const snap = await db.collection('destinations').orderBy('country').get();
     if(!snap.empty) {
       destData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } else {
@@ -4700,10 +4731,10 @@ async function saveDestination(editId) {
   };
   try {
     if(editId) {
-      await _db.collection('destinations').doc(editId).set(data, { merge: true });
+      await db.collection('destinations').doc(editId).set(data, { merge: true });
     } else {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      await _db.collection('destinations').add(data);
+      await db.collection('destinations').add(data);
     }
     document.getElementById('dest-crud-overlay')?.remove();
     await loadDestinations();
@@ -4714,7 +4745,7 @@ async function saveDestination(editId) {
 async function deleteDestination(id) {
   if(!confirm('Move this destination to Trash?')) return;
   try {
-    const snap = await _db.collection('destinations').doc(id).get();
+    const snap = await db.collection('destinations').doc(id).get();
     const data = snap.exists ? snap.data() : {};
     await trashMove('destinations', id, data, 'Destination Map', data.country||id);
     document.getElementById('dest-info-content').innerHTML = '<div style="text-align:center;padding:40px 20px;color:#94a3b8"><div style="font-size:48px;margin-bottom:12px">🌍</div><div style="font-size:14px;font-weight:600">Select a destination</div></div>';
@@ -4746,7 +4777,7 @@ async function trashMove(collection, docId, data, sectionLabel, itemName) {
     deletedBy: CURRENT_USER ? CURRENT_USER.name : 'Unknown',
     deletedById: CURRENT_USER ? CURRENT_USER.id : 0,
     deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+    expiresAt: firebase.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), // 30 days from now
   };
   // Save to trash collection
   await db.collection('trash').add(trashEntry);
@@ -4865,7 +4896,14 @@ async function restoreItem(trashId) {
     trashItems = trashItems.filter(t => t.trashId !== trashId);
     renderTrashTable();
     updateTrashBadge();
-    // Refresh the relevant section's local data
+    // Refresh the restored item's section in local data immediately
+    const col = item.originalCollection;
+    const restoredData = { ...item.originalData, id: item.originalDocId };
+    if(col === 'clients')    { clients.push(restoredData); renderClients(); }
+    else if(col === 'enquiries') { enquiries.push(restoredData); renderEnquiries(); }
+    else if(col === 'bookings')  { allBookings.push(restoredData); renderBookings(); }
+    else if(col === 'tasks')     { tasks.push(restoredData); renderTasks(); }
+    else if(col === 'marketing') { marketing.push(restoredData); }
     alert(`✅ "${item.itemName}" restored to ${item.sectionLabel}`);
   } catch(e) {
     alert('Restore failed: ' + e.message);
@@ -5294,7 +5332,7 @@ async function importClientExcel(event, importCategory) {
       const pan         = getCol("PAN No.","PAN No","PAN","pan");
       const gst         = getCol("GST No.","GST No","GST","gst");
       const kycDate     = getCol("KYC Date","kyc date");
-      const phone       = getCol("Phone","phone","Phone No","landline");
+      // phone handled in mobile fallback above
 
       // Skip empty rows
       if(!firstName && !lastName && !companyName) { skipped++; continue; }
