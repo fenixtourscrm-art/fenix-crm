@@ -2704,7 +2704,8 @@ async function saveBooking(isEdit) {
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
   // Validate amount
   const rawAmt = parseFloat(document.getElementById("b-amt")?.value)||0;
-  if(rawAmt <= 0) return alert("⚠️ Please enter the Total Amount for this booking!");estination: could be select (b-dest) or input depending on category
+  if(rawAmt <= 0) return alert("⚠️ Please enter the Total Amount for this booking!");
+  // Destination: could be select (b-dest) or input depending on category
   const dest = gv("b-dest") || "N/A";
   const cat = gv("b-cat") || "International Tours";
   const isVisaPassport = cat === "Visa" || cat === "Passport";
