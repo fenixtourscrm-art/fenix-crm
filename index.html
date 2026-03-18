@@ -1763,10 +1763,28 @@ function renderReports(){
           </div>`).join("")}
       </div>` : ""}
 
+      <!-- Custom Entries -->
+      ${r.customEntries&&r.customEntries.length ? `<div style="margin-bottom:10px">
+        <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">📋 Client Work Updates</div>
+        ${r.customEntries.map((e,i)=>`
+          <div style="padding:8px 10px;background:#f8fafc;border-radius:8px;margin-bottom:5px;border-left:3px solid #0369a1">
+            <div style="font-size:12px;font-weight:700;color:#0f172a">${e.title||''}</div>
+            ${e.description?`<div style="font-size:11px;color:#64748b;margin-top:2px">${e.description}</div>`:''}
+          </div>`).join('')}
+      </div>` : ""}
+
       <!-- Other Work -->
-      ${r.otherWork ? `<div style="background:#fff7ed;border-radius:8px;padding:8px 12px;font-size:12px;color:#7c3a00">
+      ${r.otherWork ? `<div style="background:#fff7ed;border-radius:8px;padding:8px 12px;font-size:12px;color:#7c3a00;margin-bottom:10px">
         <span style="font-weight:700">📝 Notes by ${staffName}:</span> ${r.otherWork}
       </div>` : ""}
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid #f1f5f9;flex-wrap:wrap">
+        <button onclick="editReport('${r.id}')" style="padding:6px 12px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">✏️ Edit</button>
+        <button onclick="deleteReport('${r.id}')" style="padding:6px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🗑 Delete</button>
+        <button onclick="shareReportWhatsApp('${r.id}')" style="padding:6px 12px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">📱 Share WhatsApp</button>
+        <button onclick="copyReportText('${r.id}')" style="padding:6px 12px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">📋 Copy</button>
+      </div>
     </div>`;
   }).join("")||`<div class="empty">No reports found</div>`;
 }
@@ -2063,14 +2081,57 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Task Title / Description <span style="color:#dc2626">*</span></label><input id="t-title" placeholder="e.g. Send itinerary to client — required"/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveTask()">Save Task</button>`;
   } else if(type==="report"){
-    mb.innerHTML=`<div class="modal-title">Submit Daily Report <button class="x" onclick="closeOverlay()">✕</button></div>
-    <div class="form-grid"><div class="fg"><label>Staff Member</label><select id="r-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("")}</select></div><div class="fg"><label>Date</label><input type="date" id="r-date" value="${today()}"/></div></div>
-    <div class="form-grid g3"><div class="fg"><label>Sales Calls</label><input type="number" id="r-calls" value="0"/></div><div class="fg"><label>New Enquiries</label><input type="number" id="r-enqn" value="0"/></div><div class="fg"><label>Old Enquiries</label><input type="number" id="r-enqo" value="0"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Bookings Confirmed</label><input type="number" id="r-book" value="0"/></div><div class="fg"><label>Visa Apps Processed</label><input type="number" id="r-visa" value="0"/></div></div>
-    <div style="margin-bottom:12px"><div class="fg" style="margin-bottom:6px"><label>Enquiry Entries (Client × Pax → Destination)</label></div><div id="r-entries"></div><button class="btn btn-ghost" style="margin-top:4px;font-size:11px" onclick="addReportEntry()">+ Add Entry</button></div>
-    <div class="form-grid g1"><div class="fg"><label>Other Work / Notes</label><textarea id="r-other" rows="2" placeholder="Any other work..."></textarea></div></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveReport()">Submit Report</button>`;
-    addReportEntry();
+    const isEditRpt = !!window._editReportId;
+    const exRpt = isEditRpt ? reports.find(x=>x.id===window._editReportId) : null;
+    const prefillStaff = exRpt?.staffId || CURRENT_USER?.id || STAFF[1]?.id;
+    const prefillDate = exRpt?.date || today();
+    mb.innerHTML=`<div class="modal-title">${isEditRpt?'Edit':'Submit'} Daily Report <button class="x" onclick="closeOverlay()">✕</button></div>
+    <div class="form-grid"><div class="fg"><label>Staff Member</label><select id="r-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}"${s.id===prefillStaff?' selected':''}>${s.name}</option>`).join("")}</select></div><div class="fg"><label>Date</label><input type="date" id="r-date" value="${prefillDate}"/></div></div>
+
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">📊 Activity Metrics</div>
+      <div class="form-grid g3"><div class="fg"><label>Sales Calls</label><input type="number" id="r-calls" value="${exRpt?.salesCalls||0}"/></div><div class="fg"><label>New Enquiries</label><input type="number" id="r-enqn" value="${exRpt?.enquiriesNew||0}"/></div><div class="fg"><label>Old Enquiries</label><input type="number" id="r-enqo" value="${exRpt?.enquiriesOld||0}"/></div></div>
+      <div class="form-grid"><div class="fg"><label>Bookings Confirmed</label><input type="number" id="r-book" value="${exRpt?.bookingsConfirmed||0}"/></div><div class="fg"><label>Visa Apps Processed</label><input type="number" id="r-visa" value="${exRpt?.visaApps||0}"/></div></div>
+    </div>
+
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;margin-bottom:8px">📋 Enquiry Entries (Client × Pax → Destination)</div>
+      <div id="r-entries"></div>
+      <button class="btn btn-ghost" style="margin-top:4px;font-size:11px" onclick="addReportEntry()">+ Add Enquiry Entry</button>
+    </div>
+
+    <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase">🧾 Custom Work Entries</div>
+        <button onclick="addCustomReportEntry()" style="padding:4px 10px;background:#7c3aed;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">+ Add Entry</button>
+      </div>
+      <div id="r-custom-entries"></div>
+      <div style="font-size:10px;color:#94a3b8;margin-top:4px">Add client updates, visa status, work progress etc.</div>
+    </div>
+
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:#c2410c;text-transform:uppercase;margin-bottom:6px">📝 Notes / Other Work</div>
+      <textarea id="r-other" rows="3" placeholder="Any other work, observations, or notes..." style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${exRpt?.otherWork||''}</textarea>
+    </div>
+
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;margin-bottom:8px">⏰ Schedule Report (Optional)</div>
+      <div class="form-grid">
+        <div class="fg"><label>Schedule Date</label><input type="date" id="r-sched-date" value="${today()}"/></div>
+        <div class="fg"><label>Schedule Time</label><input type="time" id="r-sched-time" value="20:00"/></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#374151;margin-top:8px;cursor:pointer">
+        <input type="checkbox" id="r-schedule-on" style="width:16px;height:16px;accent-color:#16a34a"/>
+        <span>Schedule this report (auto-submit at chosen time)</span>
+      </label>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveReport(${isEditRpt})">
+      ${isEditRpt ? '💾 Update Report' : '📤 Submit Report'}
+    </button>`;
+    // Pre-fill existing entries
+    if(exRpt?.entries?.length) { exRpt.entries.forEach(e=>addReportEntry(e)); } else { addReportEntry(); }
+    if(exRpt?.customEntries?.length) { exRpt.customEntries.forEach(e=>addCustomReportEntry(e)); }
   } else if(type==="marketing"||type==="editmarketing"){
     const isEditM = type==="editmarketing";
     const exM = isEditM ? marketing.find(x=>x.id===window._editMktId) : null;
@@ -2187,15 +2248,32 @@ function openEditEnq(id){window._editEnqId=id;openModal("editEnquiry");}
 
 // REPORT ENTRY HELPER
 let entryCount=0;
-function addReportEntry(){
+function addReportEntry(prefill) {
   const el=document.getElementById("r-entries");if(!el)return;
   const i=entryCount++;
   const d=document.createElement("div");
   d.style="display:grid;grid-template-columns:2fr 1fr 2fr auto;gap:6px;margin-bottom:6px;align-items:center";
-  d.innerHTML=`<input placeholder="Client name" id="re-n-${i}" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#1e293b;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;outline:none"/>
-  <input type="number" placeholder="Pax" id="re-p-${i}" value="2" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#1e293b;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;outline:none"/>
-  <input placeholder="Destination" id="re-d-${i}" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#1e293b;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;outline:none"/>
+  d.innerHTML=`<input placeholder="Client name" id="re-n-${i}" value="${prefill?.clientName||''}" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#1e293b;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;outline:none"/>
+  <input type="number" placeholder="Pax" id="re-p-${i}" value="${prefill?.pax||2}" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#1e293b;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;outline:none"/>
+  <input placeholder="Destination" id="re-d-${i}" value="${prefill?.destination||''}" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;color:#1e293b;padding:6px 8px;font-size:11px;font-family:Inter,sans-serif;outline:none"/>
   <button class="btn btn-warn" style="padding:4px 8px" onclick="this.parentElement.remove()">✕</button>`;
+  el.appendChild(d);
+}
+
+let customEntryCount = 0;
+function addCustomReportEntry(prefill) {
+  const el = document.getElementById("r-custom-entries"); if(!el) return;
+  const i = customEntryCount++;
+  const d = document.createElement("div");
+  d.style = "margin-bottom:8px";
+  d.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr auto;gap:6px;margin-bottom:4px;align-items:center">
+      <input placeholder="Title (e.g. USA Visa – Tanjal Shah)" id="rce-t-${i}" value="${prefill?.title||''}"
+        style="width:100%;padding:7px 10px;border:1.5px solid #e9d5ff;border-radius:7px;font-size:12px;font-weight:600;box-sizing:border-box"/>
+      <button onclick="this.closest('div').parentElement.remove()" style="padding:4px 8px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;cursor:pointer;font-size:12px">✕</button>
+    </div>
+    <textarea id="rce-d-${i}" placeholder="Description / Status / Notes..." rows="2"
+      style="width:100%;padding:7px 10px;border:1.5px solid #e9d5ff;border-radius:7px;font-size:12px;box-sizing:border-box;resize:vertical">${prefill?.description||''}</textarea>`;
   el.appendChild(d);
 }
 
@@ -2891,26 +2969,139 @@ async function toggleTask(id) {
   } catch(e) { t.done=!t.done; alert("Update failed: "+e.message); }
 }
 
-async function saveReport() {
-  const entries=[];
-  document.querySelectorAll("#r-entries > div").forEach(row=>{
-    const n=row.querySelector("input:nth-child(1)"),p=row.querySelector("input:nth-child(2)"),d=row.querySelector("input:nth-child(3)");
-    if(n&&n.value.trim()) entries.push({clientName:n.value,pax:parseInt(p?.value)||1,destination:d?.value||""});
+async function saveReport(isEdit) {
+  const entries = [];
+  document.querySelectorAll("#r-entries > div").forEach(row => {
+    const inputs = row.querySelectorAll("input");
+    const n = inputs[0], p = inputs[1], d = inputs[2];
+    if(n && n.value.trim()) entries.push({clientName:n.value.trim(), pax:parseInt(p?.value)||1, destination:d?.value||""});
   });
+
+  // Collect custom entries
+  const customEntries = [];
+  document.querySelectorAll("#r-custom-entries > div").forEach((row, i) => {
+    const title = row.querySelector(`[id^="rce-t-"]`)?.value?.trim();
+    const desc  = row.querySelector(`[id^="rce-d-"]`)?.value?.trim();
+    if(title || desc) customEntries.push({ title: title||"", description: desc||"" });
+  });
+
+  const scheduleOn   = document.getElementById("r-schedule-on")?.checked;
+  const scheduleDate = document.getElementById("r-sched-date")?.value;
+  const scheduleTime = document.getElementById("r-sched-time")?.value;
+
   const data = {
-    staffId:parseInt(document.getElementById("r-staff").value),
-    date:document.getElementById("r-date").value,
-    salesCalls:parseInt(document.getElementById("r-calls").value)||0,
-    enquiriesNew:parseInt(document.getElementById("r-enqn").value)||0,
-    enquiriesOld:parseInt(document.getElementById("r-enqo").value)||0,
-    bookingsConfirmed:parseInt(document.getElementById("r-book").value)||0,
-    visaApps:parseInt(document.getElementById("r-visa").value)||0,
-    entries, otherWork:document.getElementById("r-other").value,
+    staffId:           parseInt(document.getElementById("r-staff").value),
+    date:              document.getElementById("r-date").value,
+    salesCalls:        parseInt(document.getElementById("r-calls").value)||0,
+    enquiriesNew:      parseInt(document.getElementById("r-enqn").value)||0,
+    enquiriesOld:      parseInt(document.getElementById("r-enqo").value)||0,
+    bookingsConfirmed: parseInt(document.getElementById("r-book").value)||0,
+    visaApps:          parseInt(document.getElementById("r-visa").value)||0,
+    entries,
+    customEntries,
+    otherWork: document.getElementById("r-other")?.value||"",
   };
+
+  // Scheduled report
+  if(scheduleOn && scheduleDate && scheduleTime) {
+    const schedDT = new Date(`${scheduleDate}T${scheduleTime}`);
+    const msUntil = schedDT.getTime() - Date.now();
+    if(msUntil > 0) {
+      closeOverlay();
+      alert(`✅ Report scheduled for ${scheduleDate} at ${scheduleTime}. It will auto-submit at that time.`);
+      setTimeout(async () => {
+        try {
+          await fbAdd("reports", {...data, date: scheduleDate});
+          showToastNotif && showToastNotif('default', `Scheduled report auto-submitted for ${scheduleDate}`);
+        } catch(e) { console.error("Scheduled report failed:", e); }
+      }, msUntil);
+      return;
+    }
+  }
+
   try {
-    await fbAdd("reports",data);
+    if(isEdit && window._editReportId) {
+      await fbUpdate("reports", window._editReportId, data);
+      const idx = reports.findIndex(r => r.id === window._editReportId);
+      if(idx > -1) reports[idx] = { ...reports[idx], ...data };
+      window._editReportId = null;
+    } else {
+      await fbAdd("reports", data);
+    }
     closeOverlay();
-  } catch(e) { alert("Save failed: "+e.message); }
+    renderReports();
+  } catch(e) { alert("Save failed: " + e.message); }
+}
+
+function editReport(id) {
+  window._editReportId = id;
+  openModal("report");
+}
+
+async function deleteReport(id) {
+  if(!confirm("Are you sure you want to delete this report? This cannot be undone.")) return;
+  try {
+    await trashMove("reports", id, reports.find(r=>r.id===id)||{}, "Daily Reports", `Report by ${STAFF.find(s=>s.id===(reports.find(r=>r.id===id)?.staffId))?.name||'Staff'} on ${reports.find(r=>r.id===id)?.date||''}`);
+    reports = reports.filter(r => r.id !== id);
+    renderReports();
+    updateTrashBadge();
+  } catch(e) { alert("Delete failed: " + e.message); }
+}
+
+function buildReportText(id) {
+  const r = reports.find(x => x.id === id); if(!r) return "";
+  const s = STAFF.find(x => x.id === r.staffId);
+  const staffName = s ? s.name : "Staff";
+  const lines = [];
+  lines.push("📊 *Daily Report — Fenix Tours & Travels*");
+  lines.push(`📅 Date: ${r.date}`);
+  lines.push(`👤 Staff: ${staffName}`);
+  lines.push("─────────────────────");
+  if(r.salesCalls)        lines.push(`📞 Sales Calls: ${r.salesCalls}`);
+  if(r.enquiriesNew)      lines.push(`🆕 New Enquiries: ${r.enquiriesNew}`);
+  if(r.enquiriesOld)      lines.push(`🔄 Follow-up Enquiries: ${r.enquiriesOld}`);
+  if(r.bookingsConfirmed) lines.push(`✅ Bookings Confirmed: ${r.bookingsConfirmed}`);
+  if(r.visaApps)          lines.push(`🛂 Visa Applications: ${r.visaApps}`);
+  if(r.entries?.length) {
+    lines.push("─────────────────────");
+    lines.push("📋 *Client Updates:*");
+    r.entries.forEach((e,i) => lines.push(`${i+1}. ${e.clientName} – ${e.pax} pax → ${e.destination}`));
+  }
+  if(r.customEntries?.length) {
+    lines.push("─────────────────────");
+    lines.push("🧾 *Work Details:*");
+    r.customEntries.forEach((e,i) => {
+      lines.push(`${i+1}. *${e.title}*`);
+      if(e.description) lines.push(`   ${e.description}`);
+    });
+  }
+  if(r.otherWork) {
+    lines.push("─────────────────────");
+    lines.push(`📝 *Notes:* ${r.otherWork}`);
+  }
+  lines.push("─────────────────────");
+  lines.push("_Fenix Tours & Travels, Ahmedabad_");
+  return lines.join("
+");
+}
+
+function shareReportWhatsApp(id) {
+  const text = buildReportText(id);
+  const encoded = encodeURIComponent(text);
+  window.open(`https://wa.me/?text=${encoded}`, "_blank");
+}
+
+function copyReportText(id) {
+  const text = buildReportText(id);
+  navigator.clipboard.writeText(text).then(() => {
+    showToastNotif && showToastNotif("default", "Report copied to clipboard! Paste in WhatsApp.");
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand("copy"); document.body.removeChild(ta);
+    alert("✅ Report copied! Paste it in WhatsApp.");
+  });
 }
 
 async function saveMarketing(isEdit) {
