@@ -37,13 +37,13 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0}
 .agent-name{font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .agent-role{font-size:10px;color:#94a3b8}
-.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:clip}
+.main{flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden}
 .topbar{padding:13px 24px;border-bottom:1px solid #e2e8f0;background:rgba(255,255,255,0.97);backdrop-filter:blur(10px);display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
 .page-title{font-size:20px;font-weight:800;font-family:"Playfair Display",serif;color:#0f172a}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .topbar-date{font-size:11px;color:#94a3b8}
-.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 24px;min-height:0}
-.tab{display:none}.tab.active{display:block;height:auto;overflow:visible}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.tab{display:none}.tab.active{display:block}
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px}
 .kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;transition:.2s;cursor:default;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
@@ -277,29 +277,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
   to   { transform: translateX(0);    opacity:1; }
 }
 
-/* Destination Map scroll fix */
-#tab-destinations { overflow-y: visible !important; }
-
-#dest-map { touch-action: pan-x pan-y; }
-.leaflet-container { touch-action: pan-x pan-y !important; }
-.country-tooltip { font-size: 12px; font-weight: 600; background: rgba(15,23,42,0.85); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; }
-
-/* Destination tab — ensure grid doesn't fight scroll container */
-#tab-destinations { display: block; }
-#dest-main-grid {
-  display: grid;
-  grid-template-columns: 1fr 380px;
-  gap: 16px;
-  align-items: start;
-  height: auto !important;
-  overflow: visible !important;
-}
-#dest-map-wrap {
-  height: 460px;
-  flex-shrink: 0;
-  position: relative;
-}
-#dest-cards-grid { margin-top: 0; }
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -825,18 +802,18 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
 
       <!-- Main Layout: Map + Info Panel -->
-      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;" id="dest-main-grid">
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:500px" id="dest-main-grid">
 
         <!-- LEFT: Map -->
-        <div style="background:#e8f4fd;border-radius:16px;position:relative;height:460px;border:1.5px solid #bae6fd;flex-shrink:0">
-          <div id="dest-map" style="width:100%;height:460px;border-radius:16px;"></div>
+        <div style="background:#e8f4fd;border-radius:16px;overflow:hidden;position:relative;min-height:460px;border:1.5px solid #bae6fd">
+          <div id="dest-map" style="width:100%;height:100%;min-height:460px"></div>
           <div id="dest-map-hint" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.75);color:#fff;padding:6px 14px;border-radius:99px;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap">
             🖱️ Click any country to explore
           </div>
         </div>
 
         <!-- RIGHT: Info Panel -->
-        <div id="dest-info-panel" style="background:#f8fafc;border-radius:16px;border:1.5px solid #e2e8f0;padding:20px;height:460px;overflow-y:auto">
+        <div id="dest-info-panel" style="background:#f8fafc;border-radius:16px;border:1.5px solid #e2e8f0;padding:20px;overflow-y:auto;max-height:500px">
           <div id="dest-info-content">
             <div style="text-align:center;padding:40px 20px;color:#94a3b8">
               <div style="font-size:48px;margin-bottom:12px">🌍</div>
@@ -4694,12 +4671,7 @@ function initDestinations() {
       scrollWheelZoom: false,
       dragging: true,
       tap: false,
-      touchZoom: false,
     }).setView([20, 0], 2);
-    // Prevent map from capturing page scroll
-    destMap.getContainer().addEventListener('touchmove', function(e) {
-      e.stopPropagation();
-    }, { passive: true });
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CartoDB', subdomains: 'abcd', maxZoom: 19
     }).addTo(destMap);
