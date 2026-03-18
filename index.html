@@ -276,6 +276,13 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
   from { transform: translateX(120%); opacity:0; }
   to   { transform: translateX(0);    opacity:1; }
 }
+
+/* Destination Map scroll fix */
+#tab-destinations { overflow-y: visible !important; }
+#dest-main-grid { overflow: visible !important; }
+#dest-map { touch-action: pan-x pan-y; }
+.leaflet-container { touch-action: pan-x pan-y !important; }
+.country-tooltip { font-size: 12px; font-weight: 600; background: rgba(15,23,42,0.85); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; }
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -801,18 +808,18 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
 
       <!-- Main Layout: Map + Info Panel -->
-      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:500px" id="dest-main-grid">
+      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;" id="dest-main-grid">
 
         <!-- LEFT: Map -->
-        <div style="background:#e8f4fd;border-radius:16px;overflow:hidden;position:relative;min-height:460px;border:1.5px solid #bae6fd">
-          <div id="dest-map" style="width:100%;height:100%;min-height:460px"></div>
+        <div style="background:#e8f4fd;border-radius:16px;position:relative;height:460px;border:1.5px solid #bae6fd;flex-shrink:0">
+          <div id="dest-map" style="width:100%;height:460px;border-radius:16px;"></div>
           <div id="dest-map-hint" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.75);color:#fff;padding:6px 14px;border-radius:99px;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap">
             🖱️ Click any country to explore
           </div>
         </div>
 
         <!-- RIGHT: Info Panel -->
-        <div id="dest-info-panel" style="background:#f8fafc;border-radius:16px;border:1.5px solid #e2e8f0;padding:20px;overflow-y:auto;max-height:500px">
+        <div id="dest-info-panel" style="background:#f8fafc;border-radius:16px;border:1.5px solid #e2e8f0;padding:20px;height:460px;overflow-y:auto">
           <div id="dest-info-content">
             <div style="text-align:center;padding:40px 20px;color:#94a3b8">
               <div style="font-size:48px;margin-bottom:12px">🌍</div>
@@ -4665,7 +4672,12 @@ function initDestinations() {
   if(ownerBtns) ownerBtns.style.display = isStaff ? '' : 'none'; // All staff can add
 
   if(!destMap) {
-    destMap = L.map('dest-map', { zoomControl: true, scrollWheelZoom: false }).setView([20, 0], 2);
+    destMap = L.map('dest-map', {
+      zoomControl: true,
+      scrollWheelZoom: false,
+      dragging: true,
+      tap: false,
+    }).setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CartoDB', subdomains: 'abcd', maxZoom: 19
     }).addTo(destMap);
