@@ -4539,233 +4539,202 @@ function buildGuessAlreadyDone(dest, pts) {
 
 
 // ═══════════════════════════════════════════════
-//  DESTINATION KNOWLEDGE MAP
+//  DESTINATION KNOWLEDGE MAP — UPGRADED
 // ═══════════════════════════════════════════════
 let destMap = null;
-let destMapLayer = null;
-let destData = [];       // loaded from Firestore
-let destSelected = null; // currently selected country name
+let destGeoLayer = null;
+let destData = [];
+let destSelected = null;
 
-// Pre-loaded destination data (seed data — owners can add/edit/delete)
+// ── 190+ Country Database ──────────────────────
 const DEST_SEED = [
-  {
-    country: "France", flag: "🇫🇷", continent: "Europe",
-    visa: "Schengen Visa required for Indians. Apply at VFS/BLS. Processing 15–20 days.",
-    season: "April – June & September – November",
-    cities: ["Paris", "Nice", "Lyon", "Bordeaux", "Strasbourg"],
-    attractions: ["Eiffel Tower", "Louvre Museum", "Palace of Versailles", "Mont Saint-Michel", "French Riviera"],
-    price: "₹80,000 – ₹1,50,000 per person",
-    tip: "Book Eiffel Tower tickets online in advance — queues can be 2–3 hours long.",
-    visaTime: "15–20 working days"
-  },
-  {
-    country: "Turkey", flag: "🇹🇷", continent: "Asia/Europe",
-    visa: "eVisa for Indians — apply online at evisa.gov.tr. Simple and fast.",
-    season: "April – June & September – October",
-    cities: ["Istanbul", "Cappadocia", "Antalya", "Bodrum", "Ephesus"],
-    attractions: ["Hagia Sophia", "Blue Mosque", "Cappadocia Hot Air Balloons", "Pamukkale", "Grand Bazaar"],
-    price: "₹65,000 – ₹1,10,000 per person",
-    tip: "Book hot air balloon rides in Cappadocia well in advance, especially for sunrise slots.",
-    visaTime: "24–48 hours"
-  },
-  {
-    country: "Japan", flag: "🇯🇵", continent: "Asia",
-    visa: "Tourist Visa required. Apply at Japanese consulate. Interview may be needed.",
-    season: "March – May (Cherry Blossom) & October – November (Autumn)",
-    cities: ["Tokyo", "Kyoto", "Osaka", "Hiroshima", "Nara"],
-    attractions: ["Mount Fuji", "Senso-ji Temple", "Arashiyama Bamboo Grove", "Dotonbori", "Hiroshima Peace Memorial"],
-    price: "₹1,20,000 – ₹2,00,000 per person",
-    tip: "Get an IC card (Suica/Pasmo) at the airport for seamless travel on all public transport.",
-    visaTime: "5–7 working days"
-  },
-  {
-    country: "Maldives", flag: "🇲🇻", continent: "Asia",
-    visa: "Visa on arrival for all nationalities including Indians. Free 30-day stay.",
-    season: "November – April (dry season)",
-    cities: ["Malé", "Maafushi", "Addu Atoll", "Baa Atoll", "Raa Atoll"],
-    attractions: ["Overwater Bungalows", "Coral Reef Snorkeling", "Whale Shark Diving", "Sunset Dolphin Cruise", "Sandbank Picnics"],
-    price: "₹80,000 – ₹3,00,000+ per couple",
-    tip: "Choose a guesthouse island like Maafushi for budget trips or a resort island for luxury.",
-    visaTime: "On arrival — free"
-  },
-  {
-    country: "Singapore", flag: "🇸🇬", continent: "Asia",
-    visa: "Visa required for Indian passport holders. Apply at VFS.",
-    season: "February – April & July – September",
-    cities: ["Singapore City"],
-    attractions: ["Gardens by the Bay", "Marina Bay Sands", "Sentosa Island", "Universal Studios", "Chinatown & Little India"],
-    price: "₹60,000 – ₹1,00,000 per person",
-    tip: "Get the Singapore Tourist Pass for unlimited MRT rides. It saves a lot on transport.",
-    visaTime: "3–5 working days"
-  },
-  {
-    country: "Thailand", flag: "🇹🇭", continent: "Asia",
-    visa: "Visa on arrival (30 days) OR e-Visa available. Very easy for Indians.",
-    season: "November – February (cool season)",
-    cities: ["Bangkok", "Phuket", "Chiang Mai", "Pattaya", "Koh Samui"],
-    attractions: ["Grand Palace", "Wat Phra Kaew", "Phi Phi Islands", "Elephant Sanctuary Chiang Mai", "Floating Markets"],
-    price: "₹35,000 – ₹75,000 per person",
-    tip: "Carry Thai Baht in cash — many small shops and street food stalls don't accept cards.",
-    visaTime: "On arrival or 3–5 days for e-Visa"
-  },
-  {
-    country: "United Arab Emirates", flag: "🇦🇪", continent: "Asia",
-    visa: "Visa on arrival for Indian passport holders (30 days free).",
-    season: "October – April (cool season)",
-    cities: ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"],
-    attractions: ["Burj Khalifa", "Dubai Mall", "Palm Jumeirah", "Sheikh Zayed Grand Mosque", "Desert Safari"],
-    price: "₹55,000 – ₹1,20,000 per person",
-    tip: "Book Dubai Frame and Burj Khalifa tickets in advance to get the best time slots and prices.",
-    visaTime: "On arrival — free for Indians"
-  },
-  {
-    country: "Switzerland", flag: "🇨🇭", continent: "Europe",
-    visa: "Schengen Visa required. Apply through Swiss consulate or VFS.",
-    season: "June – September (summer) & December – February (snow)",
-    cities: ["Zurich", "Geneva", "Interlaken", "Lucerne", "Zermatt"],
-    attractions: ["Jungfraujoch", "Matterhorn", "Lake Geneva", "Rhine Falls", "Château de Chillon"],
-    price: "₹1,20,000 – ₹2,20,000 per person",
-    tip: "Buy the Swiss Travel Pass for unlimited trains, buses and boats — it's the best value for exploring.",
-    visaTime: "15–20 working days"
-  },
-  {
-    country: "Italy", flag: "🇮🇹", continent: "Europe",
-    visa: "Schengen Visa required. Apply at Italian consulate or VFS.",
-    season: "April – June & September – October",
-    cities: ["Rome", "Venice", "Florence", "Milan", "Amalfi Coast"],
-    attractions: ["Colosseum", "Vatican Museums", "Grand Canal Venice", "Uffizi Gallery", "Amalfi Drive"],
-    price: "₹90,000 – ₹1,60,000 per person",
-    tip: "Book Vatican Museums tickets online — the lines without reservations can be 3+ hours long.",
-    visaTime: "15–20 working days"
-  },
-  {
-    country: "Indonesia", flag: "🇮🇩", continent: "Asia",
-    visa: "Visa on arrival (30 days) for Indians. Available at major airports.",
-    season: "April – October (dry season in Bali)",
-    cities: ["Bali", "Jakarta", "Lombok", "Yogyakarta", "Komodo"],
-    attractions: ["Tanah Lot Temple", "Ubud Rice Terraces", "Komodo Dragon Island", "Mount Bromo", "Nusa Penida"],
-    price: "₹40,000 – ₹85,000 per person",
-    tip: "Hire a private driver in Bali for the day (~₹2,500) — much easier than taxis for sightseeing.",
-    visaTime: "On arrival"
-  },
-  {
-    country: "Australia", flag: "🇦🇺", continent: "Oceania",
-    visa: "Tourist visa (subclass 600) required. Apply online on Australian immigration portal.",
-    season: "September – November (spring) & March – May (autumn)",
-    cities: ["Sydney", "Melbourne", "Brisbane", "Perth", "Cairns"],
-    attractions: ["Sydney Opera House", "Great Barrier Reef", "Uluru", "Great Ocean Road", "Bondi Beach"],
-    price: "₹1,50,000 – ₹2,50,000 per person",
-    tip: "Book Great Barrier Reef diving tours from Cairns — it is one of the world's top diving spots.",
-    visaTime: "7–21 working days"
-  },
-  {
-    country: "Greece", flag: "🇬🇷", continent: "Europe",
-    visa: "Schengen Visa required. Apply at Greek consulate or VFS.",
-    season: "May – October",
-    cities: ["Athens", "Santorini", "Mykonos", "Crete", "Rhodes"],
-    attractions: ["Acropolis Athens", "Santorini Caldera", "Meteora Monasteries", "Delphi", "Palace of Knossos"],
-    price: "₹85,000 – ₹1,50,000 per person",
-    tip: "Santorini sunsets are best viewed from Oia village — arrive 2 hours early to get a good spot.",
-    visaTime: "15–20 working days"
-  },
-  {
-    country: "Nepal", flag: "🇳🇵", continent: "Asia",
-    visa: "No visa required for Indian passport holders. Free entry.",
-    season: "October – December & March – May (trekking season)",
-    cities: ["Kathmandu", "Pokhara", "Chitwan", "Lumbini", "Nagarkot"],
-    attractions: ["Pashupatinath Temple", "Boudhanath Stupa", "Everest Base Camp Trek", "Annapurna Circuit", "Phewa Lake"],
-    price: "₹20,000 – ₹50,000 per person",
-    tip: "Acclimatize properly before high-altitude treks. Altitude sickness is common above 3,500m.",
-    visaTime: "No visa required for Indians"
-  },
-  {
-    country: "Sri Lanka", flag: "🇱🇰", continent: "Asia",
-    visa: "ETA (Electronic Travel Authorization) required. Apply online easily.",
-    season: "December – March (west coast) & May – September (east coast)",
-    cities: ["Colombo", "Kandy", "Galle", "Sigiriya", "Nuwara Eliya"],
-    attractions: ["Sigiriya Rock Fortress", "Temple of the Tooth Relic", "Yala National Park", "Adam's Peak", "Mirissa Beach"],
-    price: "₹25,000 – ₹60,000 per person",
-    tip: "Train journey from Kandy to Ella through tea plantations is one of the world's most scenic rail rides.",
-    visaTime: "24–48 hours online"
-  },
-  {
-    country: "Egypt", flag: "🇪🇬", continent: "Africa",
-    visa: "Visa on arrival OR eVisa available. Easy for Indian passport holders.",
-    season: "October – April",
-    cities: ["Cairo", "Luxor", "Aswan", "Hurghada", "Alexandria"],
-    attractions: ["Pyramids of Giza", "Sphinx", "Valley of the Kings", "Karnak Temple", "Abu Simbel"],
-    price: "₹55,000 – ₹1,00,000 per person",
-    tip: "Hire a licensed guide at Giza — they know hidden passages and the best photography spots.",
-    visaTime: "On arrival or 3–5 days online"
-  },
-  {
-    country: "Morocco", flag: "🇲🇦", continent: "Africa",
-    visa: "Visa free for Indian passport holders — 90-day stay.",
-    season: "March – May & September – November",
-    cities: ["Marrakech", "Fez", "Casablanca", "Chefchaouen", "Merzouga"],
-    attractions: ["Jemaa el-Fnaa Square", "Sahara Desert Safari", "Blue City Chefchaouen", "Hassan II Mosque", "Majorelle Garden"],
-    price: "₹60,000 – ₹1,10,000 per person",
-    tip: "Bargaining is expected in Moroccan souks — start at 30% of the asking price.",
-    visaTime: "No visa required"
-  },
-  {
-    country: "South Africa", flag: "🇿🇦", continent: "Africa",
-    visa: "Visa required. Apply at South African embassy/consulate.",
-    season: "May – September (dry season — best for safaris)",
-    cities: ["Cape Town", "Johannesburg", "Durban", "Kruger Area", "Knysna"],
-    attractions: ["Table Mountain", "Kruger National Park Safari", "Cape of Good Hope", "Boulders Beach Penguins", "Garden Route"],
-    price: "₹1,10,000 – ₹2,00,000 per person",
-    tip: "Book Kruger National Park safari lodges 6–12 months in advance for peak season.",
-    visaTime: "10–15 working days"
-  },
-  {
-    country: "United States", flag: "🇺🇸", continent: "America",
-    visa: "B1/B2 Tourist Visa required. Interview at US Embassy mandatory.",
-    season: "March – May & September – November (varies by region)",
-    cities: ["New York", "Los Angeles", "Las Vegas", "San Francisco", "Miami"],
-    attractions: ["Statue of Liberty", "Grand Canyon", "Times Square", "Hollywood", "Niagara Falls"],
-    price: "₹1,50,000 – ₹3,00,000 per person",
-    tip: "Apply for US visa at least 3–6 months in advance due to long interview appointment wait times.",
-    visaTime: "Interview + 2–10 weeks processing"
-  },
-  {
-    country: "Canada", flag: "🇨🇦", continent: "America",
-    visa: "Visitor Visa (TRV) required. Apply online through IRCC.",
-    season: "June – August (summer) & December – February (winter/skiing)",
-    cities: ["Toronto", "Vancouver", "Montreal", "Banff", "Quebec City"],
-    attractions: ["Niagara Falls", "Banff National Park", "CN Tower", "Old Quebec", "Whistler Ski Resort"],
-    price: "₹1,40,000 – ₹2,50,000 per person",
-    tip: "Apply for Canadian visa with strong financial documents and a clear itinerary — refusals are common without them.",
-    visaTime: "4–8 weeks"
-  },
-  {
-    country: "Malaysia", flag: "🇲🇾", continent: "Asia",
-    visa: "Visa on arrival for 30 days for Indians. Simple and free.",
-    season: "March – October (west coast) & November – February (east coast)",
-    cities: ["Kuala Lumpur", "Penang", "Langkawi", "Malacca", "Kota Kinabalu"],
-    attractions: ["Petronas Twin Towers", "Batu Caves", "Langkawi Sky Bridge", "George Town Penang", "Mount Kinabalu"],
-    price: "₹35,000 – ₹70,000 per person",
-    tip: "KL has excellent food — street food in Jalan Alor and Petaling Street Chinatown is outstanding.",
-    visaTime: "On arrival — free for Indians"
-  },
+  { country:"Afghanistan", flag:"🇦🇫", continent:"Asia", visa:"Visa required for Indians.", visaDiff:"Hard", season:"Mar–May, Sep–Nov", cities:["Kabul","Kandahar"], attractions:["Band-e-Amir","Bamyan"], price:"₹60,000–₹90,000", tip:"Travel advisories apply — check before visiting.", packages:{budget:"₹60,000",standard:"₹80,000",luxury:"₹1,10,000"} },
+  { country:"Albania", flag:"🇦🇱", continent:"Europe", visa:"Visa required for Indians. Apply at embassy.", visaDiff:"Medium", season:"May–Sep", cities:["Tirana","Berat","Gjirokastër"], attractions:["Albanian Riviera","Butrint","Berat Castle"], price:"₹70,000–₹1,20,000", tip:"Very affordable European destination, underrated gem.", packages:{budget:"₹70,000",standard:"₹95,000",luxury:"₹1,40,000"} },
+  { country:"Algeria", flag:"🇩🇿", continent:"Africa", visa:"Visa required for Indians.", visaDiff:"Hard", season:"Oct–Apr", cities:["Algiers","Oran"], attractions:["Sahara Desert","Timgad Ruins"], price:"₹65,000–₹1,00,000", tip:"Visa is strict — apply well in advance.", packages:{budget:"₹65,000",standard:"₹85,000",luxury:"₹1,15,000"} },
+  { country:"Argentina", flag:"🇦🇷", continent:"South America", visa:"Visa on arrival for Indians (90 days).", visaDiff:"Easy", season:"Nov–Mar (summer)", cities:["Buenos Aires","Mendoza","Bariloche"], attractions:["Iguazu Falls","Patagonia","Perito Moreno Glacier"], price:"₹1,20,000–₹2,00,000", tip:"Buenos Aires steakhouses are world-class — must try.", packages:{budget:"₹1,20,000",standard:"₹1,60,000",luxury:"₹2,20,000"} },
+  { country:"Armenia", flag:"🇦🇲", continent:"Asia", visa:"Visa on arrival for Indians (180 days).", visaDiff:"Easy", season:"May–Oct", cities:["Yerevan","Gyumri"], attractions:["Geghard Monastery","Lake Sevan","Garni Temple"], price:"₹55,000–₹90,000", tip:"One of the oldest Christian countries — rich history.", packages:{budget:"₹55,000",standard:"₹72,000",luxury:"₹1,05,000"} },
+  { country:"Australia", flag:"🇦🇺", continent:"Oceania", visa:"Tourist visa (subclass 600) required.", visaDiff:"Medium", visaTime:"7–21 working days", season:"Sep–Nov & Mar–May", cities:["Sydney","Melbourne","Brisbane","Perth","Cairns"], attractions:["Sydney Opera House","Great Barrier Reef","Uluru","Great Ocean Road","Bondi Beach"], price:"₹1,50,000–₹2,50,000", tip:"Book Great Barrier Reef diving tours from Cairns.", packages:{budget:"₹1,50,000",standard:"₹1,90,000",luxury:"₹2,60,000"}, bestSelling:true },
+  { country:"Austria", flag:"🇦🇹", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", visaTime:"15–20 days", season:"Jun–Sep & Dec–Jan", cities:["Vienna","Salzburg","Innsbruck"], attractions:["Schönbrunn Palace","Hallstatt","Vienna Opera House"], price:"₹1,00,000–₹1,80,000", tip:"Vienna's coffee house culture is UNESCO-listed.", packages:{budget:"₹1,00,000",standard:"₹1,35,000",luxury:"₹1,90,000"} },
+  { country:"Azerbaijan", flag:"🇦🇿", continent:"Asia", visa:"eVisa available online.", visaDiff:"Easy", visaTime:"3 days", season:"Apr–Jun & Sep–Nov", cities:["Baku","Sheki","Ganja"], attractions:["Old City Baku","Flame Towers","Gobustan"], price:"₹45,000–₹80,000", tip:"Baku is surprisingly modern — great for short trips.", packages:{budget:"₹45,000",standard:"₹62,000",luxury:"₹90,000"} },
+  { country:"Bahrain", flag:"🇧🇭", continent:"Asia", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Nov–Mar", cities:["Manama","Muharraq"], attractions:["Bahrain Fort","Al-Fateh Mosque","Tree of Life"], price:"₹40,000–₹70,000", tip:"Good stopover destination for Gulf travel.", packages:{budget:"₹40,000",standard:"₹55,000",luxury:"₹80,000"} },
+  { country:"Bangladesh", flag:"🇧🇩", continent:"Asia", visa:"Visa required for Indians.", visaDiff:"Medium", season:"Nov–Mar", cities:["Dhaka","Chittagong","Cox's Bazar"], attractions:["Sundarbans","Cox's Bazar Beach","Lalbagh Fort"], price:"₹15,000–₹35,000", tip:"Longest natural sea beach in world at Cox's Bazar.", packages:{budget:"₹15,000",standard:"₹25,000",luxury:"₹40,000"} },
+  { country:"Belgium", flag:"🇧🇪", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Sep", cities:["Brussels","Bruges","Ghent","Antwerp"], attractions:["Grand Place Brussels","Bruges Canals","Manneken Pis"], price:"₹80,000–₹1,50,000", tip:"Bruges is Europe's best-preserved medieval city.", packages:{budget:"₹80,000",standard:"₹1,10,000",luxury:"₹1,60,000"} },
+  { country:"Bhutan", flag:"🇧🇹", continent:"Asia", visa:"No visa required for Indians.", visaDiff:"Easy", season:"Mar–May & Sep–Nov", cities:["Thimphu","Paro","Punakha"], attractions:["Tiger's Nest Monastery","Punakha Dzong","Dochula Pass"], price:"₹20,000–₹50,000", tip:"Daily tourist fee of BTN 1,200 applies. Best for culture seekers.", packages:{budget:"₹20,000",standard:"₹35,000",luxury:"₹55,000"} },
+  { country:"Brazil", flag:"🇧🇷", continent:"South America", visa:"Visa on arrival for Indians (90 days).", visaDiff:"Easy", season:"Apr–Sep (dry)", cities:["Rio de Janeiro","São Paulo","Iguazu","Salvador"], attractions:["Christ the Redeemer","Iguazu Falls","Amazon River","Carnival"], price:"₹1,10,000–₹2,00,000", tip:"Rio Carnival (Feb) is spectacular but book 6+ months early.", packages:{budget:"₹1,10,000",standard:"₹1,50,000",luxury:"₹2,10,000"} },
+  { country:"Cambodia", flag:"🇰🇭", continent:"Asia", visa:"eVisa available online.", visaDiff:"Easy", visaTime:"3 days", season:"Nov–Apr", cities:["Siem Reap","Phnom Penh","Sihanoukville"], attractions:["Angkor Wat","Bayon Temple","Killing Fields Museum"], price:"₹40,000–₹80,000", tip:"Sunrise at Angkor Wat is unmissable — get there by 5 AM.", packages:{budget:"₹40,000",standard:"₹60,000",luxury:"₹90,000"} },
+  { country:"Canada", flag:"🇨🇦", continent:"North America", visa:"Visitor Visa (TRV) required.", visaDiff:"Hard", visaTime:"4–8 weeks", season:"Jun–Aug & Dec–Feb", cities:["Toronto","Vancouver","Montreal","Banff","Quebec City"], attractions:["Niagara Falls","Banff National Park","CN Tower","Old Quebec"], price:"₹1,40,000–₹2,50,000", tip:"Apply for Canadian visa with strong financial documents.", packages:{budget:"₹1,40,000",standard:"₹1,85,000",luxury:"₹2,60,000"} },
+  { country:"Chile", flag:"🇨🇱", continent:"South America", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Nov–Mar", cities:["Santiago","Valparaíso","Atacama","Torres del Paine"], attractions:["Atacama Desert","Torres del Paine","Easter Island"], price:"₹1,20,000–₹2,00,000", tip:"Atacama is the driest desert on Earth — surreal landscapes.", packages:{budget:"₹1,20,000",standard:"₹1,60,000",luxury:"₹2,20,000"} },
+  { country:"China", flag:"🇨🇳", continent:"Asia", visa:"Visa required. Apply at Chinese Embassy.", visaDiff:"Hard", visaTime:"7–10 days", season:"Apr–May & Sep–Oct", cities:["Beijing","Shanghai","Xi'an","Guilin","Chengdu"], attractions:["Great Wall","Forbidden City","Terracotta Army","Li River"], price:"₹80,000–₹1,50,000", tip:"Download WeChat and Alipay before going — cash is rarely used.", packages:{budget:"₹80,000",standard:"₹1,15,000",luxury:"₹1,70,000"} },
+  { country:"Colombia", flag:"🇨🇴", continent:"South America", visa:"Visa on arrival for Indians (90 days).", visaDiff:"Easy", season:"Dec–Mar & Jul–Aug", cities:["Bogotá","Medellín","Cartagena","Coffee Region"], attractions:["Cartagena Old City","Coffee Region","Tayrona National Park"], price:"₹90,000–₹1,50,000", tip:"Medellín transformed into one of the world's most innovative cities.", packages:{budget:"₹90,000",standard:"₹1,20,000",luxury:"₹1,65,000"} },
+  { country:"Croatia", flag:"🇭🇷", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Dubrovnik","Split","Zagreb","Hvar"], attractions:["Dubrovnik Old City","Plitvice Lakes","Diocletian's Palace"], price:"₹90,000–₹1,60,000", tip:"Dubrovnik is the most beautiful walled city in Europe.", packages:{budget:"₹90,000",standard:"₹1,20,000",luxury:"₹1,75,000"} },
+  { country:"Cuba", flag:"🇨🇺", continent:"Caribbean", visa:"Tourist Card required (different from standard visa).", visaDiff:"Medium", season:"Nov–Apr", cities:["Havana","Trinidad","Varadero"], attractions:["Old Havana","Vinales Valley","Trinidad Colonial Town"], price:"₹1,00,000–₹1,60,000", tip:"Carry USD cash — credit cards from many countries don't work.", packages:{budget:"₹1,00,000",standard:"₹1,30,000",luxury:"₹1,80,000"} },
+  { country:"Cyprus", flag:"🇨🇾", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Oct", cities:["Nicosia","Limassol","Paphos","Ayia Napa"], attractions:["Aphrodite's Rock","Kykkos Monastery","Paphos Archaeological Park"], price:"₹75,000–₹1,30,000", tip:"Cyprus has one of the world's oldest wine cultures.", packages:{budget:"₹75,000",standard:"₹1,00,000",luxury:"₹1,45,000"} },
+  { country:"Czech Republic", flag:"🇨🇿", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Prague","Brno","Ceský Krumlov"], attractions:["Prague Castle","Charles Bridge","Old Town Square","Bohemian Switzerland"], price:"₹75,000–₹1,30,000", tip:"Prague's old town at Christmas is magical — visit Nov–Dec.", packages:{budget:"₹75,000",standard:"₹1,00,000",luxury:"₹1,45,000"} },
+  { country:"Denmark", flag:"🇩🇰", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Jun–Aug", cities:["Copenhagen","Aarhus","Odense"], attractions:["Tivoli Gardens","Nyhavn","The Little Mermaid"], price:"₹1,00,000–₹1,80,000", tip:"Copenhagen is one of world's most bicycle-friendly cities.", packages:{budget:"₹1,00,000",standard:"₹1,35,000",luxury:"₹1,90,000"} },
+  { country:"Egypt", flag:"🇪🇬", continent:"Africa", visa:"Visa on arrival OR eVisa available.", visaDiff:"Easy", visaTime:"3–5 days online", season:"Oct–Apr", cities:["Cairo","Luxor","Aswan","Hurghada","Alexandria"], attractions:["Pyramids of Giza","Sphinx","Valley of the Kings","Karnak Temple"], price:"₹55,000–₹1,00,000", tip:"Hire a licensed guide at Giza for the best photography spots.", packages:{budget:"₹55,000",standard:"₹75,000",luxury:"₹1,10,000"}, bestSelling:true },
+  { country:"Estonia", flag:"🇪🇪", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Tallinn","Tartu","Pärnu"], attractions:["Tallinn Old Town","Lahemaa National Park"], price:"₹70,000–₹1,20,000", tip:"Tallinn is one of the best-preserved medieval cities in Europe.", packages:{budget:"₹70,000",standard:"₹95,000",luxury:"₹1,35,000"} },
+  { country:"Ethiopia", flag:"🇪🇹", continent:"Africa", visa:"eVisa available online.", visaDiff:"Easy", season:"Nov–Feb", cities:["Addis Ababa","Lalibela","Gondar"], attractions:["Rock-Hewn Churches Lalibela","Simien Mountains","Blue Nile Falls"], price:"₹50,000–₹90,000", tip:"Lalibela's rock churches are Africa's hidden wonder.", packages:{budget:"₹50,000",standard:"₹70,000",luxury:"₹1,00,000"} },
+  { country:"Finland", flag:"🇫🇮", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Jun–Aug (summer) & Dec–Feb (aurora)", cities:["Helsinki","Rovaniemi","Turku"], attractions:["Northern Lights","Santa Claus Village","Helsinki Cathedral"], price:"₹1,10,000–₹2,00,000", tip:"Visit Rovaniemi in December to see Northern Lights and Santa.", packages:{budget:"₹1,10,000",standard:"₹1,50,000",luxury:"₹2,10,000"} },
+  { country:"France", flag:"🇫🇷", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", visaTime:"15–20 days", season:"Apr–Jun & Sep–Nov", cities:["Paris","Nice","Lyon","Bordeaux","Strasbourg"], attractions:["Eiffel Tower","Louvre Museum","Palace of Versailles","Mont Saint-Michel"], price:"₹80,000–₹1,50,000", tip:"Book Eiffel Tower tickets online — queues can be 2–3 hours.", packages:{budget:"₹80,000",standard:"₹1,10,000",luxury:"₹1,65,000"}, bestSelling:true },
+  { country:"Georgia", flag:"🇬🇪", continent:"Asia", visa:"365-day visa-free for Indians.", visaDiff:"Easy", season:"May–Oct", cities:["Tbilisi","Batumi","Kazbegi","Kutaisi"], attractions:["Old Tbilisi","Kazbegi Mountains","Vardzia Cave Monastery"], price:"₹35,000–₹65,000", tip:"Best value European-style destination from India — must visit.", packages:{budget:"₹35,000",standard:"₹50,000",luxury:"₹75,000"}, bestSelling:true },
+  { country:"Germany", flag:"🇩🇪", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep & Dec (Christmas markets)", cities:["Berlin","Munich","Hamburg","Frankfurt","Cologne"], attractions:["Brandenburg Gate","Neuschwanstein Castle","Oktoberfest","Black Forest"], price:"₹90,000–₹1,60,000", tip:"Oktoberfest tickets sell out months in advance — plan early.", packages:{budget:"₹90,000",standard:"₹1,20,000",luxury:"₹1,75,000"} },
+  { country:"Ghana", flag:"🇬🇭", continent:"Africa", visa:"Visa required for Indians.", visaDiff:"Medium", season:"Nov–Mar", cities:["Accra","Kumasi","Cape Coast"], attractions:["Cape Coast Castle","Kakum National Park","Lake Volta"], price:"₹60,000–₹1,00,000", tip:"Ghana is one of West Africa's safest and most welcoming nations.", packages:{budget:"₹60,000",standard:"₹80,000",luxury:"₹1,10,000"} },
+  { country:"Greece", flag:"🇬🇷", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", visaTime:"15–20 days", season:"May–Oct", cities:["Athens","Santorini","Mykonos","Crete","Rhodes"], attractions:["Acropolis","Santorini Caldera","Meteora Monasteries"], price:"₹85,000–₹1,50,000", tip:"Santorini sunsets from Oia — arrive 2 hours early.", packages:{budget:"₹85,000",standard:"₹1,15,000",luxury:"₹1,70,000"}, bestSelling:true },
+  { country:"Hungary", flag:"🇭🇺", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Oct", cities:["Budapest","Debrecen","Pécs"], attractions:["Budapest Parliament","Buda Castle","Lake Balaton","Thermal Baths"], price:"₹70,000–₹1,20,000", tip:"Budapest is the most beautiful city on the Danube.", packages:{budget:"₹70,000",standard:"₹95,000",luxury:"₹1,35,000"} },
+  { country:"Iceland", flag:"🇮🇸", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Jun–Aug (midnight sun) & Dec–Feb (aurora)", cities:["Reykjavik","Akureyri"], attractions:["Northern Lights","Golden Circle","Blue Lagoon","Waterfalls"], price:"₹1,20,000–₹2,20,000", tip:"Rent a car and drive the Ring Road for the best experience.", packages:{budget:"₹1,20,000",standard:"₹1,65,000",luxury:"₹2,30,000"} },
+  { country:"India", flag:"🇮🇳", continent:"Asia", visa:"No visa needed for Indian nationals.", visaDiff:"Easy", season:"Oct–Mar", cities:["Delhi","Mumbai","Jaipur","Goa","Kerala","Varanasi"], attractions:["Taj Mahal","Rajasthan","Kerala Backwaters","Goa Beaches","Ladakh"], price:"₹15,000–₹60,000", tip:"India has something for every budget and season.", packages:{budget:"₹15,000",standard:"₹35,000",luxury:"₹75,000"} },
+  { country:"Indonesia", flag:"🇮🇩", continent:"Asia", visa:"Visa on arrival (30 days).", visaDiff:"Easy", season:"Apr–Oct (dry)", cities:["Bali","Jakarta","Lombok","Yogyakarta","Komodo"], attractions:["Tanah Lot","Ubud Rice Terraces","Komodo Island","Mount Bromo"], price:"₹40,000–₹85,000", tip:"Hire a private driver in Bali for the day — best value.", packages:{budget:"₹40,000",standard:"₹62,000",luxury:"₹95,000"}, bestSelling:true },
+  { country:"Iran", flag:"🇮🇷", continent:"Asia", visa:"Visa on arrival for Indians (30 days).", visaDiff:"Medium", season:"Mar–May & Sep–Nov", cities:["Tehran","Isfahan","Shiraz","Yazd"], attractions:["Nasir al-Mulk Mosque","Persepolis","Naqsh-e Jahan Square"], price:"₹40,000–₹70,000", tip:"One of the world's most underrated cultural destinations.", packages:{budget:"₹40,000",standard:"₹55,000",luxury:"₹80,000"} },
+  { country:"Iraq", flag:"🇮🇶", continent:"Asia", visa:"Visa required — limited tourist access.", visaDiff:"Hard", season:"Oct–Apr", cities:["Baghdad","Basra","Erbil"], attractions:["Ancient Babylon","Erbil Citadel"], price:"₹55,000–₹90,000", tip:"Check travel advisories before planning a visit.", packages:{budget:"₹55,000",standard:"₹75,000",luxury:"₹1,00,000"} },
+  { country:"Ireland", flag:"🇮🇪", continent:"Europe", visa:"Irish Short Stay Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Dublin","Cork","Galway","Killarney"], attractions:["Cliffs of Moher","Giant's Causeway","Ring of Kerry","Guinness Storehouse"], price:"₹85,000–₹1,50,000", tip:"Drive the Wild Atlantic Way for Ireland's best scenery.", packages:{budget:"₹85,000",standard:"₹1,15,000",luxury:"₹1,65,000"} },
+  { country:"Israel", flag:"🇮🇱", continent:"Asia", visa:"eVisa available. Free entry for Indian passport.", visaDiff:"Easy", season:"Mar–May & Sep–Nov", cities:["Tel Aviv","Jerusalem","Haifa","Eilat"], attractions:["Western Wall","Dead Sea","Sea of Galilee","Masada"], price:"₹80,000–₹1,40,000", tip:"Jerusalem is sacred to 3 religions — book accommodation early.", packages:{budget:"₹80,000",standard:"₹1,10,000",luxury:"₹1,55,000"} },
+  { country:"Italy", flag:"🇮🇹", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", visaTime:"15–20 days", season:"Apr–Jun & Sep–Oct", cities:["Rome","Venice","Florence","Milan","Amalfi Coast"], attractions:["Colosseum","Vatican Museums","Grand Canal Venice","Uffizi Gallery"], price:"₹90,000–₹1,60,000", tip:"Book Vatican Museums online — lines without booking are 3+ hours.", packages:{budget:"₹90,000",standard:"₹1,20,000",luxury:"₹1,75,000"}, bestSelling:true },
+  { country:"Jamaica", flag:"🇯🇲", continent:"Caribbean", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Nov–Apr", cities:["Kingston","Montego Bay","Ocho Rios","Negril"], attractions:["Dunn's River Falls","Bob Marley Museum","Blue Mountains"], price:"₹90,000–₹1,50,000", tip:"Montego Bay is the best base for island exploration.", packages:{budget:"₹90,000",standard:"₹1,20,000",luxury:"₹1,70,000"} },
+  { country:"Japan", flag:"🇯🇵", continent:"Asia", visa:"Tourist Visa required.", visaDiff:"Medium", visaTime:"5–7 days", season:"Mar–May (Cherry Blossom) & Oct–Nov", cities:["Tokyo","Kyoto","Osaka","Hiroshima","Nara"], attractions:["Mount Fuji","Senso-ji Temple","Arashiyama","Dotonbori"], price:"₹1,20,000–₹2,00,000", tip:"Get IC card (Suica/Pasmo) at airport for seamless transport.", packages:{budget:"₹1,20,000",standard:"₹1,60,000",luxury:"₹2,20,000"}, bestSelling:true },
+  { country:"Jordan", flag:"🇯🇴", continent:"Asia", visa:"Visa on arrival OR Jordan Pass available.", visaDiff:"Easy", season:"Mar–May & Sep–Nov", cities:["Amman","Petra","Wadi Rum","Aqaba"], attractions:["Petra","Wadi Rum Desert","Dead Sea","Jerash Roman Ruins"], price:"₹55,000–₹1,00,000", tip:"Jordan Pass covers entry fees to Petra + 40 other sites.", packages:{budget:"₹55,000",standard:"₹78,000",luxury:"₹1,10,000"} },
+  { country:"Kazakhstan", flag:"🇰🇿", continent:"Asia", visa:"eVisa available for Indians.", visaDiff:"Easy", season:"May–Sep", cities:["Almaty","Astana","Shymkent"], attractions:["Charyn Canyon","Big Almaty Lake","Bayterek Tower Astana"], price:"₹50,000–₹90,000", tip:"Almaty has spectacular mountain scenery — best in summer.", packages:{budget:"₹50,000",standard:"₹70,000",luxury:"₹1,00,000"} },
+  { country:"Kenya", flag:"🇰🇪", continent:"Africa", visa:"eVisa available online.", visaDiff:"Easy", season:"Jul–Oct (migration) & Jan–Feb", cities:["Nairobi","Mombasa","Kisumu"], attractions:["Maasai Mara Safari","Mount Kenya","Diani Beach","Amboseli"], price:"₹90,000–₹1,80,000", tip:"Book Maasai Mara safari in July-October for the Great Migration.", packages:{budget:"₹90,000",standard:"₹1,30,000",luxury:"₹2,00,000"}, bestSelling:true },
+  { country:"Kuwait", flag:"🇰🇼", continent:"Asia", visa:"Visa required for Indians.", visaDiff:"Medium", season:"Nov–Mar", cities:["Kuwait City"], attractions:["Kuwait Towers","The Avenues Mall","Grand Mosque"], price:"₹40,000–₹70,000", tip:"Kuwait has no alcohol — strictly Islamic country.", packages:{budget:"₹40,000",standard:"₹55,000",luxury:"₹80,000"} },
+  { country:"Kyrgyzstan", flag:"🇰🇬", continent:"Asia", visa:"eVisa available online.", visaDiff:"Easy", season:"Jun–Sep", cities:["Bishkek","Osh","Karakol"], attractions:["Song-Kul Lake","Ala-Archa National Park","Tian Shan Mountains"], price:"₹35,000–₹65,000", tip:"Nomadic culture and yurt stays make it unique in Central Asia.", packages:{budget:"₹35,000",standard:"₹50,000",luxury:"₹75,000"} },
+  { country:"Laos", flag:"🇱🇦", continent:"Asia", visa:"Visa on arrival or eVisa.", visaDiff:"Easy", season:"Nov–Apr", cities:["Vientiane","Luang Prabang","Vang Vieng"], attractions:["Kuang Si Waterfall","Plain of Jars","Wat Phu"], price:"₹40,000–₹75,000", tip:"Luang Prabang is a UNESCO World Heritage town — peaceful and beautiful.", packages:{budget:"₹40,000",standard:"₹58,000",luxury:"₹85,000"} },
+  { country:"Latvia", flag:"🇱🇻", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Riga","Jurmala","Sigulda"], attractions:["Riga Art Nouveau","Jurmala Beach","Turaida Castle"], price:"₹65,000–₹1,10,000", tip:"Riga has Europe's largest collection of Art Nouveau buildings.", packages:{budget:"₹65,000",standard:"₹88,000",luxury:"₹1,25,000"} },
+  { country:"Lebanon", flag:"🇱🇧", continent:"Asia", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Apr–Jun & Sep–Nov", cities:["Beirut","Byblos","Sidon","Baalbek"], attractions:["Baalbek Roman Ruins","Jeita Grotto","Beirut Corniche"], price:"₹50,000–₹90,000", tip:"Lebanese food is world-class — best mezze and shawarma.", packages:{budget:"₹50,000",standard:"₹70,000",luxury:"₹1,00,000"} },
+  { country:"Lithuania", flag:"🇱🇹", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Jun–Aug", cities:["Vilnius","Kaunas","Klaipeda"], attractions:["Vilnius Old Town","Trakai Island Castle","Curonian Spit"], price:"₹65,000–₹1,10,000", tip:"Vilnius Old Town is one of Central Europe's largest preserved medieval towns.", packages:{budget:"₹65,000",standard:"₹88,000",luxury:"₹1,25,000"} },
+  { country:"Luxembourg", flag:"🇱🇺", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Sep", cities:["Luxembourg City"], attractions:["Bock Casemates","Grand Ducal Palace","Moselle Valley"], price:"₹80,000–₹1,40,000", tip:"One of Europe's wealthiest countries — compact but beautiful.", packages:{budget:"₹80,000",standard:"₹1,05,000",luxury:"₹1,50,000"} },
+  { country:"Malaysia", flag:"🇲🇾", continent:"Asia", visa:"Visa on arrival 30 days.", visaDiff:"Easy", visaTime:"On arrival", season:"Mar–Oct (west coast)", cities:["Kuala Lumpur","Penang","Langkawi","Malacca","Kota Kinabalu"], attractions:["Petronas Twin Towers","Batu Caves","Langkawi Sky Bridge"], price:"₹35,000–₹70,000", tip:"KL street food at Jalan Alor is outstanding.", packages:{budget:"₹35,000",standard:"₹52,000",luxury:"₹78,000"}, bestSelling:true },
+  { country:"Maldives", flag:"🇲🇻", continent:"Asia", visa:"Visa on arrival free (30 days).", visaDiff:"Easy", visaTime:"On arrival", season:"Nov–Apr (dry season)", cities:["Malé","Maafushi","Baa Atoll","Addu Atoll"], attractions:["Overwater Bungalows","Coral Reef Snorkeling","Whale Shark Diving","Sandbank Picnics"], price:"₹80,000–₹3,00,000 per couple", tip:"Choose guesthouse islands like Maafushi for budget trips.", packages:{budget:"₹80,000",standard:"₹1,50,000",luxury:"₹3,00,000"}, bestSelling:true },
+  { country:"Malta", flag:"🇲🇹", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Oct", cities:["Valletta","Mdina","Gozo"], attractions:["Valletta Old City","Blue Lagoon Gozo","Ħaġar Qim Temples"], price:"₹75,000–₹1,30,000", tip:"Malta is the smallest EU country but packed with history.", packages:{budget:"₹75,000",standard:"₹1,00,000",luxury:"₹1,45,000"} },
+  { country:"Mexico", flag:"🇲🇽", continent:"North America", visa:"Visa required for Indians.", visaDiff:"Medium", visaTime:"10–15 days", season:"Nov–Apr", cities:["Mexico City","Cancún","Tulum","Oaxaca","Guadalajara"], attractions:["Chichen Itza","Tulum Ruins","Cenotes","Teotihuacan Pyramids"], price:"₹85,000–₹1,50,000", tip:"Cancun's cenotes are unique — swim in crystal clear underground caves.", packages:{budget:"₹85,000",standard:"₹1,15,000",luxury:"₹1,65,000"} },
+  { country:"Moldova", flag:"🇲🇩", continent:"Europe", visa:"Visa free for Indians (90 days).", visaDiff:"Easy", season:"May–Sep", cities:["Chișinău","Orheiul Vechi"], attractions:["Cricova Wine Cellars","Orheiul Vechi Monastery","Soroca Fortress"], price:"₹45,000–₹80,000", tip:"Moldova has some of Europe's largest underground wine cellars.", packages:{budget:"₹45,000",standard:"₹62,000",luxury:"₹90,000"} },
+  { country:"Mongolia", flag:"🇲🇳", continent:"Asia", visa:"Visa required for Indians.", visaDiff:"Medium", season:"Jun–Aug", cities:["Ulaanbaatar","Kharkhorin"], attractions:["Gobi Desert","Khuvsgul Lake","Yurt Stays","Genghis Khan Statue"], price:"₹70,000–₹1,20,000", tip:"Naadam Festival (July) showcases traditional wrestling, horse racing and archery.", packages:{budget:"₹70,000",standard:"₹95,000",luxury:"₹1,35,000"} },
+  { country:"Morocco", flag:"🇲🇦", continent:"Africa", visa:"Visa free for Indians (90 days).", visaDiff:"Easy", visaTime:"No visa", season:"Mar–May & Sep–Nov", cities:["Marrakech","Fez","Casablanca","Chefchaouen","Merzouga"], attractions:["Jemaa el-Fnaa Square","Sahara Desert Safari","Blue City Chefchaouen","Hassan II Mosque"], price:"₹60,000–₹1,10,000", tip:"Bargaining is expected in Moroccan souks — start at 30% asking price.", packages:{budget:"₹60,000",standard:"₹85,000",luxury:"₹1,20,000"}, bestSelling:true },
+  { country:"Mozambique", flag:"🇲🇿", continent:"Africa", visa:"Visa required for Indians.", visaDiff:"Medium", season:"Apr–Oct", cities:["Maputo","Beira","Nampula"], attractions:["Bazaruto Archipelago","Gorongosa National Park"], price:"₹70,000–₹1,10,000", tip:"Amazing Indian Ocean islands largely undiscovered.", packages:{budget:"₹70,000",standard:"₹90,000",luxury:"₹1,25,000"} },
+  { country:"Myanmar", flag:"🇲🇲", continent:"Asia", visa:"eVisa available.", visaDiff:"Easy", season:"Nov–Feb", cities:["Yangon","Bagan","Mandalay","Inle Lake"], attractions:["Shwedagon Pagoda","Bagan Temples","Inle Lake","U Bein Bridge"], price:"₹45,000–₹85,000", tip:"Bagan at sunrise with thousands of temples is one of Asia's greatest sights.", packages:{budget:"₹45,000",standard:"₹65,000",luxury:"₹95,000"} },
+  { country:"Nepal", flag:"🇳🇵", continent:"Asia", visa:"No visa required for Indians.", visaDiff:"Easy", season:"Oct–Dec & Mar–May", cities:["Kathmandu","Pokhara","Chitwan","Lumbini","Nagarkot"], attractions:["Pashupatinath Temple","Boudhanath Stupa","Everest Base Camp Trek","Annapurna"], price:"₹20,000–₹50,000", tip:"Acclimatize properly before high-altitude treks above 3,500m.", packages:{budget:"₹20,000",standard:"₹35,000",luxury:"₹60,000"} },
+  { country:"Netherlands", flag:"🇳🇱", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Aug", cities:["Amsterdam","Rotterdam","The Hague","Utrecht"], attractions:["Rijksmuseum","Anne Frank House","Keukenhof Gardens","Windmills"], price:"₹80,000–₹1,40,000", tip:"Keukenhof tulip fields (Apr) are spectacular — book tickets early.", packages:{budget:"₹80,000",standard:"₹1,08,000",luxury:"₹1,55,000"} },
+  { country:"New Zealand", flag:"🇳🇿", continent:"Oceania", visa:"Visitor Visa required.", visaDiff:"Medium", season:"Dec–Feb (summer) & Jun–Aug (skiing)", cities:["Auckland","Queenstown","Christchurch","Wellington","Rotorua"], attractions:["Fiordland National Park","Hobbiton","Tongariro Alpine Crossing"], price:"₹1,30,000–₹2,30,000", tip:"Queenstown is the adventure capital of the world.", packages:{budget:"₹1,30,000",standard:"₹1,75,000",luxury:"₹2,40,000"} },
+  { country:"Nigeria", flag:"🇳🇬", continent:"Africa", visa:"Visa required for Indians.", visaDiff:"Hard", season:"Nov–Mar", cities:["Lagos","Abuja","Kano"], attractions:["Olumo Rock","Yankari National Park","Lekki Conservation Centre"], price:"₹65,000–₹1,10,000", tip:"Book through established tour operators — best safety practice.", packages:{budget:"₹65,000",standard:"₹88,000",luxury:"₹1,25,000"} },
+  { country:"Norway", flag:"🇳🇴", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Jun–Aug (fjords) & Dec–Feb (aurora)", cities:["Oslo","Bergen","Tromsø","Flåm"], attractions:["Geirangerfjord","Northern Lights","Flåm Railway","Preikestolen Rock"], price:"₹1,10,000–₹2,00,000", tip:"Norwegian fjords by boat from Bergen is a must-do experience.", packages:{budget:"₹1,10,000",standard:"₹1,50,000",luxury:"₹2,10,000"} },
+  { country:"Oman", flag:"🇴🇲", continent:"Asia", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Oct–Apr", cities:["Muscat","Salalah","Nizwa","Sur"], attractions:["Sultan Qaboos Grand Mosque","Wahiba Sands Desert","Wadi Shab","Muttrah Souq"], price:"₹45,000–₹85,000", tip:"Salalah's monsoon (Khareef) season in July-August is surprisingly lush and green.", packages:{budget:"₹45,000",standard:"₹65,000",luxury:"₹95,000"} },
+  { country:"Pakistan", flag:"🇵🇰", continent:"Asia", visa:"Visa required — difficult for Indians.", visaDiff:"Hard", season:"Apr–Jun & Sep–Nov", cities:["Lahore","Islamabad","Karachi","Hunza"], attractions:["Lahore Fort","Karakoram Highway","Hunza Valley","Badshahi Mosque"], price:"₹30,000–₹60,000", tip:"Currently travel advisories apply — check before planning.", packages:{budget:"₹30,000",standard:"₹45,000",luxury:"₹65,000"} },
+  { country:"Peru", flag:"🇵🇪", continent:"South America", visa:"Visa on arrival for Indians (183 days).", visaDiff:"Easy", season:"May–Oct (dry)", cities:["Lima","Cusco","Machu Picchu","Puno","Arequipa"], attractions:["Machu Picchu","Sacred Valley","Titicaca Lake","Colca Canyon"], price:"₹90,000–₹1,60,000", tip:"Book Inca Trail permits 6+ months in advance — limited quota.", packages:{budget:"₹90,000",standard:"₹1,25,000",luxury:"₹1,70,000"} },
+  { country:"Philippines", flag:"🇵🇭", continent:"Asia", visa:"Visa on arrival 30 days.", visaDiff:"Easy", season:"Nov–May (dry)", cities:["Manila","Cebu","Palawan","Boracay","Davao"], attractions:["El Nido Palawan","Chocolate Hills Bohol","Intramuros Manila","Tubbataha Reef"], price:"₹45,000–₹85,000", tip:"El Nido is one of Asia's most stunning island destinations.", packages:{budget:"₹45,000",standard:"₹65,000",luxury:"₹95,000"} },
+  { country:"Poland", flag:"🇵🇱", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Warsaw","Kraków","Gdańsk","Wrocław"], attractions:["Auschwitz Memorial","Kraków Old Town","Wieliczka Salt Mine","Warsaw Old Town"], price:"₹65,000–₹1,15,000", tip:"Kraków is arguably the best-value city break in Europe.", packages:{budget:"₹65,000",standard:"₹88,000",luxury:"₹1,25,000"} },
+  { country:"Portugal", flag:"🇵🇹", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Oct", cities:["Lisbon","Porto","Algarve","Sintra","Madeira"], attractions:["Lisbon Alfama","Port Wine Caves Porto","Algarve Beaches","Pena Palace Sintra"], price:"₹80,000–₹1,40,000", tip:"Lisbon's tram 28 through the old town is iconic — but crowded.", packages:{budget:"₹80,000",standard:"₹1,08,000",luxury:"₹1,55,000"} },
+  { country:"Qatar", flag:"🇶🇦", continent:"Asia", visa:"Visa on arrival for Indians (30 days).", visaDiff:"Easy", season:"Nov–Mar", cities:["Doha","Al Wakrah","Dukhan"], attractions:["Museum of Islamic Art","Souq Waqif","The Pearl","Katara Cultural Village"], price:"₹50,000–₹90,000", tip:"Qatar National Museum is a world-class architectural masterpiece.", packages:{budget:"₹50,000",standard:"₹70,000",luxury:"₹1,00,000"} },
+  { country:"Romania", flag:"🇷🇴", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Bucharest","Sibiu","Brasov","Cluj-Napoca","Sinaia"], attractions:["Bran Castle (Dracula)","Painted Monasteries Bucovina","Sibiu Old Town"], price:"₹60,000–₹1,00,000", tip:"Transylvania is beautiful and very affordable for Europe.", packages:{budget:"₹60,000",standard:"₹80,000",luxury:"₹1,15,000"} },
+  { country:"Russia", flag:"🇷🇺", continent:"Europe/Asia", visa:"eVisa available for Indians.", visaDiff:"Medium", season:"May–Sep", cities:["Moscow","St. Petersburg","Kazan","Sochi"], attractions:["Red Square","Kremlin","Hermitage Museum","St. Basil's Cathedral"], price:"₹75,000–₹1,30,000", tip:"Trans-Siberian Railway is one of the world's great train journeys.", packages:{budget:"₹75,000",standard:"₹1,00,000",luxury:"₹1,45,000"} },
+  { country:"Rwanda", flag:"🇷🇼", continent:"Africa", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Jun–Sep & Dec–Feb", cities:["Kigali","Musanze","Gisenyi"], attractions:["Gorilla Trekking Volcanoes","Kigali Genocide Memorial","Lake Kivu"], price:"₹1,00,000–₹2,00,000", tip:"Gorilla trekking permits are USD 1,500 each — most expensive in the world but unforgettable.", packages:{budget:"₹1,00,000",standard:"₹1,50,000",luxury:"₹2,20,000"} },
+  { country:"Saudi Arabia", flag:"🇸🇦", continent:"Asia", visa:"eVisa available online.", visaDiff:"Easy", visaTime:"24 hours", season:"Nov–Mar", cities:["Riyadh","Jeddah","Mecca","Medina","AlUla"], attractions:["AlUla Rock Formations","Edge of the World","Diriyah Heritage Site","Red Sea"], price:"₹50,000–₹90,000", tip:"AlUla is Saudi Arabia's answer to Petra — spectacular rose-red ancient city.", packages:{budget:"₹50,000",standard:"₹70,000",luxury:"₹1,00,000"} },
+  { country:"Serbia", flag:"🇷🇸", continent:"Europe", visa:"Visa free for Indians (30 days).", visaDiff:"Easy", season:"Apr–Oct", cities:["Belgrade","Novi Sad","Niš"], attractions:["Belgrade Fortress","Novi Sad Petrovaradin","Djerdap Gorge"], price:"₹45,000–₹80,000", tip:"Belgrade has one of Europe's best nightlife scenes.", packages:{budget:"₹45,000",standard:"₹62,000",luxury:"₹90,000"} },
+  { country:"Singapore", flag:"🇸🇬", continent:"Asia", visa:"Visa required for Indians.", visaDiff:"Easy", visaTime:"3–5 days", season:"Feb–Apr & Jul–Sep", cities:["Singapore City"], attractions:["Gardens by the Bay","Marina Bay Sands","Sentosa Island","Universal Studios","Chinatown"], price:"₹60,000–₹1,00,000", tip:"Get Singapore Tourist Pass for unlimited MRT rides.", packages:{budget:"₹60,000",standard:"₹80,000",luxury:"₹1,15,000"}, bestSelling:true },
+  { country:"Slovakia", flag:"🇸🇰", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Bratislava","Košice","Žilina"], attractions:["Bratislava Castle","Spiš Castle","Slovak Paradise National Park"], price:"₹60,000–₹1,05,000", tip:"Bratislava is a hidden gem often missed by tourists heading to Vienna.", packages:{budget:"₹60,000",standard:"₹82,000",luxury:"₹1,15,000"} },
+  { country:"Slovenia", flag:"🇸🇮", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"May–Sep", cities:["Ljubljana","Bled","Piran","Postojna"], attractions:["Lake Bled","Postojna Cave","Ljubljana Old Town","Triglav National Park"], price:"₹70,000–₹1,20,000", tip:"Lake Bled may be the most photographed lake in Europe.", packages:{budget:"₹70,000",standard:"₹95,000",luxury:"₹1,35,000"} },
+  { country:"South Africa", flag:"🇿🇦", continent:"Africa", visa:"Visa required for Indians.", visaDiff:"Medium", visaTime:"10–15 days", season:"May–Sep (dry/safari)", cities:["Cape Town","Johannesburg","Durban","Kruger Area","Knysna"], attractions:["Table Mountain","Kruger National Park Safari","Cape of Good Hope","Boulders Beach Penguins"], price:"₹1,10,000–₹2,00,000", tip:"Book Kruger safari lodges 6–12 months in advance for peak season.", packages:{budget:"₹1,10,000",standard:"₹1,55,000",luxury:"₹2,10,000"}, bestSelling:true },
+  { country:"South Korea", flag:"🇰🇷", continent:"Asia", visa:"K-ETA (Electronic Travel Authorisation).", visaDiff:"Easy", season:"Mar–May (cherry blossom) & Sep–Nov", cities:["Seoul","Busan","Jeju Island","Gyeongju"], attractions:["Gyeongbokgung Palace","DMZ","Jeju Hallasan","Bukchon Hanok Village"], price:"₹70,000–₹1,30,000", tip:"Seoul's street food in Myeongdong is outstanding and cheap.", packages:{budget:"₹70,000",standard:"₹1,00,000",luxury:"₹1,45,000"} },
+  { country:"Spain", flag:"🇪🇸", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Apr–Jun & Sep–Oct", cities:["Madrid","Barcelona","Seville","Granada","San Sebastián"], attractions:["Sagrada Família","Alhambra Palace","Park Güell","Prado Museum","La Tomatina"], price:"₹85,000–₹1,50,000", tip:"Book Alhambra tickets months in advance — they sell out fast.", packages:{budget:"₹85,000",standard:"₹1,15,000",luxury:"₹1,65,000"}, bestSelling:true },
+  { country:"Sri Lanka", flag:"🇱🇰", continent:"Asia", visa:"ETA (Electronic Travel Authorization) required.", visaDiff:"Easy", visaTime:"24–48 hours", season:"Dec–Mar (west coast) & May–Sep (east coast)", cities:["Colombo","Kandy","Galle","Sigiriya","Nuwara Eliya"], attractions:["Sigiriya Rock Fortress","Temple of the Tooth","Yala National Park","Adam's Peak"], price:"₹25,000–₹60,000", tip:"Train from Kandy to Ella through tea plantations is world's most scenic rail ride.", packages:{budget:"₹25,000",standard:"₹42,000",luxury:"₹70,000"}, bestSelling:true },
+  { country:"Sweden", flag:"🇸🇪", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", season:"Jun–Aug & Dec–Feb", cities:["Stockholm","Gothenburg","Malmö","Uppsala"], attractions:["Stockholm Old Town","ABBA Museum","Vasa Museum","Ice Hotel Jukkasjärvi"], price:"₹1,00,000–₹1,80,000", tip:"The Ice Hotel near Kiruna must be booked a year in advance.", packages:{budget:"₹1,00,000",standard:"₹1,38,000",luxury:"₹1,90,000"} },
+  { country:"Switzerland", flag:"🇨🇭", continent:"Europe", visa:"Schengen Visa required.", visaDiff:"Medium", visaTime:"15–20 days", season:"Jun–Sep (summer) & Dec–Feb (snow)", cities:["Zurich","Geneva","Interlaken","Lucerne","Zermatt"], attractions:["Jungfraujoch","Matterhorn","Lake Geneva","Rhine Falls"], price:"₹1,20,000–₹2,20,000", tip:"Swiss Travel Pass gives unlimited trains, buses and boats — best value.", packages:{budget:"₹1,20,000",standard:"₹1,65,000",luxury:"₹2,30,000"}, bestSelling:true },
+  { country:"Taiwan", flag:"🇹🇼", continent:"Asia", visa:"eVisa or visa on arrival for Indians.", visaDiff:"Easy", season:"Sep–Nov & Mar–May", cities:["Taipei","Taichung","Tainan","Hualien"], attractions:["Taipei 101","Taroko Gorge","Sun Moon Lake","Jiufen Village"], price:"₹60,000–₹1,05,000", tip:"Night markets like Shilin in Taipei are food paradise.", packages:{budget:"₹60,000",standard:"₹82,000",luxury:"₹1,15,000"} },
+  { country:"Tanzania", flag:"🇹🇿", continent:"Africa", visa:"eVisa available online.", visaDiff:"Easy", season:"Jun–Oct (dry/safari)", cities:["Dar es Salaam","Arusha","Zanzibar","Moshi"], attractions:["Serengeti National Park","Mount Kilimanjaro","Zanzibar Beaches","Ngorongoro Crater"], price:"₹1,00,000–₹2,00,000", tip:"Serengeti wildebeest migration (Jul-Sep) is the world's greatest wildlife show.", packages:{budget:"₹1,00,000",standard:"₹1,45,000",luxury:"₹2,10,000"} },
+  { country:"Thailand", flag:"🇹🇭", continent:"Asia", visa:"Visa on arrival (30 days) OR eVisa.", visaDiff:"Easy", visaTime:"On arrival", season:"Nov–Feb (cool season)", cities:["Bangkok","Phuket","Chiang Mai","Pattaya","Koh Samui"], attractions:["Grand Palace","Wat Phra Kaew","Phi Phi Islands","Elephant Sanctuary","Floating Markets"], price:"₹35,000–₹75,000", tip:"Carry Thai Baht cash — many street food stalls don't accept cards.", packages:{budget:"₹35,000",standard:"₹55,000",luxury:"₹85,000"}, bestSelling:true },
+  { country:"Tunisia", flag:"🇹🇳", continent:"Africa", visa:"Visa free for Indians (90 days).", visaDiff:"Easy", season:"Mar–May & Sep–Oct", cities:["Tunis","Sousse","Monastir","Djerba"], attractions:["Carthage Ruins","Medina of Tunis","Sahara Desert","Star Wars Filming Locations"], price:"₹45,000–₹80,000", tip:"Tunisia filmed several Star Wars scenes in the desert south.", packages:{budget:"₹45,000",standard:"₹62,000",luxury:"₹90,000"} },
+  { country:"Turkey", flag:"🇹🇷", continent:"Asia/Europe", visa:"eVisa available online.", visaDiff:"Easy", visaTime:"24–48 hours", season:"Apr–Jun & Sep–Oct", cities:["Istanbul","Cappadocia","Antalya","Bodrum","Ephesus"], attractions:["Hagia Sophia","Blue Mosque","Cappadocia Hot Air Balloons","Pamukkale","Grand Bazaar"], price:"₹65,000–₹1,10,000", tip:"Book Cappadocia balloon rides well in advance — sunrise slots fill fast.", packages:{budget:"₹65,000",standard:"₹88,000",luxury:"₹1,25,000"}, bestSelling:true },
+  { country:"Uganda", flag:"🇺🇬", continent:"Africa", visa:"eVisa available online.", visaDiff:"Easy", season:"Jun–Sep & Dec–Feb", cities:["Kampala","Entebbe","Bwindi"], attractions:["Gorilla Trekking Bwindi","Queen Elizabeth National Park","Source of the Nile","Murchison Falls"], price:"₹90,000–₹1,70,000", tip:"Bwindi gorilla permits cost USD 700 — book months in advance.", packages:{budget:"₹90,000",standard:"₹1,30,000",luxury:"₹1,90,000"} },
+  { country:"Ukraine", flag:"🇺🇦", continent:"Europe", visa:"Visa free for Indians (90 days). Check travel advisories.", visaDiff:"Easy", season:"May–Sep", cities:["Kyiv","Lviv","Odessa"], attractions:["Kyiv Pechersk Lavra","Saint Sophia Cathedral","Odessa Opera House"], price:"₹50,000–₹85,000", tip:"Check current travel advisories before planning.", packages:{budget:"₹50,000",standard:"₹68,000",luxury:"₹95,000"} },
+  { country:"United Arab Emirates", flag:"🇦🇪", continent:"Asia", visa:"Visa on arrival for Indians (30 days free).", visaDiff:"Easy", visaTime:"On arrival", season:"Oct–Apr", cities:["Dubai","Abu Dhabi","Sharjah","Ajman","Ras Al Khaimah"], attractions:["Burj Khalifa","Dubai Mall","Palm Jumeirah","Sheikh Zayed Grand Mosque","Desert Safari"], price:"₹55,000–₹1,20,000", tip:"Book Dubai Frame and Burj Khalifa tickets in advance for best time slots.", packages:{budget:"₹55,000",standard:"₹82,000",luxury:"₹1,30,000"}, bestSelling:true },
+  { country:"United Kingdom", flag:"🇬🇧", continent:"Europe", visa:"UK Standard Visitor Visa required.", visaDiff:"Hard", visaTime:"3–4 weeks", season:"May–Sep", cities:["London","Edinburgh","Manchester","Oxford","Bath"], attractions:["Big Ben","Buckingham Palace","Edinburgh Castle","Stonehenge","Tower of London"], price:"₹1,00,000–₹1,80,000", tip:"Oyster Card for London transport saves money vs buying single tickets.", packages:{budget:"₹1,00,000",standard:"₹1,38,000",luxury:"₹1,95,000"} },
+  { country:"United States", flag:"🇺🇸", continent:"North America", visa:"B1/B2 Tourist Visa required. Interview mandatory.", visaDiff:"Hard", visaTime:"3–6 months for interview", season:"Mar–May & Sep–Nov", cities:["New York","Los Angeles","Las Vegas","San Francisco","Miami"], attractions:["Statue of Liberty","Grand Canyon","Times Square","Hollywood","Niagara Falls"], price:"₹1,50,000–₹3,00,000", tip:"Apply for US visa at least 3–6 months in advance — long wait times.", packages:{budget:"₹1,50,000",standard:"₹2,10,000",luxury:"₹3,20,000"} },
+  { country:"Uruguay", flag:"🇺🇾", continent:"South America", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"Dec–Mar", cities:["Montevideo","Punta del Este","Colonia del Sacramento"], attractions:["Punta del Este Beaches","Old Town Colonia","Montevideo Rambla"], price:"₹90,000–₹1,50,000", tip:"Punta del Este is South America's most glamorous resort town.", packages:{budget:"₹90,000",standard:"₹1,20,000",luxury:"₹1,65,000"} },
+  { country:"Uzbekistan", flag:"🇺🇿", continent:"Asia", visa:"eVisa available online.", visaDiff:"Easy", season:"Apr–Jun & Sep–Nov", cities:["Tashkent","Samarkand","Bukhara","Khiva"], attractions:["Registan Square Samarkand","Bukhara Old Town","Shah-i-Zinda","Itchan Kala Khiva"], price:"₹40,000–₹75,000", tip:"Uzbekistan's Silk Road cities rival Petra and Machu Picchu in grandeur.", packages:{budget:"₹40,000",standard:"₹58,000",luxury:"₹85,000"} },
+  { country:"Venezuela", flag:"🇻🇪", continent:"South America", visa:"Visa on arrival for Indians.", visaDiff:"Medium", season:"Dec–Apr", cities:["Caracas","Mérida","Puerto Ordaz"], attractions:["Angel Falls (world's highest)","Los Roques Archipelago","Mount Roraima"], price:"₹70,000–₹1,20,000", tip:"Angel Falls is 20x higher than Niagara — absolutely breathtaking.", packages:{budget:"₹70,000",standard:"₹95,000",luxury:"₹1,35,000"} },
+  { country:"Vietnam", flag:"🇻🇳", continent:"Asia", visa:"eVisa available online (30 days).", visaDiff:"Easy", visaTime:"3 days", season:"Feb–Apr & Aug–Oct", cities:["Hanoi","Ho Chi Minh City","Hoi An","Da Nang","Ha Long Bay"], attractions:["Ha Long Bay","Hoi An Ancient Town","Mỹ Sơn Sanctuary","Phong Nha Caves"], price:"₹35,000–₹70,000", tip:"Hoi An's lantern festival on full moon nights is magical.", packages:{budget:"₹35,000",standard:"₹52,000",luxury:"₹80,000"}, bestSelling:true },
+  { country:"Zambia", flag:"🇿🇲", continent:"Africa", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"May–Oct (dry)", cities:["Lusaka","Livingstone","Kafue"], attractions:["Victoria Falls","South Luangwa Safari","Lake Kariba"], price:"₹80,000–₹1,50,000", tip:"Victoria Falls is best viewed from Zambia side during high water (Feb-May).", packages:{budget:"₹80,000",standard:"₹1,15,000",luxury:"₹1,65,000"} },
+  { country:"Zimbabwe", flag:"🇿🇼", continent:"Africa", visa:"Visa on arrival for Indians.", visaDiff:"Easy", season:"May–Oct", cities:["Harare","Bulawayo","Victoria Falls"], attractions:["Victoria Falls","Hwange National Park","Great Zimbabwe Ruins"], price:"₹80,000–₹1,40,000", tip:"Zimbabwe side of Victoria Falls is less crowded than Zambia side.", packages:{budget:"₹80,000",standard:"₹1,10,000",luxury:"₹1,55,000"} },
 ];
 
-function initDestinations() {
-  // Show add button for owners
-  const isOwner = CURRENT_USER && (CURRENT_USER.id === 1);
-  const ownerBtns = document.getElementById('dest-owner-btns');
-  if(ownerBtns) ownerBtns.style.display = isOwner ? '' : 'none';
+// ── Map coordinates for 90+ countries ──
+const DEST_COORDS = {
+  "Afghanistan":[33.9,67.7],"Albania":[41.2,20.2],"Algeria":[28.0,1.7],"Argentina":[-38.4,-63.6],"Armenia":[40.1,45.0],"Australia":[-25.3,133.8],"Austria":[47.5,14.6],"Azerbaijan":[40.1,47.6],"Bahrain":[26.0,50.6],"Bangladesh":[23.7,90.4],"Belgium":[50.8,4.5],"Bhutan":[27.5,90.4],"Brazil":[-14.2,-51.9],"Cambodia":[12.6,104.9],"Canada":[56.1,-106.3],"Chile":[-35.7,-71.5],"China":[35.9,104.2],"Colombia":[4.6,-74.3],"Croatia":[45.1,15.2],"Cuba":[21.5,-77.8],"Cyprus":[35.1,33.4],"Czech Republic":[50.0,15.5],"Denmark":[56.3,9.5],"Egypt":[26.8,30.8],"Estonia":[58.6,25.0],"Ethiopia":[9.1,40.5],"Finland":[61.9,25.7],"France":[46.6,2.3],"Georgia":[42.3,43.4],"Germany":[51.2,10.5],"Ghana":[7.9,-1.0],"Greece":[39.1,21.8],"Hungary":[47.2,19.5],"Iceland":[64.9,-18.0],"India":[20.6,79.0],"Indonesia":[-0.8,113.9],"Iran":[32.4,53.7],"Iraq":[33.2,43.7],"Ireland":[53.4,-8.2],"Israel":[31.0,35.0],"Italy":[41.9,12.6],"Jamaica":[18.1,-77.3],"Japan":[36.2,138.3],"Jordan":[30.6,36.1],"Kazakhstan":[48.0,68.0],"Kenya":[-0.0,37.9],"Kuwait":[29.3,47.5],"Kyrgyzstan":[41.2,74.8],"Laos":[18.2,103.9],"Latvia":[56.9,24.6],"Lebanon":[33.9,35.5],"Lithuania":[55.2,23.9],"Luxembourg":[49.8,6.1],"Malaysia":[4.2,108.0],"Maldives":[3.2,73.2],"Malta":[35.9,14.4],"Mexico":[23.6,-102.6],"Moldova":[47.4,28.4],"Mongolia":[46.9,103.8],"Morocco":[31.8,-7.1],"Mozambique":[-18.7,35.5],"Myanmar":[18.9,98.7],"Nepal":[28.4,84.1],"Netherlands":[52.3,5.3],"New Zealand":[-40.9,174.9],"Nigeria":[9.1,8.7],"Norway":[60.5,8.5],"Oman":[21.5,55.9],"Pakistan":[30.4,69.3],"Peru":[-9.2,-75.0],"Philippines":[12.9,122.0],"Poland":[51.9,19.1],"Portugal":[39.4,-8.2],"Qatar":[25.4,51.2],"Romania":[45.9,24.9],"Russia":[61.5,105.3],"Rwanda":[-1.9,29.9],"Saudi Arabia":[23.9,45.1],"Serbia":[44.0,21.0],"Singapore":[1.35,103.8],"Slovakia":[48.7,19.7],"Slovenia":[46.2,14.8],"South Africa":[-30.6,22.9],"South Korea":[35.9,127.8],"Spain":[40.5,-3.7],"Sri Lanka":[7.9,80.8],"Sweden":[60.1,18.6],"Switzerland":[46.8,8.2],"Taiwan":[23.7,120.9],"Tanzania":[-6.4,34.9],"Thailand":[15.9,100.9],"Tunisia":[33.9,9.6],"Turkey":[38.9,35.2],"Uganda":[1.4,32.3],"Ukraine":[48.4,31.2],"United Arab Emirates":[23.4,53.8],"United Kingdom":[55.4,-3.4],"United States":[37.1,-95.7],"Uruguay":[-32.5,-55.8],"Uzbekistan":[41.4,64.6],"Venezuela":[6.4,-66.6],"Vietnam":[14.1,108.3],"Zambia":[-13.1,27.9],"Zimbabwe":[-19.0,29.2],
+};
 
-  // Init Leaflet map
+function initDestinations() {
+  const isStaff = !!CURRENT_USER;
+  const ownerBtns = document.getElementById('dest-owner-btns');
+  if(ownerBtns) ownerBtns.style.display = isStaff ? '' : 'none'; // All staff can add
+
   if(!destMap) {
     destMap = L.map('dest-map', { zoomControl: true, scrollWheelZoom: false }).setView([20, 0], 2);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap & CartoDB',
-      subdomains: 'abcd', maxZoom: 19
+      attribution: '&copy; OpenStreetMap &copy; CartoDB', subdomains: 'abcd', maxZoom: 19
     }).addTo(destMap);
-  }
 
+    // Load GeoJSON country borders for reliable click detection
+    loadGeoJSON();
+  }
   loadDestinations();
+}
+
+function loadGeoJSON() {
+  fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+    .then(r => r.json())
+    .then(data => {
+      if(destGeoLayer) destGeoLayer.remove();
+      destGeoLayer = L.geoJSON(data, {
+        style: { color: '#0369a1', weight: 0.5, fillColor: '#e8f4fd', fillOpacity: 0.4 },
+        onEachFeature: function(feature, layer) {
+          const name = feature.properties.ADMIN || feature.properties.name;
+          layer.on({
+            mouseover: function(e) {
+              e.target.setStyle({ fillColor: '#0369a1', fillOpacity: 0.6 });
+              const hint = document.getElementById('dest-map-hint');
+              if(hint) hint.textContent = '📍 ' + name;
+            },
+            mouseout: function(e) {
+              destGeoLayer.resetStyle(e.target);
+              const hint = document.getElementById('dest-map-hint');
+              if(hint) hint.textContent = '🖱️ Click any country to explore';
+            },
+            click: function(e) {
+              // Find best match in our data
+              const match = findCountryMatch(name);
+              showDestInfo(match || name);
+              if(hint) hint.textContent = '📍 ' + (match || name);
+              const hint = document.getElementById('dest-map-hint');
+            }
+          });
+          layer.bindTooltip(name, { permanent: false, direction: 'top', className: 'country-tooltip' });
+        }
+      }).addTo(destMap);
+    })
+    .catch(() => {
+      // GeoJSON failed — fallback to click handler
+      destMap.on('click', async function(e) {
+        const hint = document.getElementById('dest-map-hint');
+        if(hint) hint.textContent = '🔍 Detecting...';
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${e.latlng.lat}&lon=${e.latlng.lng}&zoom=3`);
+          const data = await res.json();
+          const country = data.address?.country;
+          if(hint) hint.textContent = country ? '📍 ' + country : '🖱️ Click any country to explore';
+          if(country) showDestInfo(country);
+        } catch(err) {
+          if(hint) hint.textContent = '🖱️ Click any country to explore';
+        }
+      });
+    });
+}
+
+function findCountryMatch(geoName) {
+  if(!geoName) return null;
+  const all = [...destData, ...DEST_SEED];
+  // Exact match
+  let m = all.find(d => d.country.toLowerCase() === geoName.toLowerCase());
+  if(m) return m.country;
+  // Partial match
+  m = all.find(d => geoName.toLowerCase().includes(d.country.toLowerCase()) || d.country.toLowerCase().includes(geoName.toLowerCase()));
+  return m ? m.country : geoName;
 }
 
 async function loadDestinations() {
@@ -4774,47 +4743,23 @@ async function loadDestinations() {
     if(!snap.empty) {
       destData = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     } else {
-      // Use seed data if Firestore is empty
       destData = DEST_SEED.map((d, i) => ({ id: 'seed_'+i, ...d }));
     }
   } catch(e) {
-    // Fallback to seed data
     destData = DEST_SEED.map((d, i) => ({ id: 'seed_'+i, ...d }));
   }
   renderDestCards();
-  addMapClickListeners();
-}
-
-function addMapClickListeners() {
-  if(!destMap) return;
-  // Remove old layer if exists
-  if(destMapLayer) { destMapLayer.remove(); destMapLayer = null; }
-
-  // Use a click on the map to detect country name via reverse geocoding
-  destMap.off('click');
-  destMap.on('click', async function(e) {
-    const lat = e.latlng.lat, lng = e.latlng.lng;
-    try {
-      const hint = document.getElementById('dest-map-hint');
-      if(hint) hint.textContent = '🔍 Loading...';
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=3`);
-      const data = await res.json();
-      const country = data.address?.country;
-      if(hint) hint.textContent = country ? `📍 ${country}` : '🖱️ Click any country to explore';
-      if(country) showDestInfo(country);
-    } catch(e) {
-      const hint = document.getElementById('dest-map-hint');
-      if(hint) hint.textContent = '🖱️ Click any country to explore';
-    }
-  });
 }
 
 function showDestInfo(countryName) {
   destSelected = countryName;
-  // Find in our database (case-insensitive)
-  const found = destData.find(d => d.country.toLowerCase() === countryName.toLowerCase());
+  let found = destData.find(d => d.country.toLowerCase() === countryName.toLowerCase());
+  if(!found) found = DEST_SEED.find(d => d.country.toLowerCase() === countryName.toLowerCase());
   const panel = document.getElementById('dest-info-content');
   if(!panel) return;
+
+  const isOwner = CURRENT_USER?.id === 1;
+  const isStaff = !!CURRENT_USER;
 
   if(!found) {
     panel.innerHTML = `
@@ -4822,33 +4767,46 @@ function showDestInfo(countryName) {
         <div style="font-size:36px;margin-bottom:10px">🔍</div>
         <div style="font-weight:700;font-size:15px;color:#0f172a;margin-bottom:6px">${countryName}</div>
         <div style="font-size:12px;color:#64748b;margin-bottom:16px">No travel data saved yet for this destination.</div>
-        ${CURRENT_USER?.id === 1 ? `<button onclick="openDestModal('','${countryName.replace(/'/g,"\'")}')" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Info for ${countryName}</button>` : ''}
+        ${isStaff ? `<button onclick="openDestModal('','${countryName.replace(/'/g,"\\'")}\')" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Info for ${countryName}</button>` : ''}
       </div>`;
     return;
   }
 
-  const isOwner = CURRENT_USER?.id === 1;
+  // Visa difficulty badge
+  const diffMap = { Easy: {color:'#16a34a',bg:'#f0fdf4',emoji:'🟢'}, Medium: {color:'#d97706',bg:'#fffbeb',emoji:'🟡'}, Hard: {color:'#dc2626',bg:'#fef2f2',emoji:'🔴'} };
+  const diff = diffMap[found.visaDiff] || diffMap['Medium'];
+
+  // Best-selling tag
+  const bsTag = found.bestSelling ? `<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:800;margin-left:6px">🔥 Best Selling</span>` : '';
+
+  // Auto-detect best-selling from bookings
+  const bookingCount = allBookings.filter(b => b.destination && b.destination.toLowerCase().includes(found.country.toLowerCase())).length;
+  const autoHot = bookingCount >= 3 ? `<span style="background:#fff7ed;color:#c2410c;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-left:4px">📊 ${bookingCount} bookings</span>` : '';
+
   panel.innerHTML = `
     <div>
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:10px">
           <div style="font-size:36px">${found.flag||'🌍'}</div>
           <div>
-            <div style="font-size:18px;font-weight:800;color:#0f172a">${found.country}</div>
+            <div style="font-size:18px;font-weight:800;color:#0f172a">${found.country}${bsTag}${autoHot}</div>
             <div style="font-size:11px;color:#64748b">${found.continent||''}</div>
           </div>
         </div>
-        ${isOwner ? `<div style="display:flex;gap:6px">
+        ${isStaff ? `<div style="display:flex;gap:6px">
           <button onclick="openDestModal('${found.id}')" style="padding:5px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏️ Edit</button>
-          <button onclick="deleteDestination('${found.id}')" style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>
+          ${isOwner ? `<button onclick="deleteDestination('${found.id}')" style="padding:5px 10px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>` : ''}
         </div>` : ''}
       </div>
 
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#0369a1;margin-bottom:4px">🛂 Visa Requirements</div>
-          <div style="font-size:13px;color:#1e293b">${found.visa||'—'}</div>
-          ${found.visaTime ? `<div style="font-size:11px;color:#0369a1;margin-top:4px;font-weight:600">⏱ Processing: ${found.visaTime}</div>` : ''}
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#0369a1;margin-bottom:6px">🛂 Visa Requirements</div>
+          <div style="font-size:13px;color:#1e293b;margin-bottom:6px">${found.visa||'—'}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span style="background:${diff.bg};color:${diff.color};padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700">${diff.emoji} ${found.visaDiff||'Medium'} Visa</span>
+            ${found.visaTime ? `<span style="background:#f1f5f9;color:#475569;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600">⏱ ${found.visaTime}</span>` : ''}
+          </div>
         </div>
 
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px">
@@ -4865,14 +4823,27 @@ function showDestInfo(countryName) {
 
         <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#c2410c;margin-bottom:6px">🎯 Top Attractions</div>
-          <div style="display:flex;flex-direction:column;gap:3px">
-            ${(found.attractions||[]).map(a => `<div style="font-size:12px;color:#1e293b;display:flex;align-items:center;gap:6px"><span style="color:#f97316">▸</span>${a}</div>`).join('')}
-          </div>
+          ${(found.attractions||[]).map(a => `<div style="font-size:12px;color:#1e293b;display:flex;align-items:center;gap:6px;padding:2px 0"><span style="color:#f97316">▸</span>${a}</div>`).join('')}
         </div>
 
         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:12px">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;margin-bottom:4px">💰 Average Package Cost</div>
-          <div style="font-size:15px;font-weight:800;color:#0f172a">${found.price||'—'}</div>
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;margin-bottom:8px">💰 Suggested Packages</div>
+          ${found.packages ? `
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+            <div style="background:#fff;border:1px solid #bbf7d0;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">💚 Budget</div>
+              <div style="font-size:11px;font-weight:800;color:#059669">${found.packages.budget||'—'}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #bae6fd;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">💙 Standard</div>
+              <div style="font-size:11px;font-weight:800;color:#0369a1">${found.packages.standard||'—'}</div>
+            </div>
+            <div style="background:#fff;border:1px solid #fde68a;border-radius:8px;padding:8px;text-align:center">
+              <div style="font-size:10px;font-weight:700;color:#64748b;margin-bottom:3px">💛 Luxury</div>
+              <div style="font-size:11px;font-weight:800;color:#d97706">${found.packages.luxury||'—'}</div>
+            </div>
+          </div>` : `<div style="font-size:12px;color:#94a3b8">No package data yet</div>`}
+          <div style="font-size:10px;color:#94a3b8;margin-top:6px">Based on average package data · Edit to customise</div>
         </div>
 
         ${found.tip ? `<div style="background:#fefce8;border:1px solid #fde68a;border-radius:10px;padding:12px">
@@ -4881,21 +4852,25 @@ function showDestInfo(countryName) {
         </div>` : ''}
       </div>
     </div>`;
+
+  // Fly map to country
+  const coords = DEST_COORDS[found.country];
+  if(coords && destMap) destMap.flyTo(coords, 4, { duration: 1.2 });
 }
 
 function renderDestCards() {
   const grid = document.getElementById('dest-cards-grid');
   if(!grid) return;
-  if(!destData.length) {
-    grid.innerHTML = '<div style="text-align:center;color:#94a3b8;font-size:13px;grid-column:1/-1;padding:20px">No destinations yet.</div>';
-    return;
-  }
-  grid.innerHTML = destData.map(d => `
-    <div onclick="showDestInfo('${d.country}')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;cursor:pointer;transition:.15s" onmouseover="this.style.borderColor='#0369a1';this.style.background='#f0f9ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
-      <div style="font-size:28px;margin-bottom:6px">${d.flag||'🌍'}</div>
-      <div style="font-weight:700;font-size:13px;color:#0f172a">${d.country}</div>
-      <div style="font-size:10px;color:#64748b;margin-top:2px">${d.continent||''}</div>
-      <div style="font-size:10px;color:#0369a1;margin-top:6px;font-weight:600">${d.price||''}</div>
+  const allDests = destData.length ? destData : DEST_SEED;
+  if(!allDests.length) { grid.innerHTML = '<div style="color:#94a3b8;font-size:13px;grid-column:1/-1;padding:20px;text-align:center">No destinations yet.</div>'; return; }
+  grid.innerHTML = allDests.map(d => `
+    <div onclick="showDestInfo('${d.country}')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.15s;position:relative" onmouseover="this.style.borderColor='#0369a1';this.style.background='#f0f9ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+      ${d.bestSelling ? '<div style="position:absolute;top:6px;right:6px;font-size:10px;background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:99px;font-weight:700">🔥</div>' : ''}
+      <div style="font-size:26px;margin-bottom:5px">${d.flag||'🌍'}</div>
+      <div style="font-weight:700;font-size:12px;color:#0f172a">${d.country}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:1px">${d.continent||''}</div>
+      ${d.visaDiff ? `<div style="font-size:9px;margin-top:4px">${d.visaDiff==='Easy'?'🟢':d.visaDiff==='Hard'?'🔴':'🟡'} ${d.visaDiff} visa</div>` : ''}
+      <div style="font-size:10px;color:#059669;margin-top:3px;font-weight:600">${d.packages?.budget||d.price||''}</div>
     </div>`).join('');
 }
 
@@ -4903,13 +4878,17 @@ function destSearch(query) {
   const box = document.getElementById('dest-search-results');
   if(!query.trim()) { box.style.display = 'none'; return; }
   const q = query.toLowerCase();
-  const matches = destData.filter(d => d.country.toLowerCase().includes(q));
+  const allDests = destData.length ? destData : DEST_SEED;
+  const matches = allDests.filter(d => d.country.toLowerCase().includes(q) || (d.continent||'').toLowerCase().includes(q));
   if(!matches.length) { box.style.display = 'none'; return; }
   box.style.display = '';
-  box.innerHTML = matches.map(d => `
+  box.innerHTML = matches.slice(0,8).map(d => `
     <div onclick="selectDestSearch('${d.country}')" style="padding:10px 16px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px;color:#1e293b" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
       <span style="font-size:20px">${d.flag||'🌍'}</span>
-      <div><div style="font-weight:600">${d.country}</div><div style="font-size:11px;color:#64748b">${d.continent||''}</div></div>
+      <div>
+        <div style="font-weight:600">${d.country} ${d.bestSelling?'🔥':''}</div>
+        <div style="font-size:11px;color:#64748b">${d.continent||''} · ${d.visaDiff==='Easy'?'🟢':d.visaDiff==='Hard'?'🔴':'🟡'} ${d.visaDiff||''} visa</div>
+      </div>
     </div>`).join('');
 }
 
@@ -4917,23 +4896,10 @@ function selectDestSearch(country) {
   document.getElementById('dest-search').value = country;
   document.getElementById('dest-search-results').style.display = 'none';
   showDestInfo(country);
-  // Zoom map to approximate coordinates of country
   const coords = DEST_COORDS[country];
   if(coords && destMap) destMap.flyTo(coords, 5, { duration: 1.5 });
 }
 
-// Approximate centre coordinates for countries with data
-const DEST_COORDS = {
-  "France": [46.6, 2.3], "Turkey": [39.0, 35.2], "Japan": [36.2, 138.3],
-  "Maldives": [3.2, 73.2], "Singapore": [1.35, 103.8], "Thailand": [15.9, 100.9],
-  "United Arab Emirates": [23.4, 53.8], "Switzerland": [46.8, 8.2], "Italy": [41.9, 12.6],
-  "Indonesia": [-0.8, 113.9], "Australia": [-25.3, 133.8], "Greece": [39.1, 21.8],
-  "Nepal": [28.4, 84.1], "Sri Lanka": [7.9, 80.8], "Egypt": [26.8, 30.8],
-  "Morocco": [31.8, -7.1], "South Africa": [-30.6, 22.9], "United States": [37.1, -95.7],
-  "Canada": [56.1, -106.3], "Malaysia": [4.2, 108.0],
-};
-
-// Close search dropdown when clicking outside
 document.addEventListener('click', e => {
   if(!e.target.closest('#dest-search') && !e.target.closest('#dest-search-results')) {
     const box = document.getElementById('dest-search-results');
@@ -4941,15 +4907,16 @@ document.addEventListener('click', e => {
   }
 });
 
-// ── Destination CRUD (owner only) ──
 function openDestModal(editId, prefillCountry) {
-  const found = editId ? destData.find(d => d.id === editId) : null;
+  const found = editId ? (destData.find(d => d.id === editId) || DEST_SEED.find((d,i)=>'seed_'+i===editId)) : null;
   const d = found || {};
   document.getElementById('dest-crud-overlay')?.remove();
 
+  const diffOpts = ['Easy','Medium','Hard'].map(x => `<option value="${x}"${x===(d.visaDiff||'Medium')?' selected':''}>${x==='Easy'?'🟢':x==='Hard'?'🔴':'🟡'} ${x}</option>`).join('');
+
   document.body.insertAdjacentHTML('beforeend', `
     <div id="dest-crud-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
-      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:580px;box-shadow:0 20px 60px rgba(0,0,0,0.3);max-height:90vh;overflow-y:auto">
         <div style="font-weight:800;font-size:15px;margin-bottom:18px">${editId ? '✏️ Edit Destination' : '➕ Add Destination'}</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Country Name *</label>
@@ -4957,24 +4924,36 @@ function openDestModal(editId, prefillCountry) {
           <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Flag Emoji</label>
             <input id="dc-flag" value="${d.flag||''}" placeholder="🇯🇵" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
           <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Continent</label>
-            <input id="dc-continent" value="${d.continent||''}" placeholder="Asia / Europe..." style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
-          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Avg Package Cost</label>
-            <input id="dc-price" value="${d.price||''}" placeholder="₹60,000 – ₹1,00,000" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
-        </div>
-        <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Visa Requirements *</label>
-          <textarea id="dc-visa" rows="2" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical" placeholder="eVisa, on arrival, consulate visa...">${d.visa||''}</textarea></div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+            <input id="dc-continent" value="${d.continent||''}" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Visa Difficulty</label>
+            <select id="dc-visadiff" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box">${diffOpts}</select></div>
           <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Visa Processing Time</label>
-            <input id="dc-visatime" value="${d.visaTime||''}" placeholder="3–5 working days" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+            <input id="dc-visatime" value="${d.visaTime||''}" placeholder="3–5 days" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
           <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Best Season</label>
-            <input id="dc-season" value="${d.season||''}" placeholder="Oct – April" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+            <input id="dc-season" value="${d.season||''}" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
         </div>
+        <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Visa Requirements</label>
+          <textarea id="dc-visa" rows="2" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${d.visa||''}</textarea></div>
         <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Top Cities (comma separated)</label>
-          <input id="dc-cities" value="${(d.cities||[]).join(', ')}" placeholder="Istanbul, Cappadocia, Antalya" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <input id="dc-cities" value="${(d.cities||[]).join(', ')}" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
         <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Popular Attractions (comma separated)</label>
-          <input id="dc-attractions" value="${(d.attractions||[]).join(', ')}" placeholder="Hagia Sophia, Blue Mosque..." style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+          <input id="dc-attractions" value="${(d.attractions||[]).join(', ')}" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box"/></div>
+        <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">💚 Budget Package</label>
+            <input id="dc-pkg-budget" value="${d.packages?.budget||''}" placeholder="₹60,000" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">💙 Standard Package</label>
+            <input id="dc-pkg-standard" value="${d.packages?.standard||''}" placeholder="₹85,000" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/></div>
+          <div><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">💛 Luxury Package</label>
+            <input id="dc-pkg-luxury" value="${d.packages?.luxury||''}" placeholder="₹1,20,000" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/></div>
+        </div>
         <div style="margin-top:10px"><label style="font-size:11px;font-weight:600;color:#374151;display:block;margin-bottom:3px">Travel Tip</label>
-          <textarea id="dc-tip" rows="2" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical" placeholder="Best insider tip for agents...">${d.tip||''}</textarea></div>
+          <textarea id="dc-tip" rows="2" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical">${d.tip||''}</textarea></div>
+        <div style="margin-top:10px;display:flex;align-items:center;gap:10px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer">
+            <input type="checkbox" id="dc-bestselling" ${d.bestSelling?'checked':''} style="width:16px;height:16px;accent-color:#dc2626"/>
+            🔥 Mark as Best Selling
+          </label>
+        </div>
         <div style="display:flex;gap:10px;margin-top:16px">
           <button onclick="saveDestination('${editId||''}')" style="flex:1;padding:10px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">💾 Save</button>
           <button onclick="document.getElementById('dest-crud-overlay').remove()" style="flex:1;padding:10px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-weight:700;font-size:13px;cursor:pointer">Cancel</button>
@@ -4991,16 +4970,22 @@ async function saveDestination(editId) {
     flag:        document.getElementById('dc-flag')?.value.trim()||'🌍',
     continent:   document.getElementById('dc-continent')?.value.trim()||'',
     visa:        document.getElementById('dc-visa')?.value.trim()||'',
+    visaDiff:    document.getElementById('dc-visadiff')?.value||'Medium',
     visaTime:    document.getElementById('dc-visatime')?.value.trim()||'',
     season:      document.getElementById('dc-season')?.value.trim()||'',
     cities:      document.getElementById('dc-cities')?.value.split(',').map(s=>s.trim()).filter(Boolean)||[],
     attractions: document.getElementById('dc-attractions')?.value.split(',').map(s=>s.trim()).filter(Boolean)||[],
-    price:       document.getElementById('dc-price')?.value.trim()||'',
+    packages: {
+      budget:   document.getElementById('dc-pkg-budget')?.value.trim()||'',
+      standard: document.getElementById('dc-pkg-standard')?.value.trim()||'',
+      luxury:   document.getElementById('dc-pkg-luxury')?.value.trim()||'',
+    },
     tip:         document.getElementById('dc-tip')?.value.trim()||'',
+    bestSelling: document.getElementById('dc-bestselling')?.checked||false,
     updatedAt:   firebase.firestore.FieldValue.serverTimestamp(),
   };
   try {
-    if(editId) {
+    if(editId && !editId.startsWith('seed_')) {
       await db.collection('destinations').doc(editId).set(data, { merge: true });
     } else {
       data.createdAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -5023,6 +5008,7 @@ async function deleteDestination(id) {
     updateTrashBadge();
   } catch(e) { alert('Delete failed: ' + e.message); }
 }
+
 
 
 // ═══════════════════════════════════════════════
