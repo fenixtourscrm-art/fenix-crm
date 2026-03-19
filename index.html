@@ -3185,10 +3185,13 @@ function clearAIChat() {
   </div>`;
 }
 
+let _aiSending = false;
 async function sendAIMessage() {
+  if(_aiSending) return; // hard block — one message at a time
   const input = document.getElementById('ai-input');
   const msg = input.value.trim();
   if (!msg) return;
+  _aiSending = true;
 
   const win = document.getElementById('ai-chat-window');
   const btn = document.getElementById('ai-send-btn');
@@ -3248,6 +3251,7 @@ async function sendAIMessage() {
 
   btn.disabled = false;
   btn.style.opacity = '1';
+  _aiSending = false;
   win.scrollTop = win.scrollHeight;
 }
 
@@ -6090,11 +6094,11 @@ async function callGeminiAI(prompt, retries = 3) {
       })
     });
 
-    // 429 = rate limited — wait and retry
+    // 429 = rate limited — wait and retry once
     if(res.status === 429 && retries > 0) {
       _geminiPending = false;
-      await new Promise(r => setTimeout(r, 2000)); // wait 2 seconds
-      return callGeminiAI(prompt, retries - 1);
+      await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds
+      return callGeminiAI(prompt, 0); // only 1 retry
     }
 
     if(!res.ok) throw new Error("Gemini API error " + res.status);
