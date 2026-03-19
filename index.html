@@ -6085,7 +6085,7 @@ async function callGeminiAI(prompt, retries = 3) {
   _geminiLastCall = Date.now();
 
   try {
-    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=AIzaSyAppVsgXKiXGsA1n_W-ptKsliinCCsmxUo", {
+    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAppVsgXKiXGsA1n_W-ptKsliinCCsmxUo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
