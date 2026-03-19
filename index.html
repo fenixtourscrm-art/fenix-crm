@@ -6068,45 +6068,14 @@ setInterval(() => {
 
 
 
-// ── Gemini 2.0 Flash AI Helper ─────────────────
-let _geminiLastCall = 0;
-let _geminiPending = false;
-
-async function callGeminiAI(prompt, retries = 3) {
-  // Prevent overlapping calls
-  if(_geminiPending) throw new Error("Please wait — AI is already processing a request.");
-
-  // Enforce 1 second minimum gap between calls
-  const now = Date.now();
-  const gap = now - _geminiLastCall;
-  if(gap < 1000) await new Promise(r => setTimeout(r, 1000 - gap));
-
-  _geminiPending = true;
-  _geminiLastCall = Date.now();
-
-  try {
-    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAppVsgXKiXGsA1n_W-ptKsliinCCsmxUo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
-      })
-    });
-
-    // 429 = rate limited — wait and retry once
-    if(res.status === 429 && retries > 0) {
-      _geminiPending = false;
-      await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds
-      return callGeminiAI(prompt, 0); // only 1 retry
-    }
-
-    if(!res.ok) throw new Error("Gemini API error " + res.status);
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  } finally {
-    _geminiPending = false;
-  }
+// ── Pollinations AI Helper ─────────────────────
+async function callGeminiAI(prompt) {
+  const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`, {
+    method: 'GET',
+    headers: { 'Accept': 'text/plain' }
+  });
+  if(!res.ok) throw new Error("AI error " + res.status);
+  return await res.text();
 }
 
 function promptImportCategory(event) {
