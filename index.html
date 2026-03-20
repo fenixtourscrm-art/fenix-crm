@@ -398,6 +398,12 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div class="section-title">👥 Staff Daily Summary</div>
       <div id="dash-reports"></div>
       <div class="divider"></div>
+      <div class="section-title">📅 Next Month Overview</div>
+      <div id="dash-next-month"></div>
+      <div class="divider"></div>
+      <div class="section-title">🗓️ Last Month Bookings</div>
+      <div id="dash-last-month"></div>
+      <div class="divider"></div>
       <div class="section-title">🎯 Target Progress</div>
       <div id="dash-targets"></div>
     </div>
@@ -433,7 +439,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
       </div>
       <div class="card"><table><thead><tr>
-        <th>CATEGORY</th><th>COMPANY NAME</th><th>FIRST NAME</th><th>LAST NAME</th><th>GENDER</th><th>MOBILE</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>ACTIONS</th>
+        <th>CATEGORY</th><th>COMPANY NAME</th><th>FIRST NAME</th><th>LAST NAME</th><th>GENDER</th><th>MOBILE / ALT</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>FAMILY</th><th>ACTIONS</th>
       </tr></thead><tbody id="clients-tbody"></tbody></table></div>
     </div>
 
@@ -463,6 +469,12 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('New',this)">🟢 New</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Old',this)">🟠 Old</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Repeated',this)">🟣 Repeated</button>
+          <span style="width:1px;background:#e2e8f0;height:20px;display:inline-block;margin:0 4px"></span>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('A+',this)" style="background:#fef2f2;color:#dc2626;border-color:#fca5a5">⭐ A+</button>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('A',this)" style="background:#fff7ed;color:#ea580c;border-color:#fed7aa">⭐ A</button>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('B+',this)" style="background:#fefce8;color:#ca8a04;border-color:#fde68a">⭐ B+</button>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('B',this)" style="background:#eff6ff;color:#2563eb;border-color:#bfdbfe">⭐ B</button>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('C',this)" style="background:#f8fafc;color:#64748b;border-color:#e2e8f0">⭐ C</button>
           <div style="position:relative;display:inline-block">
             <button id="enq-staff-btn" class="btn btn-ghost enq-filter" onclick="toggleEnqStaffMenu(this)" style="display:flex;align-items:center;gap:5px">👨‍💼 Staff <span id="enq-staff-arrow">▾</span></button>
             <div id="enq-staff-menu" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:220px;margin-top:4px;padding:6px 0">
@@ -473,7 +485,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-primary" onclick="openModal('enquiry')">+ Add Enquiry</button>
       </div>
       <div class="card"><table><thead><tr>
-        <th>TYPE</th><th>CLIENT</th><th>SOURCE</th><th>CATEGORY</th><th>DESTINATION</th><th>PAX</th><th>BUDGET</th><th>RATING</th><th>FOLLOW-UP</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th>
+        <th>ENQ NO</th><th>TYPE</th><th>CLIENT</th><th>SOURCE</th><th>CATEGORY</th><th>DESTINATION</th><th>PAX</th><th>BUDGET</th><th>RATING</th><th>FOLLOW-UP</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th>
       </tr></thead><tbody id="enq-tbody"></tbody></table></div>
     </div>
 
@@ -483,7 +495,14 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div class="bk-cards-grid" id="bk-cards"></div>
 
       <!-- Filters row -->
-      <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost bk-month-filter active-filter" id="bkm-all" onclick="setBkMonthFilter('all',this)">📁 All</button>
+          <button class="btn btn-ghost bk-month-filter" id="bkm-lastmonth" onclick="setBkMonthFilter('lastmonth',this)">⬅️ Last Month</button>
+          <button class="btn btn-ghost bk-month-filter" id="bkm-thismonth" onclick="setBkMonthFilter('thismonth',this)">📅 This Month</button>
+          <button class="btn btn-ghost bk-month-filter" id="bkm-nextmonth" onclick="setBkMonthFilter('nextmonth',this)">➡️ Next Month</button>
+          <button class="btn btn-ghost bk-month-filter" id="bkm-add" onclick="openBookingModal()" style="background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none">+ Add Booking</button>
+        </div>
         <div style="display:flex;align-items:center;gap:6px">
           <button class="btn btn-ghost" onclick="prevMonth('book')">‹</button>
           <span id="book-cal-label" style="font-size:12px;font-weight:700;color:#0f172a;min-width:110px;text-align:center"></span>
@@ -1072,6 +1091,13 @@ function updateBadges(){
 // DASHBOARD
 function renderDashboard(){
   const tm=thisMonth();
+  // next/last month helpers
+  const nmDate=new Date(); nmDate.setMonth(nmDate.getMonth()+1);
+  const nm=`${nmDate.getFullYear()}-${String(nmDate.getMonth()+1).padStart(2,'0')}`;
+  const nmLabel=nmDate.toLocaleString('en-IN',{month:'long',year:'numeric'});
+  const lmDate=new Date(); lmDate.setMonth(lmDate.getMonth()-1);
+  const lm=`${lmDate.getFullYear()}-${String(lmDate.getMonth()+1).padStart(2,'0')}`;
+  const lmLabel=lmDate.toLocaleString('en-IN',{month:'long',year:'numeric'});
   const mb=allBookings.filter(b=>b.travelDate&&b.travelDate.startsWith(tm)).length;
   const rev=allBookings.reduce((s,b)=>s+(parseFloat(b.paid)||0),0);
   const pt=tasks.filter(t=>!t.done).length;
@@ -1106,6 +1132,49 @@ function renderDashboard(){
       </div>
     </div>`;
   }).join("")||`<div class="empty">No targets set for this month</div>`;
+
+  // ── Next Month Overview ──
+  const nmBookings = allBookings.filter(b=>b.travelDate&&b.travelDate.startsWith(nm));
+  const nmEnqs = enquiries.filter(e=>(e.startDate||"").startsWith(nm));
+  const nmPax = nmBookings.reduce((s,b)=>s+(parseInt(b.adults||0)+parseInt(b.childBed||0)+parseInt(b.childNoBed||0)+parseInt(b.infant||0)||parseInt(b.pax||1)),0);
+  const nmUpcoming = nmBookings.slice(0,5);
+  const nmEl = document.getElementById("dash-next-month");
+  if(nmEl) nmEl.innerHTML=`
+    <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:14px;padding:16px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">📅 ${nmLabel}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#fff">${nmBookings.length}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Bookings</div></div>
+        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#fff">${nmEnqs.length}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Enquiries</div></div>
+        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#fff">${nmPax}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Total PAX</div></div>
+        <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#f97316">${nmUpcoming.length}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Upcoming Trips</div></div>
+      </div>
+      ${nmUpcoming.length?`<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Upcoming Trips</div>${nmUpcoming.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:4px"><div style="font-size:20px">${(b.category||"").includes("Tour")?"✈️":(b.category||"").includes("Hotel")?"🏨":(b.category||"").includes("Visa")?"🛂":"📁"}</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:#fff">${cName(b.clientId)}</div><div style="font-size:10px;color:#94a3b8">${b.destination||b.category} · ${b.travelDate} · ${b.adults||b.pax||1} pax</div></div></div>`).join("")}`:"<div style="font-size:12px;color:#475569;padding:8px">No trips scheduled yet</div>"}
+    </div>`;
+
+  // ── Last Month Bookings ──
+  const lmBookings = allBookings.filter(b=>b.travelDate&&b.travelDate.startsWith(lm));
+  const lmRev = lmBookings.reduce((s,b)=>s+(parseFloat(b.paid)||0),0);
+  const lmPax = lmBookings.reduce((s,b)=>s+(parseInt(b.adults||0)+parseInt(b.childBed||0)+parseInt(b.childNoBed||0)+parseInt(b.infant||0)||parseInt(b.pax||1)),0);
+  const lmEl = document.getElementById("dash-last-month");
+  if(lmEl) lmEl.innerHTML=lmBookings.length?`
+    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:#0f172a">📊 ${lmLabel} — ${lmBookings.length} bookings</div>
+        <div style="font-size:12px;font-weight:800;color:#16a34a">${fmt(lmRev)} collected</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:12px">
+        <div class="metric-box"><div class="metric-val">${lmBookings.length}</div><div class="metric-lbl">Bookings</div></div>
+        <div class="metric-box"><div class="metric-val">${lmPax}</div><div class="metric-lbl">Total PAX</div></div>
+        <div class="metric-box"><div class="metric-val" style="font-size:13px">${fmt(lmRev)}</div><div class="metric-lbl">Revenue</div></div>
+        <div class="metric-box"><div class="metric-val">${lmBookings.filter(b=>b.status==="Confirmed").length}</div><div class="metric-lbl">Confirmed</div></div>
+      </div>
+      <div style="max-height:200px;overflow-y:auto">${lmBookings.map(b=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 8px;border-bottom:1px solid #f1f5f9;font-size:12px">
+        <span style="color:#0369a1;font-weight:700;min-width:90px">${b.travelDate||"—"}</span>
+        <span style="flex:1;font-weight:600">${cName(b.clientId)}</span>
+        <span style="color:#64748b">${b.destination||b.category||"—"}</span>
+        <span style="color:#16a34a;font-weight:700">${fmt(b.paid)}</span>
+      </div>`).join("")}</div>
+    </div>`:`<div class="empty">No bookings in ${lmLabel}</div>`;
 }
 
 // CLIENTS
@@ -1229,9 +1298,13 @@ function renderClients(){
       </div>
     </div></td>
     <td><strong>${c.lastName||'—'}</strong></td>
-    <td>${c.gender}</td><td>${c.mobile}</td><td style="font-size:11px">${c.email}</td><td>${c.occupation}</td><td>${c.city}</td><td>${c.state}</td><td>${c.pincode}</td>
+    <td>${c.gender}</td>
+    <td><div>${c.mobile}</div>${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:''}</td>
+    <td style="font-size:11px">${c.email}</td><td>${c.occupation}</td><td>${c.city}</td><td>${c.state}</td><td>${c.pincode}</td>
+    <td style="font-size:10px;color:#7c3aed">${c.familyName?`<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:2px 7px;display:inline-block">👨‍👩‍👧 ${c.familyName}${c.isPrimaryClient?' 👑':''}</div>`:''}</td>
     <td style="position:relative;overflow:visible;white-space:nowrap">
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
+        <button class="btn" style="background:#0369a1;color:#fff;font-size:10px;padding:4px 10px;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
         <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
         <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:9990;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);min-width:180px;display:none">
           <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
@@ -1269,6 +1342,7 @@ function editClient(id){
 
 // ENQUIRIES
 let enqFilter="all", catFilter="all", enqStaffFilter=null;
+const RATINGS_LIST = ["A+","A","B+","B","C"];
 function filterEnq(f,el){enqFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
 function filterCat(f,el){catFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
 
@@ -1333,6 +1407,7 @@ function renderEnquiries(){
   let list=enquiries;
   if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk") list=list.filter(e=>e.status===enqFilter);
   else if(enqFilter==="New"||enqFilter==="Old"||enqFilter==="Repeated") list=list.filter(e=>e.type===enqFilter);
+  else if(["A+","A","B+","B","C"].includes(enqFilter)) list=list.filter(e=>e.rating===enqFilter);
   if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||(Array.isArray(e.intentions)&&e.intentions.includes(catFilter)));
   if(enqStaffFilter!==null) list=list.filter(e=>e.staffId===enqStaffFilter);
   const fuColors={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
@@ -1361,11 +1436,11 @@ function renderEnquiries(){
   const sortedDates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
 
   if(!sortedDates.length){
-    rows=`<tr><td colspan="13" class="empty">No enquiries</td></tr>`;
+    rows=`<tr><td colspan="14" class="empty">No enquiries</td></tr>`;
   } else {
     sortedDates.forEach(dk=>{
       rows+=`<tr>
-        <td colspan="13" style="background:#fff7ed;padding:8px 14px;font-size:11px;font-weight:700;color:#ea580c;border-top:2px solid #fed7aa;border-bottom:1px solid #fed7aa;letter-spacing:.3px">
+        <td colspan="14" style="background:#fff7ed;padding:8px 14px;font-size:11px;font-weight:700;color:#ea580c;border-top:2px solid #fed7aa;border-bottom:1px solid #fed7aa;letter-spacing:.3px">
           ${dateLabel(dk)}
           <span style="margin-left:8px;background:#f97316;color:#fff;font-size:10px;padding:1px 8px;border-radius:20px;font-weight:600">${groups[dk].length} enq${groups[dk].length>1?'s':''}</span>
         </td>
@@ -1378,6 +1453,7 @@ function renderEnquiries(){
           : ((e.adults||0)+(e.childBed||0)+(e.childNoBed||0)+(e.infant||0))||e.pax||1;
         const enqTime=e.createdAt?new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}):'';
         rows+=`<tr style="border-left:3px solid ${fuColor}">
+    <td><div style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap">${e.enquiryNo||'—'}</div></td>
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
     <td><strong>${cName(e.clientId)}</strong></td>
     <td style="font-size:11px;max-width:100px">${e.source.split("–")[0].trim()}</td>
@@ -1571,6 +1647,13 @@ function showDayItems(type,dateStr){
 }
 function closeDayOverlay(e){if(!e||e.target===document.getElementById("day-overlay"))document.getElementById("day-overlay").classList.remove("open");}
 // BOOKING CARDS + FILTERS + TABLE
+let bkMonthFilter = "all";
+function setBkMonthFilter(f, el) {
+  bkMonthFilter = f;
+  document.querySelectorAll(".bk-month-filter").forEach(b=>b.classList.remove("active-filter"));
+  if(el) el.classList.add("active-filter");
+  renderBookingList();
+}
 function setBkFilter(cat,el){
   bkFilter=cat;
   document.querySelectorAll(".bk-card").forEach(c=>c.classList.remove("active"));
@@ -1620,10 +1703,17 @@ function renderBookingList(){
   if(bkFilter!=="all") list=list.filter(b=>b.category===bkFilter);
   if(diFilter==="domestic") list=list.filter(b=>BK_CATS.find(c=>c.id===b.category)?.di==="domestic");
   if(diFilter==="international") list=list.filter(b=>BK_CATS.find(c=>c.id===b.category)?.di==="international");
-
+  // Month quick-filter
+  if(bkMonthFilter!=="all"){
+    const nmDate=new Date(); if(bkMonthFilter==="nextmonth") nmDate.setMonth(nmDate.getMonth()+1);
+    else if(bkMonthFilter==="lastmonth") nmDate.setMonth(nmDate.getMonth()-1);
+    const mStr=bkMonthFilter==="thismonth"?thisMonth():`${nmDate.getFullYear()}-${String(nmDate.getMonth()+1).padStart(2,"0")}`;
+    list=list.filter(b=>b.travelDate&&b.travelDate.startsWith(mStr));
+  }
   const catLabel=bkFilter==="all"?"All Bookings":BK_CATS.find(c=>c.id===bkFilter)?.label||bkFilter;
+  const monthLabel=bkMonthFilter==="lastmonth"?" — Last Month":bkMonthFilter==="thismonth"?" — This Month":bkMonthFilter==="nextmonth"?" — Next Month":"";
   const title=document.getElementById("bk-list-title");
-  if(title)title.textContent=catLabel+" ("+list.length+")";
+  if(title)title.textContent=catLabel+monthLabel+" ("+list.length+")";
 
   document.getElementById("book-tbody").innerHTML=list.map(b=>{
     const st=CAT_STYLES[b.category]||{bg:"#f1f5f9",color:"#374151"};
@@ -1844,20 +1934,143 @@ function renderChart(){
 
 // GLOBAL SEARCH
 function globalSearch(q){
-  if(!q.trim()){if(document.getElementById("tab-search").classList.contains("active"))showTab("dashboard",document.querySelector(".nav-item"));return;}
+  if(!q.trim()){
+    if(document.getElementById("tab-search").classList.contains("active"))
+      showTab("dashboard",document.querySelector(".nav-item"));
+    // Hide suggestions
+    const sug=document.getElementById("search-suggestions");
+    if(sug) sug.style.display="none";
+    return;
+  }
+  // Show inline suggestions dropdown
+  showSearchSuggestions(q);
+  // Show full results tab
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
   document.getElementById("tab-search").classList.add("active");
   document.getElementById("page-title").textContent=`🔍 "${q}"`;
   const ql=q.toLowerCase();
-  const fc=clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.email} ${c.city}`.toLowerCase().includes(ql));
-  const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source}`.toLowerCase().includes(ql));
-  const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination}`.toLowerCase().includes(ql));
+
+  // Primary client matches
+  const fc=clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email} ${c.city} ${c.companyName||""}`.toLowerCase().includes(ql));
+
+  // Family member matches — clients in same family group
+  const familyMatches=[];
+  fc.forEach(c=>{
+    if(c.familyName){
+      clients.filter(x=>x.familyName===c.familyName && x.id!==c.id).forEach(fm=>{
+        if(!fc.find(f=>f.id===fm.id) && !familyMatches.find(f=>f.id===fm.id))
+          familyMatches.push({...fm, _foundViaFamily:c.firstName+" "+c.lastName});
+      });
+    }
+  });
+
+  const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source} ${e.category||""}`.toLowerCase().includes(ql));
+  const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""} ${b.category||""}`.toLowerCase().includes(ql));
+
+  const actionBtns=(c)=>`
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#0369a1;color:#fff;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" onclick="generateEnquiry('${c.id}')">🎯 Enquiry</button>
+    </div>`;
+
+  const enqActionBtns=(e)=>`
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="openEditEnq('${e.id}')">✏️ Edit</button>
+      ${e.status==="Active"?`<button class="btn" style="font-size:10px;padding:3px 8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0" onclick="markBooked('${e.id}')">✅ Book</button>`:""}
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openFollowUpPopup('${e.id}',null)">📅 Follow-up</button>
+    </div>`;
+
+  const bkActionBtns=(b)=>`
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editBk('${b.id}')">✏️ Edit</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0" onclick="openAddPayment('${b.id}')">💰 Payment</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0" onclick="revertToEnquiry('${b.id}')">↩ Inquiry</button>
+    </div>`;
+
   document.getElementById("search-results").innerHTML=`
-    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div><div class="card"><table><thead><tr><th>COMPANY</th><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>ACTION</th></tr></thead><tbody>${fc.map(c=>`<tr><td style="font-size:11px;font-weight:700;color:#0369a1">${c.companyName||"—"}</td><td><strong>${c.firstName} ${c.lastName}</strong></td><td>${c.mobile}</td><td>${c.email}</td><td>${c.city}</td><td style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn" style="font-size:10px;padding:3px 10px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button><button class="btn" style="font-size:10px;padding:3px 10px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" onclick="generateEnquiry('${c.id}')">🎯 Enquiry</button><button class="btn" style="font-size:10px;padding:3px 10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe" onclick="logMarketingCall('${c.id}')">📞 Mktg Call</button></td></tr>`).join("")}</tbody></table></div>`:""}
-    ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>RATING</th><th>STATUS</th><th>TYPE</th></tr></thead><tbody>${fe.map(e=>`<tr><td>${cName(e.clientId)}</td><td>${e.destination}</td><td>${rBadge(e.rating)}</td><td>${sBadge(e.status)}</td><td>${tBadge(e.type)}</td></tr>`).join("")}</tbody></table></div>`:""}
-    ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div><div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th></tr></thead><tbody>${fb.map(b=>`<tr><td>${cName(b.clientId)}</td><td>${b.destination}</td><td>${b.travelDate}</td><td>${fmt(b.amount)}</td></tr>`).join("")}</tbody></table></div>`:""}
-    ${!fc.length&&!fe.length&&!fb.length?`<div class="empty">No results found for "${q}"</div>`:""}`;
+    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div>
+    <div class="card"><table><thead><tr><th>CATEGORY</th><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>FAMILY</th><th>ACTIONS</th></tr></thead>
+    <tbody>${fc.map(c=>`<tr>
+      <td><span style="background:#f1f5f9;color:#374151;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">${c.clientCategory||"Regular"}</span></td>
+      <td><strong>${c.firstName} ${c.lastName}</strong>${c.companyName?`<div style="font-size:10px;color:#0369a1">${c.companyName}</div>`:""}</td>
+      <td>${c.mobile}${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:""}</td>
+      <td style="font-size:11px">${c.email}</td><td>${c.city}</td>
+      <td style="font-size:11px;color:#7c3aed">${c.familyName?`👨‍👩‍👧 ${c.familyName}`:""}</td>
+      <td>${actionBtns(c)}</td>
+    </tr>`).join("")}</tbody></table></div>`:""
+  }
+    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">👨‍👩‍👧 Family Members (${familyMatches.length})</div>
+    <div class="card" style="border-left:4px solid #8b5cf6"><table><thead><tr><th>NAME</th><th>RELATION</th><th>MOBILE</th><th>FAMILY GROUP</th><th>FOUND VIA</th><th>ACTIONS</th></tr></thead>
+    <tbody>${familyMatches.map(c=>`<tr style="background:#faf5ff">
+      <td><strong>${c.firstName} ${c.lastName}</strong>${c.isPrimaryClient?` <span style="background:#8b5cf6;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">👑 Primary</span>`:""}</td>
+      <td style="font-size:11px;color:#7c3aed">${c.familyRelation||"—"}</td>
+      <td>${c.mobile}</td>
+      <td style="font-size:11px">${c.familyName}</td>
+      <td style="font-size:11px;color:#94a3b8">via ${c._foundViaFamily}</td>
+      <td>${actionBtns(c)}</td>
+    </tr>`).join("")}</tbody></table></div>`:""}
+    ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div>
+    <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>CATEGORY</th><th>RATING</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th></tr></thead>
+    <tbody>${fe.map(e=>`<tr>
+      <td><strong>${cName(e.clientId)}</strong></td>
+      <td>${e.destination||"—"}</td>
+      <td style="font-size:11px">${e.category||"—"}</td>
+      <td>${rBadge(e.rating)}</td><td>${sBadge(e.status)}</td>
+      <td style="font-size:11px">${sName(e.staffId)}</td>
+      <td>${enqActionBtns(e)}</td>
+    </tr>`).join("")}</tbody></table></div>`:""
+  }
+    ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div>
+    <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
+    <tbody>${fb.map(b=>`<tr>
+      <td><strong>${cName(b.clientId)}</strong></td>
+      <td>${b.destination||b.category||"—"}</td>
+      <td>${b.travelDate||"—"}</td>
+      <td style="font-weight:700;color:#059669">${fmt(b.amount)}</td>
+      <td>${sBadge(b.status||"Confirmed")}</td>
+      <td>${bkActionBtns(b)}</td>
+    </tr>`).join("")}</tbody></table></div>`:""
+  }
+    ${!fc.length&&!familyMatches.length&&!fe.length&&!fb.length?`<div class="empty" style="padding:40px"><div style="font-size:32px;margin-bottom:8px">🔍</div>No results found for "${q}"</div>`:""}`;
+}
+
+// ── Search Suggestions Dropdown ──
+function showSearchSuggestions(q){
+  let sug=document.getElementById("search-suggestions");
+  if(!sug){
+    const searchBar=document.getElementById("global-search");
+    if(!searchBar) return;
+    sug=document.createElement("div");
+    sug.id="search-suggestions";
+    sug.style.cssText="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:9996;max-height:280px;overflow-y:auto;margin-top:4px";
+    searchBar.parentElement.style.position="relative";
+    searchBar.parentElement.appendChild(sug);
+    document.addEventListener("click",e=>{if(!e.target.closest(".topbar-right"))sug.style.display="none";},{once:false});
+  }
+  if(q.length<2){sug.style.display="none";return;}
+  const ql=q.toLowerCase();
+  const matches=[];
+  clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.companyName||""}`.toLowerCase().includes(ql)).slice(0,5).forEach(c=>{
+    matches.push({type:"client",icon:"👤",label:`${c.firstName} ${c.lastName}`,sub:`${c.mobile}${c.altMobile?" · "+c.altMobile:""} · ${c.city||""}${c.familyName?" · 👨‍👩‍👧 "+c.familyName:""}`,id:c.id});
+  });
+  enquiries.filter(e=>`${cName(e.clientId)} ${e.destination||""}`.toLowerCase().includes(ql)).slice(0,3).forEach(e=>{
+    matches.push({type:"enq",icon:"🎯",label:cName(e.clientId),sub:`${e.destination||""} · ${e.rating} · ${e.status}`,id:e.id});
+  });
+  allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""}`.toLowerCase().includes(ql)).slice(0,3).forEach(b=>{
+    matches.push({type:"bk",icon:"✈️",label:cName(b.clientId),sub:`${b.destination||b.category||""} · ${b.travelDate||""}`,id:b.id});
+  });
+  if(!matches.length){sug.style.display="none";return;}
+  sug.style.display="";
+  sug.innerHTML=matches.map(m=>`
+    <div onclick="document.getElementById('global-search').value='${m.label.replace(/'/g,"\'")}';document.getElementById('search-suggestions').style.display='none';globalSearch('${m.label.replace(/'/g,"\'")}');"
+      style="display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9"
+      onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+      <span style="font-size:18px;flex-shrink:0">${m.icon}</span>
+      <div><div style="font-size:13px;font-weight:600;color:#0f172a">${m.label}</div>
+      <div style="font-size:11px;color:#64748b">${m.sub}</div></div>
+    </div>`).join("")+`<div onclick="document.getElementById('search-suggestions').style.display='none'" style="padding:8px 14px;font-size:11px;color:#94a3b8;text-align:center;cursor:pointer">Press Enter for full results</div>`;
 }
 
 // MODALS
@@ -1871,11 +2084,24 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional – for corporate clients)</span></label><input id="c-company" placeholder="e.g. ABC Pvt. Ltd."/></div></div>
     <div class="form-grid"><div class="fg"><label>Client Category <span style="color:#dc2626">*</span></label><select id="c-cat"><option value="Regular">Regular</option>${CLIENT_CATS.filter(x=>x!=="Regular").map(x=>`<option value="${x}">${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="c-fn" placeholder="e.g. Rahul"/></div><div class="fg"><label>Last Name</label><input id="c-ln" placeholder="e.g. Sharma"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No</label><input id="c-mob" placeholder="9876543210"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No <span style="color:#dc2626">*</span></label><input id="c-mob" placeholder="9876543210"/></div></div>
+    <div class="form-grid g1"><div class="fg"><label>Alternate Mobile <span style="font-size:10px;color:#94a3b8">(optional)</span></label><input id="c-altmob" placeholder="e.g. 9876500000"/></div></div>
     <div class="form-grid"><div class="fg"><label>Email ID</label><input id="c-email" placeholder="email@example.com"/></div><div class="fg"><label>Occupation</label><input id="c-occ" placeholder="e.g. Businessman"/></div></div>
     <div class="form-grid"><div class="fg"><label>Country</label><input id="c-country" value="India"/></div><div class="fg"><label>State</label><select id="c-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option>${s}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>City</label><input id="c-city" placeholder="e.g. Ahmedabad"/></div><div class="fg"><label>Area</label><input id="c-area" placeholder="e.g. Navrangpura"/></div></div>
     <div class="form-grid single g1"><div class="fg"><label>Pincode</label><input id="c-pin" placeholder="380009"/></div></div>
+    <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">👨‍👩‍👧 Family Linking (Optional)</div>
+      <div class="form-grid">
+        <div class="fg"><label>Family Group Name</label><input id="c-family-name" placeholder="e.g. Qureshi Family"/></div>
+        <div class="fg"><label>Relationship</label><select id="c-relation"><option value="">— None —</option><option>Father</option><option>Mother</option><option>Son</option><option>Daughter</option><option>Husband</option><option>Wife</option><option>Brother</option><option>Sister</option><option>Grandfather</option><option>Grandmother</option><option>Uncle</option><option>Aunt</option><option>Partner</option><option>Friend</option><option>Other</option></select></div>
+      </div>
+      <div class="form-grid g1">
+        <div class="fg"><label>Primary Client of Family?</label>
+          <select id="c-is-primary"><option value="no">No</option><option value="yes">Yes — I am the Primary</option></select>
+        </div>
+      </div>
+    </div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveClient()">Save Client</button>`;
   } else if(type==="enquiry"||type==="editEnquiry"){
     const isEdit=type==="editEnquiry";
@@ -2201,9 +2427,25 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional)</span></label><input id="ec-company" value="${c.companyName||""}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Client Category</label><select id="ec-cat">${CLIENT_CATS.map(x=>`<option value="${x}"${x===(c.clientCategory||"Regular")?" selected":""}>${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="ec-fn" value="${c.firstName}"/></div><div class="fg"><label>Last Name</label><input id="ec-ln" value="${c.lastName}"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Mobile</label><input id="ec-mob" value="${c.mobile}"/></div><div class="fg"><label>Email</label><input id="ec-email" value="${c.email}"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Occupation</label><input id="ec-occ" value="${c.occupation||""}"/></div><div class="fg"><label>City</label><input id="ec-city" value="${c.city||""}"/></div></div>
-    <div class="form-grid"><div class="fg"><label>State</label><select id="ec-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Mobile</label><input id="ec-mob" value="${c.mobile}"/></div><div class="fg"><label>Alternate Mobile</label><input id="ec-altmob" value="${c.altMobile||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Email</label><input id="ec-email" value="${c.email}"/></div><div class="fg"><label>Occupation</label><input id="ec-occ" value="${c.occupation||""}"/></div></div>
+    <div class="form-grid"><div class="fg"><label>City</label><input id="ec-city" value="${c.city||""}"/></div><div class="fg"><label>State</label><select id="ec-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div></div>
+    <div class="form-grid"><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode||""}"/></div></div>
+    <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">👨‍👩‍👧 Family Linking</div>
+      <div class="form-grid">
+        <div class="fg"><label>Family Group Name</label><input id="ec-family-name" value="${c.familyName||""}" placeholder="e.g. Qureshi Family"/></div>
+        <div class="fg"><label>Relationship</label><select id="ec-relation">
+          <option value="">— None —</option>
+          ${["Father","Mother","Son","Daughter","Husband","Wife","Brother","Sister","Grandfather","Grandmother","Uncle","Aunt","Partner","Friend","Other"].map(r=>`<option${r===(c.familyRelation||"")?" selected":""}>${r}</option>`).join("")}
+        </select></div>
+      </div>
+      <div class="form-grid g1"><div class="fg"><label>Primary Client of Family?</label>
+        <select id="ec-is-primary">
+          <option value="no"${!c.isPrimaryClient?" selected":""}>No</option>
+          <option value="yes"${c.isPrimaryClient?" selected":""}>Yes — I am the Primary</option>
+        </select></div></div>
+    </div>
     <div class="form-grid"><div class="fg"><label>Data Type / Lead Source</label>
       <select id="ec-datatype" onchange="toggleCustomDataType(this)">
         <option value="">-- Select Source --</option>
@@ -2325,6 +2567,7 @@ async function saveEditClient(){
     firstName:toTitleCase(document.getElementById("ec-fn").value),
     lastName:toTitleCase(document.getElementById("ec-ln").value),
     mobile:document.getElementById("ec-mob").value,
+    altMobile:document.getElementById("ec-altmob")?.value.trim()||"",
     email:document.getElementById("ec-email").value,
     occupation:document.getElementById("ec-occ")?.value||"",
     city:document.getElementById("ec-city")?.value||"",
@@ -2332,12 +2575,14 @@ async function saveEditClient(){
     pincode:document.getElementById("ec-pin")?.value||"",
     dataType,
     clientCategory:document.getElementById("ec-cat")?.value||"Regular",
+    familyName:document.getElementById("ec-family-name")?.value.trim()||"",
+    familyRelation:document.getElementById("ec-relation")?.value||"",
+    isPrimaryClient:document.getElementById("ec-is-primary")?.value==="yes",
   };
   data.updatedBy = CURRENT_USER ? CURRENT_USER.id : 0;
   data.updatedByName = CURRENT_USER ? CURRENT_USER.name : "Unknown";
   data.updatedAt = new Date().toISOString();
   try {
-    // Preserve original creator info on edit
     if(c.createdByName && !data.createdByName) data.createdByName = c.createdByName;
     if(c.createdBy && !data.createdBy) data.createdBy = c.createdBy;
     await fbUpdate("clients", c.id, data);
@@ -2694,6 +2939,237 @@ async function fbDelete(col, id) {
 
 const toTitleCase = s => (s||"").trim().split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
+// ═══════════════════════════════════════════════
+//  CLIENT PROFILE — Family + History + AI Insight
+// ═══════════════════════════════════════════════
+function openClientProfile(clientId) {
+  const c = clients.find(x => x.id === clientId);
+  if(!c) return;
+  document.getElementById("client-profile-overlay")?.remove();
+  const cat = c.clientCategory || "Regular";
+  const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
+  const cEnqs = enquiries.filter(e => e.clientId === clientId);
+  const cBks  = allBookings.filter(b => b.clientId === clientId);
+  const totalSpend = cBks.reduce((s,b) => s+(parseFloat(b.amount)||0), 0);
+  const totalPaid  = cBks.reduce((s,b) => s+(parseFloat(b.paid)||0), 0);
+  const familyMembers = c.familyName
+    ? clients.filter(x => x.familyName === c.familyName && x.id !== clientId)
+        .sort((a,b) => (b.isPrimaryClient?1:0)-(a.isPrimaryClient?1:0))
+    : [];
+
+  // History: all enquiries + bookings sorted newest first
+  const allHistory = [
+    ...cEnqs.map(e => ({
+      type:'enq', date:e.createdAt||e.date||"",
+      no: e.enquiryNo||"",
+      label:"Enquiry: "+(e.destination||e.category||"—"),
+      sub: (e.rating||"")+" · "+(e.status||"")+" · "+sName(e.staffId),
+      detail: "Budget: "+(e.budget||"—")+" · Pax: "+(e.pax||1)+" · "+(e.followUpStatus||""),
+      color:"#0369a1", bg:"#eff6ff"
+    })),
+    ...cBks.map(b => ({
+      type:'bk', date:b.travelDate||b.createdAt||"",
+      no: "",
+      label:"Booking: "+(b.destination||b.category||"—"),
+      sub: (b.travelDate||"")+" · "+fmt(b.amount)+" · "+(b.status||""),
+      detail: "Paid: "+fmt(b.paid||0)+" · Pending: "+fmt(Math.max(0,(parseFloat(b.amount)||0)-(parseFloat(b.paid)||0)))+" · "+sName(b.staffId),
+      color:"#059669", bg:"#f0fdf4"
+    })),
+  ].sort((a,b) => (b.date||"").localeCompare(a.date||""));
+
+  const overlay = document.createElement("div");
+  overlay.id = "client-profile-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9997;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto";
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:660px;box-shadow:0 24px 64px rgba(0,0,0,0.25);overflow:hidden;margin:auto">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:22px 24px;display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:800;color:#fff">${c.firstName} ${c.lastName}${c.isPrimaryClient?' <span style="background:#f97316;font-size:10px;padding:2px 7px;border-radius:4px">👑 Primary</span>':''}</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:3px">${c.mobile}${c.altMobile?" · 📱 "+c.altMobile:""} · ${c.city||""}${c.occupation?" · "+c.occupation:""}</div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="background:${cs.bg};color:${cs.color};padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700">${cs.icon} ${cat}</span>
+            ${c.familyName?`<span style="background:rgba(139,92,246,.3);color:#ddd6fe;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700">👨‍👩‍👧 ${c.familyName}</span>`:""}
+          </div>
+        </div>
+        <button onclick="document.getElementById('client-profile-overlay').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:7px 12px;cursor:pointer;color:#fff;font-size:16px;line-height:1">✕</button>
+      </div>
+
+      <!-- Stats Bar -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #f1f5f9">
+        <div style="padding:12px;text-align:center;border-right:1px solid #f1f5f9"><div style="font-size:20px;font-weight:800;color:#0369a1">${cEnqs.length}</div><div style="font-size:10px;color:#64748b;font-weight:600">Enquiries</div></div>
+        <div style="padding:12px;text-align:center;border-right:1px solid #f1f5f9"><div style="font-size:20px;font-weight:800;color:#059669">${cBks.length}</div><div style="font-size:10px;color:#64748b;font-weight:600">Bookings</div></div>
+        <div style="padding:12px;text-align:center;border-right:1px solid #f1f5f9"><div style="font-size:14px;font-weight:800;color:#7c3aed">₹${(totalSpend/1000).toFixed(0)}K</div><div style="font-size:10px;color:#64748b;font-weight:600">Total Spent</div></div>
+        <div style="padding:12px;text-align:center"><div style="font-size:14px;font-weight:800;color:${(totalSpend-totalPaid)>0?"#dc2626":"#059669"}">₹${((totalSpend-totalPaid)/1000).toFixed(0)}K</div><div style="font-size:10px;color:#64748b;font-weight:600">Pending</div></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:8px;padding:10px 18px;background:#f8fafc;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+        <button onclick="window._prefilledClientId='${clientId}';document.getElementById('client-profile-overlay').remove();showTab('enquiries',document.querySelector('[onclick*=enquiries]'));openModal('enquiry')" style="padding:7px 13px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🎯 New Enquiry</button>
+        <button onclick="window._editClientId='${clientId}';document.getElementById('client-profile-overlay').remove();openModal('editclient')" style="padding:7px 13px;background:#fff;color:#374151;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Edit</button>
+        <button onclick="openClientDocs('${clientId}')" style="padding:7px 13px;background:#fff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📁 Docs</button>
+      </div>
+
+      <!-- TABS -->
+      <div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:0 18px">
+        <button id="cptab-overview" onclick="switchCPTab('overview','${clientId}')" style="padding:11px 16px;background:none;border:none;border-bottom:3px solid #f97316;font-size:12px;font-weight:700;color:#f97316;cursor:pointer">🤖 Overview</button>
+        <button id="cptab-history" onclick="switchCPTab('history','${clientId}')" style="padding:11px 16px;background:none;border:none;border-bottom:3px solid transparent;font-size:12px;font-weight:700;color:#64748b;cursor:pointer">📜 Travel History ${allHistory.length?`<span style="background:#0369a1;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:3px">${allHistory.length}</span>`:""}</button>
+        <button id="cptab-family" onclick="switchCPTab('family','${clientId}')" style="padding:11px 16px;background:none;border:none;border-bottom:3px solid transparent;font-size:12px;font-weight:700;color:#64748b;cursor:pointer">👨‍👩‍👧 Family ${familyMembers.length?`<span style="background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:3px">${familyMembers.length}</span>`:""}</button>
+      </div>
+
+      <!-- TAB CONTENT -->
+      <div style="max-height:420px;overflow-y:auto;padding:18px 20px">
+
+        <!-- OVERVIEW TAB -->
+        <div id="cppanel-overview">
+          <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:10px">🤖 AI Insight</div>
+            <div id="cp-ai-body-${clientId}"><div style="font-size:12px;color:#94a3b8">Analysing...</div></div>
+          </div>
+          <!-- Contact Details -->
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:10px">📋 Contact Details</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+              <div><span style="color:#94a3b8">Mobile:</span> <strong>${c.mobile||"—"}</strong></div>
+              ${c.altMobile?`<div><span style="color:#94a3b8">Alt Mobile:</span> <strong>${c.altMobile}</strong></div>`:`<div><span style="color:#94a3b8">Alt Mobile:</span> <span style="color:#cbd5e1">Not set</span></div>`}
+              <div><span style="color:#94a3b8">Email:</span> <strong>${c.email||"—"}</strong></div>
+              <div><span style="color:#94a3b8">City:</span> <strong>${c.city||"—"}, ${c.state||""}</strong></div>
+              <div><span style="color:#94a3b8">Occupation:</span> <strong>${c.occupation||"—"}</strong></div>
+              <div><span style="color:#94a3b8">Gender:</span> <strong>${c.gender||"—"}</strong></div>
+              ${c.companyName?`<div style="grid-column:1/-1"><span style="color:#94a3b8">Company:</span> <strong style="color:#0369a1">${c.companyName}</strong></div>`:""}
+            </div>
+          </div>
+        </div>
+
+        <!-- TRAVEL HISTORY TAB -->
+        <div id="cppanel-history" style="display:none">
+          ${allHistory.length ? `
+          <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="filterCPHistory('all','${clientId}')" id="cph-all" style="padding:4px 10px;background:#0369a1;color:#fff;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">All (${allHistory.length})</button>
+            <button onclick="filterCPHistory('enq','${clientId}')" id="cph-enq" style="padding:4px 10px;background:#f1f5f9;color:#64748b;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">Enquiries (${cEnqs.length})</button>
+            <button onclick="filterCPHistory('bk','${clientId}')" id="cph-bk" style="padding:4px 10px;background:#f1f5f9;color:#64748b;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">Bookings (${cBks.length})</button>
+          </div>
+          <div id="cph-list-${clientId}">
+            ${allHistory.map(h => `
+            <div data-htype="${h.type}" style="display:flex;gap:10px;padding:11px 13px;background:${h.bg};border-radius:10px;margin-bottom:7px;border-left:3px solid ${h.color}">
+              <div style="font-size:18px;margin-top:1px">${h.type==='enq'?'🎯':'✈️'}</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:700;color:#0f172a">${h.label}</div>
+                ${h.no?`<div style="font-size:10px;font-weight:700;color:#7c3aed;font-family:monospace;margin-top:2px">${h.no}</div>`:""}
+                <div style="font-size:11px;color:#64748b;margin-top:2px">${h.sub}</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px">${h.detail}</div>
+              </div>
+              <div style="font-size:10px;color:#94a3b8;white-space:nowrap;text-align:right">${(h.date||"").slice(0,10)}</div>
+            </div>`).join("")}
+          </div>` : `<div style="text-align:center;padding:40px 20px;color:#94a3b8"><div style="font-size:36px;margin-bottom:10px">📜</div><div>No travel history yet</div></div>`}
+        </div>
+
+        <!-- FAMILY TAB -->
+        <div id="cppanel-family" style="display:none">
+          ${familyMembers.length ? `
+          <div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7c3aed;font-weight:600">
+            👨‍👩‍👧 ${c.familyName} · ${familyMembers.length+1} member${familyMembers.length+1>1?"s":""} total
+          </div>
+          <!-- Current client card -->
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:2px solid #f97316;border-radius:10px;margin-bottom:8px">
+            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+            <div style="flex:1">
+              <div style="font-weight:700;font-size:13px;color:#0f172a">${c.firstName} ${c.lastName} <span style="background:#f97316;color:#fff;font-size:9px;padding:1px 6px;border-radius:4px">Viewing</span>${c.isPrimaryClient?' 👑':''}</div>
+              <div style="font-size:11px;color:#ea580c">${c.familyRelation||"Member"} · ${c.mobile}</div>
+            </div>
+          </div>
+          ${familyMembers.map(fm => {
+            const fmEnqs = enquiries.filter(e => e.clientId === fm.id).length;
+            const fmBks  = allBookings.filter(b => b.clientId === fm.id).length;
+            return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:10px;margin-bottom:6px">
+              <div style="width:36px;height:36px;border-radius:50%;background:#8b5cf6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(fm.firstName||"?")[0]}${(fm.lastName||"")[0]||""}</div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:13px;color:#0f172a">${fm.firstName} ${fm.lastName}${fm.isPrimaryClient?' 👑':''}</div>
+                <div style="font-size:11px;color:#7c3aed;margin-top:1px">${fm.familyRelation||"Family"} · ${fm.mobile}</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:1px">${fmEnqs} enquiries · ${fmBks} bookings</div>
+              </div>
+              <button onclick="document.getElementById('client-profile-overlay').remove();setTimeout(()=>openClientProfile('${fm.id}'),100)" style="padding:5px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">View →</button>
+            </div>`;
+          }).join("")}` : `
+          <div style="text-align:center;padding:40px 20px;color:#94a3b8">
+            <div style="font-size:36px;margin-bottom:10px">👨‍👩‍👧</div>
+            <div style="font-weight:600;margin-bottom:6px">No family members linked</div>
+            <div style="font-size:12px">Edit client to add Family Group Name</div>
+            <button onclick="window._editClientId='${clientId}';document.getElementById('client-profile-overlay').remove();openModal('editclient')" style="margin-top:12px;padding:8px 16px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Edit Client</button>
+          </div>`}
+        </div>
+
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  generateProfileInsight(clientId, c, cEnqs, cBks, totalSpend, totalPaid);
+}
+
+function switchCPTab(tab, clientId) {
+  ['overview','history','family'].forEach(t => {
+    const btn = document.getElementById('cptab-'+t);
+    const panel = document.getElementById('cppanel-'+t);
+    if(btn) {
+      btn.style.borderBottomColor = t===tab ? '#f97316' : 'transparent';
+      btn.style.color = t===tab ? '#f97316' : '#64748b';
+    }
+    if(panel) panel.style.display = t===tab ? '' : 'none';
+  });
+}
+
+function filterCPHistory(type, clientId) {
+  const list = document.querySelectorAll(`#cph-list-${clientId} [data-htype]`);
+  list.forEach(el => {
+    el.style.display = (type==='all' || el.dataset.htype===type) ? '' : 'none';
+  });
+  ['all','enq','bk'].forEach(t => {
+    const btn = document.getElementById('cph-'+t);
+    if(btn) { btn.style.background = t===type?'#0369a1':'#f1f5f9'; btn.style.color = t===type?'#fff':'#64748b'; }
+  });
+}
+
+
+function generateProfileInsight(clientId, c, cEnqs, cBks, totalSpend, totalPaid) {
+  const el = document.getElementById("cp-ai-body-"+clientId);
+  if(!el) return;
+  const topDest = cBks.length ? Object.entries(cBks.reduce((acc,b)=>{
+    const k=b.destination||b.category||"?"; acc[k]=(acc[k]||0)+1; return acc;
+  },{})).sort((a,b)=>b[1]-a[1])[0]?.[0] : null;
+  const budgets = [...new Set(cEnqs.filter(e=>e.budget).map(e=>e.budget))].slice(0,3).join(", ");
+  const lastEnq = cEnqs.sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""))[0];
+  const daysSince = lastEnq?.createdAt ? Math.floor((Date.now()-new Date(lastEnq.createdAt).getTime())/86400000) : null;
+  const likelihood = cBks.length>=3?"High":cBks.length>=1?"Medium":"Low";
+  const likColor   = likelihood==="High"?"#059669":likelihood==="Medium"?"#d97706":"#dc2626";
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase">Total Bookings</div>
+        <div style="font-size:16px;font-weight:800;color:#0f172a">${cBks.length}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase">Preferred Destination</div>
+        <div style="font-size:12px;font-weight:700;color:#0369a1">${topDest||"—"}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase">Budget Range</div>
+        <div style="font-size:11px;font-weight:600;color:#0f172a">${budgets||"Not specified"}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase">Last Activity</div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${daysSince!==null?daysSince+" days ago":"No activity"}</div>
+      </div>
+      <div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:9px 11px;grid-column:1/-1;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase">Likelihood to Book</div>
+        <div style="font-size:14px;font-weight:800;color:${likColor}">${likelihood}</div>
+      </div>
+    </div>`;
+}
+
+
 async function saveClient() {
   if(_saving) return;
   const fn = document.getElementById("c-fn").value.trim();
@@ -2708,6 +3184,7 @@ async function saveClient() {
     firstName:toTitleCase(fn), lastName:toTitleCase(document.getElementById("c-ln").value.trim()),
     gender:document.getElementById("c-gen").value,
     mobile:mob,
+    altMobile:document.getElementById("c-altmob")?.value.trim()||"",
     email:document.getElementById("c-email").value.trim(),
     occupation:document.getElementById("c-occ").value.trim(),
     country:document.getElementById("c-country").value,
@@ -2717,6 +3194,9 @@ async function saveClient() {
     pincode:document.getElementById("c-pin").value.trim(),
     companyName:toTitleCase(document.getElementById("c-company")?.value.trim()||""),
     clientCategory:document.getElementById("c-cat")?.value||"Regular",
+    familyName:document.getElementById("c-family-name")?.value.trim()||"",
+    familyRelation:document.getElementById("c-relation")?.value||"",
+    isPrimaryClient:document.getElementById("c-is-primary")?.value==="yes",
   };
   _saving = true;
   try {
@@ -2724,6 +3204,19 @@ async function saveClient() {
     closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
+}
+
+// ── ENQ Number Generator ──
+function generateENQNumber() {
+  const d = new Date();
+  const datePart = d.getFullYear().toString() +
+    String(d.getMonth()+1).padStart(2,'0') +
+    String(d.getDate()).padStart(2,'0');
+  // Count today's enquiries for sequence
+  const todayStr = d.toISOString().slice(0,10);
+  const todayCount = enquiries.filter(e => (e.createdAt||'').slice(0,10) === todayStr).length + 1;
+  const seq = String(todayCount).padStart(4,'0');
+  return 'ENQ-' + datePart + '-' + seq;
 }
 
 async function saveEnquiry(isEdit) {
@@ -2769,6 +3262,7 @@ async function saveEnquiry(isEdit) {
     notes      : gv("e-notes"),
     adults, childBed, childNoBed, infant, pax,
     createdAt  : new Date().toISOString(),
+    enquiryNo  : generateENQNumber(),
   };
 
   // ── Category-specific fields ──
@@ -6068,14 +6562,45 @@ setInterval(() => {
 
 
 
-// ── Pollinations AI Helper ─────────────────────
-async function callGeminiAI(prompt) {
-  const res = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`, {
-    method: 'GET',
-    headers: { 'Accept': 'text/plain' }
-  });
-  if(!res.ok) throw new Error("AI error " + res.status);
-  return await res.text();
+// ── Gemini 2.0 Flash AI Helper ─────────────────
+let _geminiLastCall = 0;
+let _geminiPending = false;
+
+async function callGeminiAI(prompt, retries = 3) {
+  // Prevent overlapping calls
+  if(_geminiPending) throw new Error("Please wait — AI is already processing a request.");
+
+  // Enforce 1 second minimum gap between calls
+  const now = Date.now();
+  const gap = now - _geminiLastCall;
+  if(gap < 1000) await new Promise(r => setTimeout(r, 1000 - gap));
+
+  _geminiPending = true;
+  _geminiLastCall = Date.now();
+
+  try {
+    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAppVsgXKiXGsA1n_W-ptKsliinCCsmxUo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
+      })
+    });
+
+    // 429 = rate limited — wait and retry once
+    if(res.status === 429 && retries > 0) {
+      _geminiPending = false;
+      await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds
+      return callGeminiAI(prompt, 0); // only 1 retry
+    }
+
+    if(!res.ok) throw new Error("Gemini API error " + res.status);
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  } finally {
+    _geminiPending = false;
+  }
 }
 
 function promptImportCategory(event) {
