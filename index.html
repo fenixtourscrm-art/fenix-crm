@@ -3737,9 +3737,9 @@ async function sendAIMessage() {
     ).join('\n');
     
     const fullPrompt = systemPrompt + '\n\nConversation:\n' + conversationText + '\n\nFenix AI:';
+    const reply = await callGeminiAI(fullPrompt);
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
-    const reply = "AI is currently unavailable.";
 
     const formatted = escHtml(reply).split('\n').join('<br>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
@@ -6567,7 +6567,43 @@ setInterval(() => {
 
 
 // ── Pollinations.ai Free AI ─────────────────
-// AI removed
+let _geminiPending = false;
+let _geminiLastCall = 0;
+
+async function callGeminiAI(prompt, retries = 2) {
+  // Prevent overlapping calls
+  if(_geminiPending) throw new Error("Please wait — AI is already processing a request.");
+
+  const now = Date.now();
+  const gap = now - _geminiLastCall;
+  if(gap < 1000) await new Promise(r => setTimeout(r, 1000 - gap));
+
+  _geminiPending = true;
+  _geminiLastCall = Date.now();
+
+  try {
+    // Pollinations.ai — 100% free, no API key needed
+    const encoded = encodeURIComponent(prompt);
+    const res = await fetch(`https://text.pollinations.ai/${encoded}`, {
+      method: "GET",
+      headers: { "Accept": "text/plain" }
+    });
+
+    if(!res.ok) {
+      if(retries > 0) {
+        _geminiPending = false;
+        await new Promise(r => setTimeout(r, 2000));
+        return callGeminiAI(prompt, retries - 1);
+      }
+      throw new Error("AI error " + res.status);
+    }
+
+    const text = await res.text();
+    return text.trim() || "";
+  } finally {
+    _geminiPending = false;
+  }
+}
 
 function promptImportCategory(event) {
   const file = event.target.files[0];
