@@ -3107,7 +3107,7 @@ function openClientProfile(clientId) {
               <div style="font-size:11px;color:#ea580c;margin-top:2px">${c.familyRelation||"Primary"} · ${c.mobile}${c.altMobile?" · "+c.altMobile:""}</div>
               <div style="font-size:10px;color:#94a3b8">${c.email||""}</div>
             </div>
-            <button onclick="openFamilyMemberEnquiry('${c.id}','${c.firstName} ${c.lastName}','','${c.mobile}','${c.email||""}')" style="padding:5px 11px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🎯 Enquiry</button>
+            <button onclick="openFamilyMemberEnquiry('${c.id}',null,null,null,null,null,null)" style="padding:5px 11px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🎯 Enquiry</button>
           </div>
 
           <!-- FAMILY MEMBERS LIST -->
@@ -3124,7 +3124,7 @@ function openClientProfile(clientId) {
                   <div style="font-size:10px;color:#94a3b8">${fm.email||""} · ${fmEnqs} enq · ${fmBks} bk</div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:4px">
-                  <button onclick="openFamilyMemberEnquiry('${fm.id}','${fm.firstName} ${fm.lastName}','${fm.familyRelation||""}','${fm.mobile}','${fm.email||""}','${primaryClient.id}','${primaryClient.firstName} ${primaryClient.lastName}')" style="padding:4px 10px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🎯 Enquiry</button>
+                  <button onclick="openFamilyMemberEnquiry('${fm.id}',null,null,null,null,'${primaryClient.id}',null)" style="padding:4px 10px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🎯 Enquiry</button>
                   <button onclick="document.getElementById('client-profile-overlay').remove();setTimeout(()=>openClientProfile('${fm.id}'),100)" style="padding:4px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">View →</button>
                 </div>
               </div>`;
@@ -3245,17 +3245,18 @@ async function saveFamilyMember(primaryClientId) {
   }
 }
 
-function openFamilyMemberEnquiry(memberId, memberName, relation, mobile, email, primaryId, primaryName) {
-  // Store family context globals
-  window._familyEnqPrimaryId   = primaryId   || "";
-  window._familyEnqPrimaryName = primaryName || "";
-  window._familyEnqRelation    = relation    || "";
-  // Pre-fill client
-  window._prefilledClientId = memberId;
-  // Close profile overlay, open enquiry modal
+function openFamilyMemberEnquiry(memberId, _n, _r, _m, _e, primaryId, _pn) {
+  // Look up data from clients array — avoids quote/apostrophe issues in onclick strings
+  const member  = clients.find(x => x.id === memberId);
+  const primary = primaryId ? clients.find(x => x.id === primaryId) : null;
+
+  window._familyEnqPrimaryId   = primaryId || "";
+  window._familyEnqPrimaryName = primary ? primary.firstName + " " + primary.lastName : "";
+  window._familyEnqRelation    = member?.familyRelation || "";
+  window._prefilledClientId    = memberId;
+
   document.getElementById("client-profile-overlay")?.remove();
-  // Switch to enquiries tab and open modal
-  const enqNavItem = document.querySelector(".nav-item[onclick*="enquiries"]");
+  const enqNavItem = document.querySelector('.nav-item[onclick*="enquiries"]');
   showTab("enquiries", enqNavItem);
   openModal("enquiry");
 }
