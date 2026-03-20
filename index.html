@@ -1471,7 +1471,10 @@ function renderEnquiries(){
         rows+=`<tr style="border-left:3px solid ${fuColor}">
     <td><div style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap">${e.enquiryNo||'—'}</div></td>
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
-    <td><strong>${cName(e.clientId)}</strong></td>
+    <td>
+      <strong>${cName(e.clientId)}</strong>
+      ${e.primaryClientName ? `<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>` : ""}
+    </td>
     <td style="font-size:11px;max-width:100px">${e.source.split("–")[0].trim()}</td>
     <td><span class="badge" style="background:#f0fdf4;color:#166534;font-size:9px">${e.category||e.destType}</span></td>
     <td style="font-size:12px">${e.destination}</td>
@@ -3087,37 +3090,48 @@ function openClientProfile(clientId) {
 
         <!-- FAMILY TAB -->
         <div id="cppanel-family" style="display:none">
-          ${familyMembers.length ? `
-          <div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#7c3aed;font-weight:600">
-            👨‍👩‍👧 ${c.familyName} · ${familyMembers.length+1} member${familyMembers.length+1>1?"s":""} total
+
+          <!-- Group header + Add Member button -->
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div style="font-size:12px;font-weight:700;color:#7c3aed">
+              ${c.familyName ? `👨‍👩‍👧 ${c.familyName} · ${familyMembers.length+1} member${familyMembers.length+1>1?"s":""}` : "👨‍👩‍👧 No family group set"}
+            </div>
+            <button onclick="openAddFamilyMember('${clientId}')" style="padding:6px 13px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Add Member</button>
           </div>
-          <!-- Current client card -->
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:2px solid #f97316;border-radius:10px;margin-bottom:8px">
-            <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+
+          <!-- PRIMARY CLIENT (always shown first) -->
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:2px solid #f97316;border-radius:11px;margin-bottom:8px">
+            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
             <div style="flex:1">
               <div style="font-weight:700;font-size:13px;color:#0f172a">${c.firstName} ${c.lastName} <span style="background:#f97316;color:#fff;font-size:9px;padding:1px 6px;border-radius:4px">Viewing</span>${c.isPrimaryClient?' 👑':''}</div>
-              <div style="font-size:11px;color:#ea580c">${c.familyRelation||"Member"} · ${c.mobile}</div>
+              <div style="font-size:11px;color:#ea580c;margin-top:2px">${c.familyRelation||"Primary"} · ${c.mobile}${c.altMobile?" · "+c.altMobile:""}</div>
+              <div style="font-size:10px;color:#94a3b8">${c.email||""}</div>
             </div>
+            <button onclick="openFamilyMemberEnquiry('${c.id}','${c.firstName} ${c.lastName}','','${c.mobile}','${c.email||""}')" style="padding:5px 11px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">🎯 Enquiry</button>
           </div>
-          ${familyMembers.map(fm => {
-            const fmEnqs = enquiries.filter(e => e.clientId === fm.id).length;
-            const fmBks  = allBookings.filter(b => b.clientId === fm.id).length;
-            return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:10px;margin-bottom:6px">
-              <div style="width:36px;height:36px;border-radius:50%;background:#8b5cf6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(fm.firstName||"?")[0]}${(fm.lastName||"")[0]||""}</div>
-              <div style="flex:1">
-                <div style="font-weight:700;font-size:13px;color:#0f172a">${fm.firstName} ${fm.lastName}${fm.isPrimaryClient?' 👑':''}</div>
-                <div style="font-size:11px;color:#7c3aed;margin-top:1px">${fm.familyRelation||"Family"} · ${fm.mobile}</div>
-                <div style="font-size:10px;color:#94a3b8;margin-top:1px">${fmEnqs} enquiries · ${fmBks} bookings</div>
-              </div>
-              <button onclick="document.getElementById('client-profile-overlay').remove();setTimeout(()=>openClientProfile('${fm.id}'),100)" style="padding:5px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">View →</button>
-            </div>`;
-          }).join("")}` : `
-          <div style="text-align:center;padding:40px 20px;color:#94a3b8">
-            <div style="font-size:36px;margin-bottom:10px">👨‍👩‍👧</div>
-            <div style="font-weight:600;margin-bottom:6px">No family members linked</div>
-            <div style="font-size:12px">Edit client to add Family Group Name</div>
-            <button onclick="window._editClientId='${clientId}';document.getElementById('client-profile-overlay').remove();openModal('editclient')" style="margin-top:12px;padding:8px 16px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Edit Client</button>
-          </div>`}
+
+          <!-- FAMILY MEMBERS LIST -->
+          <div id="family-members-list-${clientId}">
+            ${familyMembers.length ? familyMembers.map(fm => {
+              const fmEnqs = enquiries.filter(e => e.clientId === fm.id).length;
+              const fmBks  = allBookings.filter(b => b.clientId === fm.id).length;
+              const primaryClient = clients.find(x => x.familyName === fm.familyName && x.isPrimaryClient) || c;
+              return `<div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:11px;margin-bottom:7px">
+                <div style="width:38px;height:38px;border-radius:50%;background:#8b5cf6;color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0">${(fm.firstName||"?")[0]}${(fm.lastName||"")[0]||""}</div>
+                <div style="flex:1">
+                  <div style="font-weight:700;font-size:13px;color:#0f172a">${fm.firstName} ${fm.lastName}${fm.isPrimaryClient?' 👑':''}</div>
+                  <div style="font-size:11px;color:#7c3aed;margin-top:1px">${fm.familyRelation||"Family"} of ${primaryClient.firstName} ${primaryClient.lastName} · ${fm.mobile}</div>
+                  <div style="font-size:10px;color:#94a3b8">${fm.email||""} · ${fmEnqs} enq · ${fmBks} bk</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <button onclick="openFamilyMemberEnquiry('${fm.id}','${fm.firstName} ${fm.lastName}','${fm.familyRelation||""}','${fm.mobile}','${fm.email||""}','${primaryClient.id}','${primaryClient.firstName} ${primaryClient.lastName}')" style="padding:4px 10px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">🎯 Enquiry</button>
+                  <button onclick="document.getElementById('client-profile-overlay').remove();setTimeout(()=>openClientProfile('${fm.id}'),100)" style="padding:4px 10px;background:#8b5cf6;color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">View →</button>
+                </div>
+              </div>`;
+            }).join("") : `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:12px">No family members yet — click + Add Member</div>`}
+          </div>
+
+          ${!c.familyName ? `<div style="margin-top:10px;padding:10px;background:#fef9c3;border-radius:8px;font-size:11px;color:#854d0e;text-align:center">⚠️ Set a Family Group Name in Edit Client to link members</div>` : ""}
         </div>
 
       </div>
@@ -3125,6 +3139,125 @@ function openClientProfile(clientId) {
 
   document.body.appendChild(overlay);
   generateProfileInsight(clientId, c, cEnqs, cBks, totalSpend, totalPaid);
+}
+
+// ═══════════════════════════════════════════════
+//  FAMILY MEMBER — Add Member + Enquiry Flow
+// ═══════════════════════════════════════════════
+
+function openAddFamilyMember(primaryClientId) {
+  const primary = clients.find(x => x.id === primaryClientId);
+  if(!primary) return;
+  if(!primary.familyName) {
+    alert("⚠️ Please set a Family Group Name for this client first (Edit Client → Family section).");
+    return;
+  }
+  // Remove any existing family member overlay
+  document.getElementById("add-family-overlay")?.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "add-family-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:460px;box-shadow:0 24px 64px rgba(0,0,0,0.3);overflow:hidden">
+      <div style="background:linear-gradient(135deg,#7c3aed,#4f46e5);padding:18px 22px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:16px;font-weight:800;color:#fff">👨‍👩‍👧 Add Family Member</div>
+          <div style="font-size:11px;color:#c4b5fd;margin-top:2px">Adding to: ${primary.firstName} ${primary.lastName} (${primary.familyName})</div>
+        </div>
+        <button onclick="document.getElementById('add-family-overlay').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:7px;padding:6px 10px;color:#fff;cursor:pointer;font-size:15px">✕</button>
+      </div>
+      <div style="padding:20px 22px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">First Name *</label>
+            <input id="fm-fn" placeholder="e.g. Eshita" style="width:100%;padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Last Name</label>
+            <input id="fm-ln" placeholder="e.g. Kapadiya" style="width:100%;padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Mobile *</label>
+            <input id="fm-mob" placeholder="9876543210" style="width:100%;padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"/></div>
+          <div><label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Relationship *</label>
+            <select id="fm-rel" style="width:100%;padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+              <option value="">— Select —</option>
+              <option>Father</option><option>Mother</option><option>Son</option><option>Daughter</option>
+              <option>Husband</option><option>Wife</option><option>Brother</option><option>Sister</option>
+              <option>Grandfather</option><option>Grandmother</option><option>Uncle</option><option>Aunt</option>
+              <option>Partner</option><option>Friend</option><option>Other</option>
+            </select></div>
+        </div>
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px">Email <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+          <input id="fm-email" placeholder="email@example.com" type="email" style="width:100%;padding:9px 11px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"/>
+        </div>
+        <button onclick="saveFamilyMember('${primaryClientId}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">💾 Save Family Member</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById("fm-fn").focus();
+}
+
+async function saveFamilyMember(primaryClientId) {
+  const primary = clients.find(x => x.id === primaryClientId);
+  if(!primary) return;
+  const fn  = document.getElementById("fm-fn")?.value.trim();
+  const ln  = document.getElementById("fm-ln")?.value.trim() || "";
+  const mob = document.getElementById("fm-mob")?.value.trim();
+  const rel = document.getElementById("fm-rel")?.value;
+  const email = document.getElementById("fm-email")?.value.trim() || "";
+
+  if(!fn)  return alert("⚠️ First Name is required!");
+  if(!mob) return alert("⚠️ Mobile Number is required!");
+  if(mob.replace(/\D/g,"").length !== 10) return alert("⚠️ Mobile must be 10 digits!");
+  if(!rel) return alert("⚠️ Please select a Relationship!");
+
+  const dup = clients.find(x => x.mobile && x.mobile.replace(/\D/g,"") === mob.replace(/\D/g,""));
+  if(dup) return alert(`⚠️ Mobile already exists: ${dup.firstName} ${dup.lastName}`);
+
+  const data = {
+    firstName      : fn.charAt(0).toUpperCase() + fn.slice(1),
+    lastName       : ln.charAt(0).toUpperCase() + ln.slice(1),
+    mobile         : mob,
+    email          : email,
+    gender         : "Male",
+    occupation     : "",
+    city           : primary.city || "",
+    state          : primary.state || "",
+    country        : primary.country || "India",
+    clientCategory : "Regular",
+    familyName     : primary.familyName,
+    familyRelation : rel,
+    isPrimaryClient: false,
+    linkedPrimaryId: primaryClientId,
+    linkedPrimaryName: primary.firstName + " " + primary.lastName,
+  };
+
+  try {
+    const btn = document.querySelector("#add-family-overlay button[onclick*='saveFamilyMember']");
+    if(btn) { btn.disabled = true; btn.textContent = "Saving..."; }
+    await fbAdd("clients", data);
+    document.getElementById("add-family-overlay").remove();
+    // Refresh profile
+    document.getElementById("client-profile-overlay")?.remove();
+    setTimeout(() => openClientProfile(primaryClientId), 150);
+  } catch(e) {
+    alert("Save failed: " + e.message);
+  }
+}
+
+function openFamilyMemberEnquiry(memberId, memberName, relation, mobile, email, primaryId, primaryName) {
+  // Store family context globals
+  window._familyEnqPrimaryId   = primaryId   || "";
+  window._familyEnqPrimaryName = primaryName || "";
+  window._familyEnqRelation    = relation    || "";
+  // Pre-fill client
+  window._prefilledClientId = memberId;
+  // Close profile overlay, open enquiry modal
+  document.getElementById("client-profile-overlay")?.remove();
+  // Switch to enquiries tab and open modal
+  const enqNavItem = document.querySelector(".nav-item[onclick*="enquiries"]");
+  showTab("enquiries", enqNavItem);
+  openModal("enquiry");
 }
 
 function switchCPTab(tab, clientId) {
@@ -3267,20 +3400,23 @@ async function saveEnquiry(isEdit) {
   const src    = gv("e-source");
   const subVal = gv("e-subval");
   const data = {
-    clientId   : gv("e-client"),
-    category   : cat,
-    type       : gv("e-type"),
-    source     : src,
-    influencerName: subVal,
-    refName    : subVal,
-    destination: dest,
-    rating     : gv("e-rating"),
-    status     : gv("e-status"),
-    staffId    : parseInt(gv("e-staff"))||0,
-    notes      : gv("e-notes"),
+    clientId         : gv("e-client"),
+    category         : cat,
+    type             : gv("e-type"),
+    source           : src,
+    influencerName   : subVal,
+    refName          : subVal,
+    destination      : dest,
+    rating           : gv("e-rating"),
+    status           : gv("e-status"),
+    staffId          : parseInt(gv("e-staff"))||0,
+    notes            : gv("e-notes"),
     adults, childBed, childNoBed, infant, pax,
-    createdAt  : new Date().toISOString(),
-    enquiryNo  : generateENQNumber(),
+    createdAt        : new Date().toISOString(),
+    enquiryNo        : generateENQNumber(),
+    primaryClientId  : window._familyEnqPrimaryId || "",
+    primaryClientName: window._familyEnqPrimaryName || "",
+    familyRelation   : window._familyEnqRelation || "",
   };
 
   // ── Category-specific fields ──
@@ -3346,13 +3482,16 @@ async function saveEnquiry(isEdit) {
     if(isEdit) {
       const e=enquiries.find(x=>x.id===window._editEnqId);
       await fbUpdate("enquiries", e.id, data); Object.assign(e,data);
-      window._prefilledClientId=null; closeOverlay(); renderEnquiries();
+      window._prefilledClientId=null;
+      window._familyEnqPrimaryId=null; window._familyEnqPrimaryName=null; window._familyEnqRelation=null;
+      closeOverlay(); renderEnquiries();
     } else {
       if(_saving) return;
       _saving = true;
       try {
         await fbAdd("enquiries", data);
         window._prefilledClientId=null;
+        window._familyEnqPrimaryId=null; window._familyEnqPrimaryName=null; window._familyEnqRelation=null;
         closeOverlay();
       } finally { _saving = false; }
     }
