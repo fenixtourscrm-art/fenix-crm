@@ -5904,7 +5904,13 @@ Provide a report with these EXACT sections (use **Section Name:** format):
 
 Keep each section concise — 2-4 sentences max. Be specific and practical for a travel agent.`;
 
-  report.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center">🤖 AI Insight is currently disabled.</div>`;
+  report.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center;animation:pulse 1.5s infinite">⏳ Generating AI Insight...</div>`;
+  try {
+    const aiText = await callGeminiAI(prompt);
+    renderInsightReport(client, aiText, clientEnquiries, clientBookings, totalSpend, paidAmount);
+  } catch(e) {
+    report.innerHTML = `<div style="color:#dc2626;padding:20px;font-size:13px;text-align:center">⚠️ AI error: ${e.message}</div>`;
+  }
 }
 
 function renderInsightReport(client, aiText, enqs, bks, totalSpend, paidAmt) {
@@ -6295,7 +6301,15 @@ Write the briefing in this format using **bold** for key info:
 
 Keep it SHORT and ACTIONABLE. Use bullet points. No fluff. Speak directly to ${name.split(' ').pop()}.`;
 
-  body.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center">🤖 AI Daily Briefing is currently disabled.</div>`;
+  body.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center;animation:pulse 1.5s infinite">⏳ Generating Daily Briefing...</div>`;
+  try {
+    const aiText = await callGeminiAI(prompt);
+    const briefingData = { text: aiText, generatedAt: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) };
+    await fbSet('briefings', CURRENT_USER.id.toString(), briefingData);
+    renderBriefing(briefingData);
+  } catch(e) {
+    body.innerHTML = `<div style="color:#dc2626;padding:20px;font-size:13px;text-align:center">⚠️ AI error: ${e.message}</div>`;
+  }
 }
 
 function renderBriefing(data) {
