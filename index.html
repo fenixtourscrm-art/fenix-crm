@@ -279,6 +279,33 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+  // Early stub so onclick="fbSignIn()" works before the main script block loads
+  function fbSignIn() {
+    // If full fbSignIn already defined by main script, call it
+    if (window._fbSignInReady) {
+      window._fbSignInReady();
+      return;
+    }
+    // Otherwise show loading and wait for main script
+    var loadingEl = document.getElementById("fb-loading");
+    var btnEl = document.getElementById("signin-btn");
+    if(loadingEl) loadingEl.style.display = "block";
+    if(btnEl) btnEl.disabled = true;
+    var attempts = 0;
+    var poll = setInterval(function() {
+      attempts++;
+      if (window._fbSignInReady) {
+        clearInterval(poll);
+        window._fbSignInReady();
+      } else if (attempts > 40) {
+        clearInterval(poll);
+        if(loadingEl) loadingEl.style.display = "none";
+        alert("App is still loading. Please refresh and try again.");
+      }
+    }, 250);
+  }
+  </script>
 </head>
 <body>
 
@@ -1148,7 +1175,7 @@ function renderDashboard(){
         <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#fff">${nmPax}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Total PAX</div></div>
         <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:center"><div style="font-size:24px;font-weight:800;color:#f97316">${nmUpcoming.length}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Upcoming Trips</div></div>
       </div>
-      ${nmUpcoming.length?`<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Upcoming Trips</div>${nmUpcoming.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:4px"><div style="font-size:20px">${(b.category||"").includes("Tour")?"✈️":(b.category||"").includes("Hotel")?"🏨":(b.category||"").includes("Visa")?"🛂":"📁"}</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:#fff">${cName(b.clientId)}</div><div style="font-size:10px;color:#94a3b8">${b.destination||b.category} · ${b.travelDate} · ${b.adults||b.pax||1} pax</div></div></div>`).join("")}`:"<div style="font-size:12px;color:#475569;padding:8px">No trips scheduled yet</div>"}
+      ${nmUpcoming.length?`<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Upcoming Trips</div>${nmUpcoming.map(b=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:rgba(255,255,255,.05);border-radius:8px;margin-bottom:4px"><div style="font-size:20px">${(b.category||"").includes("Tour")?"✈️":(b.category||"").includes("Hotel")?"🏨":(b.category||"").includes("Visa")?"🛂":"📁"}</div><div style="flex:1"><div style="font-size:12px;font-weight:700;color:#fff">${cName(b.clientId)}</div><div style="font-size:10px;color:#94a3b8">${b.destination||b.category} · ${b.travelDate} · ${b.adults||b.pax||1} pax</div></div></div>`).join("")}`:`<div style="font-size:12px;color:#475569;padding:8px">No trips scheduled yet</div>`}
     </div>`;
 
   // ── Last Month Bookings ──
@@ -2776,6 +2803,8 @@ function fbSignIn() {
       }
     });
 }
+// Register as ready so the early stub can call it once Firebase is initialised
+window._fbSignInReady = fbSignIn;
 
 function fbSignOut() {
   auth.signOut();
