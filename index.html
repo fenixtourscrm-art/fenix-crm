@@ -6305,7 +6305,8 @@ Keep it SHORT and ACTIONABLE. Use bullet points. No fluff. Speak directly to ${n
   try {
     const aiText = await callGeminiAI(prompt);
     const briefingData = { text: aiText, generatedAt: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) };
-    await fbSet('briefings', CURRENT_USER.id.toString(), briefingData);
+    // Save using Firestore .set() with merge (fbSet doesn't exist, use db directly)
+    await db.collection('briefings').doc(CURRENT_USER.id.toString()).set(briefingData, { merge: true });
     renderBriefing(briefingData);
   } catch(e) {
     body.innerHTML = `<div style="color:#dc2626;padding:20px;font-size:13px;text-align:center">⚠️ AI error: ${e.message}</div>`;
