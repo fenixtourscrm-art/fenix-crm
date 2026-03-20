@@ -645,18 +645,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </tr></thead><tbody id="staff-tbody"></tbody></table></div>
       <div class="section-title" style="margin-top:28px">🤖 AI Assistant Setup</div>
       <div class="card" style="padding:20px">
-        <div style="font-size:13px;color:#64748b;margin-bottom:14px">
-          Paste your Google Apps Script proxy URL below to enable the Fenix AI Travel Assistant.
-          <a href="https://script.google.com" target="_blank" style="color:#f97316;margin-left:6px">Open Google Apps Script →</a>
+        <div style="font-size:13px;color:#94a3b8;padding:12px;background:#f8fafc;border-radius:8px">
+          🤖 AI features are currently disabled.
         </div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-          <input id="ai-proxy-input" type="text" placeholder="https://script.google.com/macros/s/YOUR_ID/exec"
-            style="flex:1;min-width:300px;border:1.5px solid #e2e8f0;border-radius:8px;padding:9px 12px;font-size:13px;outline:none"
-            value="" onfocus="this.style.borderColor='#f97316'" onblur="this.style.borderColor='#e2e8f0'">
-          <button class="btn btn-primary" onclick="saveAIProxy()" style="white-space:nowrap">💾 Save URL</button>
-          <button class="btn btn-ghost" onclick="testAIProxy()" style="white-space:nowrap">🧪 Test</button>
-        </div>
-        <div id="ai-proxy-status" style="margin-top:10px;font-size:12px;color:#94a3b8"></div>
       </div>
 
     </div>
@@ -996,7 +987,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
 <script>
 // ── PASTE YOUR GOOGLE APPS SCRIPT URL HERE ──────────────────
-window.FENIX_AI_PROXY = "https://script.google.com/macros/s/AKfycbzjCAxFaBXzKs2g_j_rQZQGiIM4JyJxa3xDhuhlK58j_iBfyUdChfZQMSESy0_lbOT-DA/exec";
 // ────────────────────────────────────────────────────────────
 
 let STAFF = [
@@ -1087,7 +1077,6 @@ function showTab(tab,el){
   if(tab==="settings"){
     renderStaff();
     const saved = localStorage.getItem('fenix_ai_proxy');
-    if(saved){ window.FENIX_AI_PROXY=saved; const inp=document.getElementById('ai-proxy-input'); if(inp) inp.value=saved; }
   }
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
@@ -3748,10 +3737,9 @@ async function sendAIMessage() {
     ).join('\n');
     
     const fullPrompt = systemPrompt + '\n\nConversation:\n' + conversationText + '\n\nFenix AI:';
-    const reply = await callGeminiAI(fullPrompt);
-    
     const typingEl = document.getElementById(typingId);
     if (typingEl) typingEl.remove();
+    const reply = "AI is currently unavailable.";
 
     const formatted = escHtml(reply).split('\n').join('<br>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
 
@@ -5916,12 +5904,7 @@ Provide a report with these EXACT sections (use **Section Name:** format):
 
 Keep each section concise — 2-4 sentences max. Be specific and practical for a travel agent.`;
 
-  try {
-    const text = await callGeminiAI(prompt);
-    renderInsightReport(client, text, clientEnquiries, clientBookings, totalSpend, paidAmount);
-  } catch(err) {
-    report.innerHTML = `<div style="color:#dc2626;padding:20px;font-size:13px">⚠️ Could not generate insight: ${err.message}</div>`;
-  }
+  report.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center">🤖 AI Insight is currently disabled.</div>`;
 }
 
 function renderInsightReport(client, aiText, enqs, bks, totalSpend, paidAmt) {
@@ -6312,15 +6295,7 @@ Write the briefing in this format using **bold** for key info:
 
 Keep it SHORT and ACTIONABLE. Use bullet points. No fluff. Speak directly to ${name.split(' ').pop()}.`;
 
-  try {
-    const text = await callGeminiAI(prompt);
-    const todayKey = 'briefing_'+today+'_'+(CURRENT_USER?.id||0);
-    const data = { text, generatedAt: new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) };
-    sessionStorage.setItem(todayKey, JSON.stringify(data));
-    renderBriefing(data);
-  } catch(err) {
-    body.innerHTML = `<div style="color:#dc2626;padding:16px;font-size:13px">⚠️ Could not generate briefing: ${err.message}</div>`;
-  }
+  body.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center">🤖 AI Daily Briefing is currently disabled.</div>`;
 }
 
 function renderBriefing(data) {
@@ -6591,46 +6566,8 @@ setInterval(() => {
 
 
 
-// ── Gemini 2.0 Flash AI Helper ─────────────────
-let _geminiLastCall = 0;
-let _geminiPending = false;
-
-async function callGeminiAI(prompt, retries = 3) {
-  // Prevent overlapping calls
-  if(_geminiPending) throw new Error("Please wait — AI is already processing a request.");
-
-  // Enforce 1 second minimum gap between calls
-  const now = Date.now();
-  const gap = now - _geminiLastCall;
-  if(gap < 1000) await new Promise(r => setTimeout(r, 1000 - gap));
-
-  _geminiPending = true;
-  _geminiLastCall = Date.now();
-
-  try {
-    const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAppVsgXKiXGsA1n_W-ptKsliinCCsmxUo", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 1500 }
-      })
-    });
-
-    // 429 = rate limited — wait and retry once
-    if(res.status === 429 && retries > 0) {
-      _geminiPending = false;
-      await new Promise(r => setTimeout(r, 3000)); // wait 3 seconds
-      return callGeminiAI(prompt, 0); // only 1 retry
-    }
-
-    if(!res.ok) throw new Error("Gemini API error " + res.status);
-    const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  } finally {
-    _geminiPending = false;
-  }
-}
+// ── Pollinations.ai Free AI ─────────────────
+// AI removed
 
 function promptImportCategory(event) {
   const file = event.target.files[0];
