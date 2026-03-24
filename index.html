@@ -1098,9 +1098,11 @@ function renderAll(){
 function updateBadges(){
   // Refresh notification badge alongside other badges
   if(typeof buildNotifications === "function" && CURRENT_USER && _notifShown) buildNotifications();
-  const enqBadge=document.getElementById("enq-badge"); if(enqBadge) enqBadge.textContent=enquiries.filter(e=>e.status==="Active").length;
-  const activeTasks = tasks.filter(t=>!t.done);
-  const od = activeTasks.length;
+  const _isOwnerBadge = CURRENT_USER && CURRENT_USER.id===1;
+  const myActiveEnqs = _isOwnerBadge ? enquiries.filter(e=>e.status==="Active") : enquiries.filter(e=>e.status==="Active"&&(e.staffId===CURRENT_USER?.id||e.createdBy===CURRENT_USER?.id));
+  const enqBadge=document.getElementById("enq-badge"); if(enqBadge) enqBadge.textContent=myActiveEnqs.length;
+  const myActiveTasks = _isOwnerBadge ? tasks.filter(t=>!t.done) : tasks.filter(t=>!t.done&&t.assignedTo===CURRENT_USER?.id);
+  const od = myActiveTasks.length;
   const ob=document.getElementById("task-badge");if(!ob) return;ob.textContent=od;ob.style.display=od>0?"inline":"none";
 }
 
@@ -1117,24 +1119,33 @@ function renderDashboard(){
   const mb=allBookings.filter(b=>b.travelDate&&b.travelDate.startsWith(tm)).length;
   const rev=allBookings.reduce((s,b)=>s+(parseFloat(b.paid)||0),0);
   const pt=tasks.filter(t=>!t.done).length;
+  const primaryClients = clients.filter(c=>!c.linkedPrimaryId); // exclude family sub-members
+  const tmRev = allBookings.filter(b=>b.travelDate&&b.travelDate.startsWith(tm)).reduce((s,b)=>s+(parseFloat(b.paid)||0),0);
+  const totalPending = allBookings.reduce((s,b)=>s+(parseFloat(b.pendingAmount)||0),0);
+  const myTasks = CURRENT_USER?.id===1 ? tasks : tasks.filter(t=>t.assignedTo===CURRENT_USER?.id);
+  const myPt = myTasks.filter(t=>!t.done).length;
   document.getElementById("dash-kpis").innerHTML=`
     <div class="kpi"><div class="kpi-icon">🎯</div><div class="kpi-label">Active Enquiries</div><div class="kpi-value">${enquiries.filter(e=>e.status==="Active").length}</div><div class="kpi-sub">being followed up</div></div>
     <div class="kpi"><div class="kpi-icon">✈️</div><div class="kpi-label">Bookings This Month</div><div class="kpi-value">${mb}</div><div class="kpi-sub">${tm}</div></div>
-    <div class="kpi"><div class="kpi-icon">💰</div><div class="kpi-label">Revenue Collected</div><div class="kpi-value" style="font-size:17px">${fmt(rev)}</div><div class="kpi-sub">total paid</div></div>
-    <div class="kpi"><div class="kpi-icon">📋</div><div class="kpi-label">Pending Tasks</div><div class="kpi-value" style="color:${pt>0?"#dc2626":"#0f172a"}">${pt}</div><div class="kpi-sub">need attention</div></div>
-    <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">Total Clients</div><div class="kpi-value">${clients.length}</div><div class="kpi-sub">in database</div></div>
+    <div class="kpi"><div class="kpi-icon">💰</div><div class="kpi-label">This Month Revenue</div><div class="kpi-value" style="font-size:17px">${fmt(tmRev)}</div><div class="kpi-sub">paid in ${tm}</div></div>
+    <div class="kpi"><div class="kpi-icon">⏳</div><div class="kpi-label">Pending Payments</div><div class="kpi-value" style="font-size:17px;color:${totalPending>0?"#dc2626":"#059669"}">${fmt(totalPending)}</div><div class="kpi-sub">to be collected</div></div>
+    <div class="kpi"><div class="kpi-icon">📋</div><div class="kpi-label">My Pending Tasks</div><div class="kpi-value" style="color:${myPt>0?"#dc2626":"#0f172a"}">${myPt}</div><div class="kpi-sub">need attention</div></div>
+    <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">Total Clients</div><div class="kpi-value">${primaryClients.length}</div><div class="kpi-sub">primary accounts</div></div>
     <div class="kpi"><div class="kpi-icon">🛂</div><div class="kpi-label">Visa Pending</div><div class="kpi-value">${visas.filter(v=>v.status==="Pending"||v.status==="Submitted").length}</div><div class="kpi-sub">applications</div></div>`;
-  const hot=enquiries.filter(e=>e.status==="Active"&&(e.rating==="A+"||e.rating==="A")).slice(0,4);
+  const _dashIsOwner = CURRENT_USER && CURRENT_USER.id===1;
+  const hot=enquiries.filter(e=>e.status==="Active"&&(e.rating==="A+"||e.rating==="A")&&(_dashIsOwner||e.staffId===CURRENT_USER?.id)).slice(0,4);
   document.getElementById("dash-hot").innerHTML=hot.length?hot.map(e=>`<div class="task-item"><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)} ${rBadge(e.rating)} ${tBadge(e.type)}</div><div style="font-size:11px;color:#64748b;margin-top:2px">✈️ ${e.destination} · ${e.pax} pax · ${e.budget}</div><div style="font-size:10px;color:#94a3b8">👤 ${sName(e.staffId)}${(e.intentions&&e.intentions.length)?` · 🎯 ${e.intentions.join(", ")}`:""}</div></div><button class="btn btn-success" style="font-size:10px" onclick="markBooked('${e.id}')">Book ✓</button></div>`).join(""):`<div class="empty">No hot enquiries</div>`;
-  const od=tasks.filter(t=>!t.done&&t.dueDate<today()).slice(0,4);
+  const od=(_dashIsOwner?tasks:tasks.filter(t=>t.assignedTo===CURRENT_USER?.id)).filter(t=>!t.done&&t.dueDate<today()).slice(0,4);
   document.getElementById("dash-overdue").innerHTML=od.length?od.map(t=>`<div class="task-item overdue"><div class="pdot ph"></div><div style="flex:1"><div style="font-weight:700;font-size:12px;color:#0f172a">${t.title}</div><div style="font-size:10px;color:#dc2626;margin-top:2px">⚠️ Due ${t.dueDate} · ${sName(t.assignedTo)}</div></div></div>`).join(""):`<div class="empty">No overdue tasks 🎉</div>`;
   const todayReports=reports.filter(r=>r.date===today());
-  document.getElementById("dash-reports").innerHTML=STAFF.slice(1).map(s=>{
+  const _dashStaffList = _dashIsOwner ? STAFF.slice(1) : STAFF.filter(s=>s.id===CURRENT_USER?.id);
+  document.getElementById("dash-reports").innerHTML=_dashStaffList.map(s=>{
     const r=todayReports.find(x=>x.staffId===s.id);
     return `<div class="report-card"><div class="report-staff"><div class="avatar" style="width:26px;height:26px;font-size:9px">${s.initials}</div>${s.name}<span style="font-size:10px;color:#94a3b8">${s.role}</span></div>
     ${r?`<div class="report-metrics" style="grid-template-columns:repeat(4,1fr)"><div class="metric-box"><div class="metric-val">${r.salesCalls}</div><div class="metric-lbl">Calls</div></div><div class="metric-box"><div class="metric-val">${r.enquiriesNew}</div><div class="metric-lbl">New Enq</div></div><div class="metric-box"><div class="metric-val">${r.enquiriesOld}</div><div class="metric-lbl">Old Enq</div></div><div class="metric-box"><div class="metric-val">${r.bookingsConfirmed}</div><div class="metric-lbl">Tours Booking</div></div></div>`:`<div style="font-size:11px;color:#94a3b8;padding:4px 0">No report submitted today</div>`}</div>`;
   }).join("");
-  document.getElementById("dash-targets").innerHTML=targets.filter(t=>t.month===tm).map(t=>{
+  const _myTargets = _dashIsOwner ? targets.filter(t=>t.month===tm) : targets.filter(t=>t.month===tm&&t.staffId===CURRENT_USER?.id);
+  document.getElementById("dash-targets").innerHTML=_myTargets.map(t=>{
     const s=STAFF.find(x=>x.id===t.staffId);
     const bp=Math.min(100,Math.round(t.bookingsAchieved/t.bookings*100));
     const mp=Math.min(100,Math.round(t.mktCallsAchieved/t.mktCalls*100));
@@ -1347,12 +1358,10 @@ document.addEventListener("click", e=>{
   }
 });
 document.addEventListener("click",e=>{if(!e.target.closest(".action-btn-wrap"))document.querySelectorAll(".action-dropdown").forEach(d=>d.classList.remove("open"));});
-function generateEnquiry(clientId){window._prefilledClientId=clientId;openModal("enquiry");showTab("enquiries",document.querySelector("[onclick*='enquiries']"));}
+function generateEnquiry(clientId){window._prefilledClientId=clientId;openModal("enquiry");}
 function logMarketingCall(clientId){window._mktClientId=clientId;openModal("mktcall");}
 function editClient(id){
   const c=clients.find(x=>x.id===id);if(!c)return;
-  const isOwner=true; // In full login system this checks role
-  if(!isOwner){alert("Only Ms. Rehana (Owner) can edit client details.");return;}
   window._editClientId=id;openModal("editclient");
 }
 
@@ -1420,12 +1429,13 @@ document.addEventListener("click", e => {
 });
 
 function renderEnquiries(){
-  let list=enquiries;
+  const _isOwner = CURRENT_USER && CURRENT_USER.id===1;
+  let list = _isOwner ? enquiries : enquiries.filter(e=>e.staffId===CURRENT_USER?.id||e.createdBy===CURRENT_USER?.id);
   if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk") list=list.filter(e=>e.status===enqFilter);
   else if(enqFilter==="New"||enqFilter==="Old"||enqFilter==="Repeated") list=list.filter(e=>e.type===enqFilter);
   else if(["A+","A","B+","B","C"].includes(enqFilter)) list=list.filter(e=>e.rating===enqFilter);
   if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||(Array.isArray(e.intentions)&&e.intentions.includes(catFilter)));
-  if(enqStaffFilter!==null) list=list.filter(e=>e.staffId===enqStaffFilter);
+  if(_isOwner && enqStaffFilter!==null) list=list.filter(e=>e.staffId===enqStaffFilter);
   const fuColors={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
 
   // Sort newest first
@@ -1592,6 +1602,10 @@ async function saveBookingFromEnquiry() {
       createdBy:      CURRENT_USER ? CURRENT_USER.id : 0,
       createdByName:  CURRENT_USER ? CURRENT_USER.name : "Unknown",
       createdAt:      new Date().toISOString(),
+      fromEnquiryId:  enqId,
+      primaryClientId:   e.primaryClientId   || "",
+      primaryClientName: e.primaryClientName || "",
+      familyRelation:    e.familyRelation    || "",
     };
 
     await fbUpdate("enquiries", enqId, { status: "Booked" });
@@ -1718,7 +1732,8 @@ function renderBookings(){
   renderBookingList();
 }
 function renderBookingList(){
-  let list=[...allBookings];
+  const _isOwnerBk = CURRENT_USER && CURRENT_USER.id===1;
+  let list = _isOwnerBk ? [...allBookings] : [...allBookings].filter(b=>b.staffId===CURRENT_USER?.id||b.createdBy===CURRENT_USER?.id);
   if(bkFilter!=="all") list=list.filter(b=>b.category===bkFilter);
   if(diFilter==="domestic") list=list.filter(b=>BK_CATS.find(c=>c.id===b.category)?.di==="domestic");
   if(diFilter==="international") list=list.filter(b=>BK_CATS.find(c=>c.id===b.category)?.di==="international");
@@ -1742,6 +1757,10 @@ function renderBookingList(){
       ? (b.numApplicants||b.adults||b.pax||1)
       : ((b.adults||0)+(b.childBed||0)+(b.childNoBed||0)+(b.infant||0))||b.pax||1;
     const totalAmt = parseFloat(b.amount)||0;
+    // Always recalculate pending live from amount - paid to ensure accuracy
+    const livePaid = parseFloat(b.paid)||0;
+    const livePending = Math.max(0, totalAmt - livePaid);
+    const livePayStatus = livePaid>=totalAmt&&totalAmt>0?"Fully Paid":livePaid>0?"Partially Paid":"Pending";
     const paidAmt  = parseFloat(b.paid)||0;
     const pendingAmt = Math.max(0, totalAmt - paidAmt);
     const pct = totalAmt ? Math.round(paidAmt/totalAmt*100) : 0;
@@ -1751,7 +1770,10 @@ function renderBookingList(){
     const payBadgeBg    = payStatus==="Fully Paid"?"#dcfce7": payStatus==="Partially Paid"?"#fef3c7":"#fee2e2";
     return `<tr>
       <td><span class="cat-tag" style="background:${st.bg};color:${st.color}">${icon} ${b.category}</span></td>
-      <td><strong>${cName(b.clientId)}</strong></td>
+      <td>
+        <strong>${cName(b.clientId)}</strong>
+        ${b.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${b.familyRelation||"Family"} of ${b.primaryClientName}</div>`:""}
+      </td>
       <td style="font-size:11px"><div style="font-weight:600">${b.destination||"—"}</div>${b.tourType?`<div style="color:#94a3b8;font-size:10px">${b.tourType}</div>`:""}</td>
       <td style="text-align:center;font-size:11px">${totalPax}<br><span style="color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${b.adults||0}A ${b.childBed||0}C ${b.infant||0}I`}</span></td>
       <td style="font-size:11px">${b.travelDate||"—"}</td>
@@ -1810,7 +1832,9 @@ function clearReportFilter(){document.getElementById("report-from").value="";doc
 function renderReports(){
   const from=document.getElementById("report-from")?.value;
   const to=document.getElementById("report-to")?.value;
-  let list=[...reports].sort((a,b)=>b.date.localeCompare(a.date));
+  const _isOwnerRpt = CURRENT_USER && CURRENT_USER.id===1;
+  let list = _isOwnerRpt ? [...reports] : [...reports].filter(r=>r.staffId===CURRENT_USER?.id);
+  list = list.sort((a,b)=>b.date.localeCompare(a.date));
   if(from)list=list.filter(r=>r.date>=from);
   if(to)list=list.filter(r=>r.date<=to);
   document.getElementById("reports-list").innerHTML=list.map(r=>{
@@ -1970,15 +1994,22 @@ function globalSearch(q){
   document.getElementById("page-title").textContent=`🔍 "${q}"`;
   const ql=q.toLowerCase();
 
-  // Primary client matches
-  const fc=clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email} ${c.city} ${c.companyName||""}`.toLowerCase().includes(ql));
+  // Primary client matches — exclude sub-family members from main list
+  const fc=clients.filter(c=>!c.linkedPrimaryId&&`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email} ${c.city} ${c.companyName||""}`.toLowerCase().includes(ql));
 
-  // Family member matches — clients in same family group
+  // Family member matches — search all clients including family sub-members
   const familyMatches=[];
+  clients.filter(c=>c.linkedPrimaryId&&`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email}`.toLowerCase().includes(ql)).forEach(fm=>{
+    if(!fc.find(f=>f.id===fm.id)&&!familyMatches.find(f=>f.id===fm.id)){
+      const primary=clients.find(x=>x.id===fm.linkedPrimaryId);
+      familyMatches.push({...fm, _foundViaFamily:primary?(primary.firstName+" "+primary.lastName):"Primary Client"});
+    }
+  });
+  // Also show family members of matched primary clients
   fc.forEach(c=>{
     if(c.familyName){
-      clients.filter(x=>x.familyName===c.familyName && x.id!==c.id).forEach(fm=>{
-        if(!fc.find(f=>f.id===fm.id) && !familyMatches.find(f=>f.id===fm.id))
+      clients.filter(x=>x.linkedPrimaryId===c.id).forEach(fm=>{
+        if(!familyMatches.find(f=>f.id===fm.id))
           familyMatches.push({...fm, _foundViaFamily:c.firstName+" "+c.lastName});
       });
     }
@@ -2633,10 +2664,11 @@ function renderFollowUpCalendar(){
   const dim=new Date(s.y,s.m+1,0).getDate();
   const td=new Date(); let html="";
   for(let i=0;i<firstDay;i++) html+=`<div class="cal-day empty"></div>`;
+  const _fuIsOwner = CURRENT_USER && CURRENT_USER.id===1;
   for(let d=1;d<=dim;d++){
     const ds=`${s.y}-${String(s.m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    const dayEnqs=enquiries.filter(e=>e.followUpDate===ds);
-    const dayFuTasks=tasks.filter(t=>t.isFollowUp && t.dueDate===ds && !t.done);
+    const dayEnqs=enquiries.filter(e=>e.followUpDate===ds&&(_fuIsOwner||e.staffId===CURRENT_USER?.id||e.followUpStaff===CURRENT_USER?.id));
+    const dayFuTasks=tasks.filter(t=>t.isFollowUp&&t.dueDate===ds&&!t.done&&(_fuIsOwner||t.assignedTo===CURRENT_USER?.id));
     const totalCount = dayEnqs.length + dayFuTasks.length;
     const isT=td.getFullYear()===s.y&&td.getMonth()===s.m&&td.getDate()===d;
     const dots=[
@@ -2651,10 +2683,10 @@ function renderFollowUpCalendar(){
   document.getElementById("fu-cal-grid").innerHTML=html;
 }
 function showFUDay(dateStr){
-  const dayEnqs=enquiries.filter(e=>e.followUpDate===dateStr);
+  const _fuDayOwner = CURRENT_USER && CURRENT_USER.id===1;
+  const dayEnqs=enquiries.filter(e=>e.followUpDate===dateStr&&(_fuDayOwner||e.staffId===CURRENT_USER?.id||e.followUpStaff===CURRENT_USER?.id));
   const det=document.getElementById("fu-day-details");
-
-  const dayFuTasks = tasks.filter(t=>t.isFollowUp && t.dueDate===dateStr);
+  const dayFuTasks = tasks.filter(t=>t.isFollowUp&&t.dueDate===dateStr&&(_fuDayOwner||t.assignedTo===CURRENT_USER?.id));
   const totalItems = dayEnqs.length + dayFuTasks.length;
   if(!totalItems){det.innerHTML=`<div style="color:#94a3b8;font-size:13px;padding:12px">No follow-ups on this date.</div>`;return;}
 
@@ -2969,8 +3001,13 @@ function openClientProfile(clientId) {
   document.getElementById("client-profile-overlay")?.remove();
   const cat = c.clientCategory || "Regular";
   const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
-  const cEnqs = enquiries.filter(e => e.clientId === clientId);
-  const cBks  = allBookings.filter(b => b.clientId === clientId);
+  // Include enquiries/bookings from linked family members in primary profile
+  const familyIds = c.familyName
+    ? clients.filter(x=>x.familyName===c.familyName).map(x=>x.id)
+    : [clientId];
+  const allFamilyIds = [...new Set([clientId, ...familyIds])];
+  const cEnqs = enquiries.filter(e => allFamilyIds.includes(e.clientId));
+  const cBks  = allBookings.filter(b => allFamilyIds.includes(b.clientId));
   const totalSpend = cBks.reduce((s,b) => s+(parseFloat(b.amount)||0), 0);
   const totalPaid  = cBks.reduce((s,b) => s+(parseFloat(b.paid)||0), 0);
   const familyMembers = c.familyName
@@ -2980,22 +3017,33 @@ function openClientProfile(clientId) {
 
   // History: all enquiries + bookings sorted newest first
   const allHistory = [
-    ...cEnqs.map(e => ({
-      type:'enq', date:e.createdAt||e.date||"",
-      no: e.enquiryNo||"",
-      label:"Enquiry: "+(e.destination||e.category||"—"),
-      sub: (e.rating||"")+" · "+(e.status||"")+" · "+sName(e.staffId),
-      detail: "Budget: "+(e.budget||"—")+" · Pax: "+(e.pax||1)+" · "+(e.followUpStatus||""),
-      color:"#0369a1", bg:"#eff6ff"
-    })),
-    ...cBks.map(b => ({
-      type:'bk', date:b.travelDate||b.createdAt||"",
-      no: "",
-      label:"Booking: "+(b.destination||b.category||"—"),
-      sub: (b.travelDate||"")+" · "+fmt(b.amount)+" · "+(b.status||""),
-      detail: "Paid: "+fmt(b.paid||0)+" · Pending: "+fmt(Math.max(0,(parseFloat(b.amount)||0)-(parseFloat(b.paid)||0)))+" · "+sName(b.staffId),
-      color:"#059669", bg:"#f0fdf4"
-    })),
+    ...cEnqs.map(e => {
+      const isFam = e.clientId !== clientId;
+      const famLabel = isFam ? "["+cName(e.clientId)+"] " : "";
+      return {
+        type:'enq', date:e.createdAt||e.date||"",
+        no: e.enquiryNo||"",
+        label: famLabel+"Enquiry: "+(e.destination||e.category||"—"),
+        sub: (e.rating||"")+" · "+(e.status||"")+" · "+sName(e.staffId),
+        detail: (isFam&&e.familyRelation ? e.familyRelation+" of "+cName(clientId)+" · " : "")+"Budget: "+(e.budget||"—")+" · Pax: "+(e.pax||1),
+        color: isFam?"#7c3aed":"#0369a1",
+        bg:    isFam?"#faf5ff":"#eff6ff"
+      };
+    }),
+    ...cBks.map(b => {
+      const isFam = b.clientId !== clientId;
+      const famLabel = isFam ? "["+cName(b.clientId)+"] " : "";
+      const bPending = Math.max(0,(parseFloat(b.amount)||0)-(parseFloat(b.paid)||0));
+      return {
+        type:'bk', date:b.travelDate||b.createdAt||"",
+        no: "",
+        label: famLabel+"Booking: "+(b.destination||b.category||"—"),
+        sub: (b.travelDate||"")+" · "+fmt(b.amount)+" · "+(b.status||""),
+        detail: (isFam&&b.familyRelation ? b.familyRelation+" of "+cName(clientId)+" · " : "")+"Paid: "+fmt(b.paid||0)+" · Pending: "+fmt(bPending),
+        color: isFam?"#7c3aed":"#059669",
+        bg:    isFam?"#faf5ff":"#f0fdf4"
+      };
+    }),
   ].sort((a,b) => (b.date||"").localeCompare(a.date||""));
 
   const overlay = document.createElement("div");
@@ -3482,6 +3530,8 @@ async function saveEnquiry(isEdit) {
   try {
     if(isEdit) {
       const e=enquiries.find(x=>x.id===window._editEnqId);
+      data.lastEditedBy = CURRENT_USER ? CURRENT_USER.name : "Unknown";
+      data.lastEditedAt = new Date().toISOString();
       await fbUpdate("enquiries", e.id, data); Object.assign(e,data);
       window._prefilledClientId=null;
       window._familyEnqPrimaryId=null; window._familyEnqPrimaryName=null; window._familyEnqRelation=null;
@@ -3503,6 +3553,9 @@ async function saveBooking(isEdit) {
   if(_saving) return;
   const clientEl = document.getElementById("b-client");
   const clientId = clientEl ? clientEl.value : "";
+  // Always track who last edited
+  const editedBy = CURRENT_USER ? CURRENT_USER.name : "Unknown";
+  const editedAt = new Date().toISOString();
   if(!clientId || clientId === "0" || clientId === "") return alert("⚠️ Please select a Client!");
   const gv = id => document.getElementById(id)?.value || "";
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
@@ -3529,6 +3582,8 @@ async function saveBooking(isEdit) {
     status: gv("b-status") || "Confirmed",
     paymentStatus: gv("b-pay-status") || "Pending",
     pendingAmount: Math.max(0, (parseFloat(document.getElementById("b-amt")?.value)||0) - (parseFloat(document.getElementById("b-paid")?.value)||0)),
+    lastEditedBy: editedBy,
+    lastEditedAt: editedAt,
     paymentHistory: [],
     staffId: parseInt(document.getElementById("b-staff")?.value)||CURRENT_USER?.id||0,
     notes: gv("b-notes"),
@@ -3951,11 +4006,13 @@ async function revertToEnquiry(bookingId) {
   try {
     const b = allBookings.find(x => x.id === bookingId);
     if(!b) return;
-    // Find matching enquiry by clientId with status "Booked"
-    const matchingEnq = enquiries.find(e => e.clientId === b.clientId && e.status === "Booked");
+    // Find matching enquiry — prefer fromEnquiryId link, fallback to clientId match
+    const matchingEnq = (b.fromEnquiryId ? enquiries.find(e=>e.id===b.fromEnquiryId) : null)
+                     || enquiries.find(e => e.clientId===b.clientId && e.status==="Booked");
     if(matchingEnq) {
-      await fbUpdate("enquiries", matchingEnq.id, { status: "Active" });
+      await fbUpdate("enquiries", matchingEnq.id, { status: "Active", followUpStatus: "Follow-up Pending" });
       matchingEnq.status = "Active";
+      matchingEnq.followUpStatus = "Follow-up Pending";
     }
     // Move booking to trash instead of hard delete
     const bkSnap = await db.collection("bookings").doc(bookingId).get();
