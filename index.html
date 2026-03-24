@@ -441,6 +441,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div class="section-title" style="margin:0" id="client-section-title">All Clients</div>
         <div style="display:flex;gap:8px">
           <button class="btn btn-primary" onclick="openModal('client')">+ Add Client</button>
+          <button id="family-backfill-btn" class="btn" style="display:none;background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:11px" onclick="backfillFamilyIds()" title="Link family groups by ID">🔗 Fix Family IDs</button>
           <button class="btn" style="background:#16a34a;color:#fff;gap:6px" onclick="document.getElementById('excel-import-input').click()">📥 Import Excel</button>
           <button id="fix-names-btn" class="btn" style="background:#7c3aed;color:#fff;font-size:12px;display:none" onclick="fixSplitNames()" title="Split full names into First + Last for clients where Last Name is empty">🔧 Fix Names</button>
           <button id="fix-states-btn" class="btn" style="background:#dc2626;color:#fff;font-size:12px;display:none" onclick="fixWrongStates()" title="Clear states that were auto-filled as Andhra Pradesh when they should be blank">🔧 Fix States</button>
@@ -1089,6 +1090,8 @@ function renderAll(){
   // Show/hide backfill button for owner only
   const bfBtn = document.getElementById("enq-backfill-btn");
   if(bfBtn) bfBtn.style.display = (CURRENT_USER && CURRENT_USER.id===1) ? "" : "none";
+  const famBfBtn = document.getElementById("family-backfill-btn");
+  if(famBfBtn) famBfBtn.style.display = (CURRENT_USER && CURRENT_USER.id===1) ? "" : "none";
   try{renderDashboard();}catch(e){console.error('renderDashboard:',e);}
   try{renderClients();}catch(e){console.error('renderClients:',e);}
   try{renderEnquiries();}catch(e){console.error('renderEnquiries:',e);}
@@ -2002,21 +2005,53 @@ function globalSearch(q){
   // Primary client matches — exclude sub-family members from main list
   const fc=clients.filter(c=>!c.linkedPrimaryId&&`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email} ${c.city} ${c.companyName||""}`.toLowerCase().includes(ql));
 
-  // Family member matches — search all clients including family sub-members
+  // ── Family member matching — use familyId (UUID) as primary key ──
   const familyMatches=[];
+  const _seenFamilyIds = new Set(); // prevent duplicate family expansions
+
+  // Helper: get all members of a family group
+  function getFamilyGroup(client) {
+    if(client.familyId) return clients.filter(x=>x.familyId===client.familyId && x.id!==client.id);
+    if(client.familyName) {
+      const byName = clients.filter(x=>x.familyName===client.familyName && x.id!==client.id);
+      const byLink = clients.filter(x=>(x.linkedPrimaryId===client.id)||(client.linkedPrimaryId&&x.linkedPrimaryId===client.linkedPrimaryId&&x.id!==client.id));
+      const merged=[...byName];
+      byLink.forEach(x=>{if(!merged.find(m=>m.id===x.id))merged.push(x);});
+      return merged;
+    }
+    if(client.linkedPrimaryId) return clients.filter(x=>(x.linkedPrimaryId===client.linkedPrimaryId||x.id===client.linkedPrimaryId)&&x.id!==client.id);
+    return [];
+  }
+
+  // For each matched primary client, expand to show all family members
+  fc.forEach(c=>{
+    const groupKey = c.familyId || c.familyName || c.id;
+    if(_seenFamilyIds.has(groupKey)) return;
+    _seenFamilyIds.add(groupKey);
+    getFamilyGroup(c).forEach(fm=>{
+      if(!fc.find(f=>f.id===fm.id)&&!familyMatches.find(f=>f.id===fm.id)){
+        const primary = c.isPrimaryClient ? c : clients.find(x=>x.id===fm.linkedPrimaryId)||c;
+        familyMatches.push({...fm, _foundViaFamily:primary.firstName+" "+primary.lastName});
+      }
+    });
+  });
+
+  // Also search directly in family sub-members by name/mobile
   clients.filter(c=>c.linkedPrimaryId&&`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email}`.toLowerCase().includes(ql)).forEach(fm=>{
     if(!fc.find(f=>f.id===fm.id)&&!familyMatches.find(f=>f.id===fm.id)){
       const primary=clients.find(x=>x.id===fm.linkedPrimaryId);
       familyMatches.push({...fm, _foundViaFamily:primary?(primary.firstName+" "+primary.lastName):"Primary Client"});
-    }
-  });
-  // Also show family members of matched primary clients
-  fc.forEach(c=>{
-    if(c.familyName){
-      clients.filter(x=>x.linkedPrimaryId===c.id).forEach(fm=>{
-        if(!familyMatches.find(f=>f.id===fm.id))
-          familyMatches.push({...fm, _foundViaFamily:c.firstName+" "+c.lastName});
-      });
+      // Also expand to show all siblings in this family
+      const groupKey2 = fm.familyId || fm.familyName || fm.linkedPrimaryId;
+      if(!_seenFamilyIds.has(groupKey2)){
+        _seenFamilyIds.add(groupKey2);
+        getFamilyGroup(fm).forEach(sib=>{
+          if(!fc.find(f=>f.id===sib.id)&&!familyMatches.find(f=>f.id===sib.id)&&sib.id!==fm.id){
+            const prim2 = clients.find(x=>x.id===sib.linkedPrimaryId)||primary;
+            familyMatches.push({...sib, _foundViaFamily:(prim2?prim2.firstName+" "+prim2.lastName:"Family")});
+          }
+        });
+      }
     }
   });
 
@@ -3173,47 +3208,60 @@ function openClientProfile(clientId) {
   document.getElementById("client-profile-overlay")?.remove();
   const cat = c.clientCategory || "Regular";
   const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
-  // Include enquiries/bookings from linked family members in primary profile
-  const familyIds = c.familyName
-    ? clients.filter(x=>x.familyName===c.familyName).map(x=>x.id)
-    : [clientId];
-  const allFamilyIds = [...new Set([clientId, ...familyIds])];
-  const cEnqs = enquiries.filter(e => allFamilyIds.includes(e.clientId));
-  const cBks  = allBookings.filter(b => allFamilyIds.includes(b.clientId));
+  // ── INDIVIDUAL stats (profile header) — this client ONLY ──
+  const cEnqs    = enquiries.filter(e => e.clientId === clientId);
+  const cBks     = allBookings.filter(b => b.clientId === clientId);
   const totalSpend = cBks.reduce((s,b) => s+(parseFloat(b.amount)||0), 0);
   const totalPaid  = cBks.reduce((s,b) => s+(parseFloat(b.paid)||0), 0);
-  const familyMembers = c.familyName
-    ? clients.filter(x => x.familyName === c.familyName && x.id !== clientId)
-        .sort((a,b) => (b.isPrimaryClient?1:0)-(a.isPrimaryClient?1:0))
-    : [];
 
-  // History: all enquiries + bookings sorted newest first
+  // ── FAMILY members — use familyId UUID if available, else linkedPrimaryId, else familyName ──
+  // Determine this client's family group ID
+  const myFamilyId = c.familyId || null;
+  const myFamilyName = c.familyName || null;
+
+  let familyMembers = [];
+  if(myFamilyId) {
+    // Best: match by familyId UUID
+    familyMembers = clients.filter(x => x.id !== clientId && x.familyId === myFamilyId);
+  } else if(myFamilyName) {
+    // Fallback: match by familyName string OR by linkedPrimaryId
+    const byName = clients.filter(x => x.id !== clientId && x.familyName === myFamilyName);
+    const byLink = clients.filter(x => x.id !== clientId &&
+      (x.linkedPrimaryId === clientId || c.linkedPrimaryId === x.id ||
+       (c.linkedPrimaryId && x.linkedPrimaryId === c.linkedPrimaryId)));
+    // Merge and deduplicate
+    const merged = [...byName];
+    byLink.forEach(x => { if(!merged.find(m=>m.id===x.id)) merged.push(x); });
+    familyMembers = merged;
+  }
+  familyMembers.sort((a,b) => (b.isPrimaryClient?1:0)-(a.isPrimaryClient?1:0));
+
+  // ── FAMILY combined stats (for family tab summary) ──
+  const allFamilyIds = [clientId, ...familyMembers.map(m=>m.id)];
+  const famAllEnqs = enquiries.filter(e => allFamilyIds.includes(e.clientId));
+  const famAllBks  = allBookings.filter(b => allFamilyIds.includes(b.clientId));
+  const famTotalSpend = famAllBks.reduce((s,b) => s+(parseFloat(b.amount)||0), 0);
+  const famTotalPaid  = famAllBks.reduce((s,b) => s+(parseFloat(b.paid)||0), 0);
+
+  // History: individual entries only (cEnqs/cBks = this client only)
   const allHistory = [
-    ...cEnqs.map(e => {
-      const isFam = e.clientId !== clientId;
-      const famLabel = isFam ? "["+cName(e.clientId)+"] " : "";
-      return {
-        type:'enq', date:e.createdAt||e.date||"",
-        no: e.enquiryNo||"",
-        label: famLabel+"Enquiry: "+(e.destination||e.category||"—"),
-        sub: (e.rating||"")+" · "+(e.status||"")+" · "+sName(e.staffId),
-        detail: (isFam&&e.familyRelation ? e.familyRelation+" of "+cName(clientId)+" · " : "")+"Budget: "+(e.budget||"—")+" · Pax: "+(e.pax||1),
-        color: isFam?"#7c3aed":"#0369a1",
-        bg:    isFam?"#faf5ff":"#eff6ff"
-      };
-    }),
+    ...cEnqs.map(e => ({
+      type:'enq', date:e.createdAt||e.date||"",
+      no: e.enquiryNo||"",
+      label: "Enquiry: "+(e.destination||e.category||"—"),
+      sub: (e.rating||"")+" · "+(e.status||"")+" · "+sName(e.staffId),
+      detail: "Budget: "+(e.budget||"—")+" · Pax: "+(e.pax||1),
+      color:"#0369a1", bg:"#eff6ff"
+    })),
     ...cBks.map(b => {
-      const isFam = b.clientId !== clientId;
-      const famLabel = isFam ? "["+cName(b.clientId)+"] " : "";
       const bPending = Math.max(0,(parseFloat(b.amount)||0)-(parseFloat(b.paid)||0));
       return {
         type:'bk', date:b.travelDate||b.createdAt||"",
         no: "",
-        label: famLabel+"Booking: "+(b.destination||b.category||"—"),
+        label: "Booking: "+(b.destination||b.category||"—"),
         sub: (b.travelDate||"")+" · "+fmt(b.amount)+" · "+(b.status||""),
-        detail: (isFam&&b.familyRelation ? b.familyRelation+" of "+cName(clientId)+" · " : "")+"Paid: "+fmt(b.paid||0)+" · Pending: "+fmt(bPending),
-        color: isFam?"#7c3aed":"#059669",
-        bg:    isFam?"#faf5ff":"#f0fdf4"
+        detail: "Paid: "+fmt(b.paid||0)+" · Pending: "+fmt(bPending),
+        color:"#059669", bg:"#f0fdf4"
       };
     }),
   ].sort((a,b) => (b.date||"").localeCompare(a.date||""));
@@ -3312,12 +3360,36 @@ function openClientProfile(clientId) {
         <div id="cppanel-family" style="display:none">
 
           <!-- Group header + Add Member button -->
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
             <div style="font-size:12px;font-weight:700;color:#7c3aed">
               ${c.familyName ? `👨‍👩‍👧 ${c.familyName} · ${familyMembers.length+1} member${familyMembers.length+1>1?"s":""}` : "👨‍👩‍👧 No family group set"}
             </div>
             <button onclick="openAddFamilyMember('${clientId}')" style="padding:6px 13px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Add Member</button>
           </div>
+
+          ${familyMembers.length > 0 ? `
+          <!-- Family Combined Summary -->
+          <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:12px;padding:13px 16px;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📊 Family Summary — ${allFamilyIds.length} members</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center">
+                <div style="font-size:18px;font-weight:800;color:#fff">${famAllEnqs.length}</div>
+                <div style="font-size:9px;color:#a5b4fc;margin-top:1px">Total Enq</div>
+              </div>
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center">
+                <div style="font-size:18px;font-weight:800;color:#fff">${famAllBks.length}</div>
+                <div style="font-size:9px;color:#a5b4fc;margin-top:1px">Total Bk</div>
+              </div>
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center">
+                <div style="font-size:13px;font-weight:800;color:#fff">₹${(famTotalSpend/1000).toFixed(0)}K</div>
+                <div style="font-size:9px;color:#a5b4fc;margin-top:1px">Fam Spent</div>
+              </div>
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center">
+                <div style="font-size:13px;font-weight:800;color:${(famTotalSpend-famTotalPaid)>0?"#fca5a5":"#86efac"}">₹${((famTotalSpend-famTotalPaid)/1000).toFixed(0)}K</div>
+                <div style="font-size:9px;color:#a5b4fc;margin-top:1px">Fam Pending</div>
+              </div>
+            </div>
+          </div>` : ""}
 
           <!-- PRIMARY CLIENT (always shown first) -->
           <div style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:linear-gradient(135deg,#fff7ed,#fef3c7);border:2px solid #f97316;border-radius:11px;margin-bottom:8px">
@@ -3434,6 +3506,23 @@ async function saveFamilyMember(primaryClientId) {
   const dup = clients.find(x => x.mobile && x.mobile.replace(/\D/g,"") === mob.replace(/\D/g,""));
   if(dup) return alert(`⚠️ Mobile already exists: ${dup.firstName} ${dup.lastName}`);
 
+  // Ensure primary has a familyId — generate one if missing
+  let familyId = primary.familyId;
+  if(!familyId) {
+    familyId = "FAM-" + Date.now() + "-" + Math.random().toString(36).slice(2,6).toUpperCase();
+    // Save familyId back to primary client
+    try {
+      await db.collection("clients").doc(primaryClientId).update({ familyId });
+      primary.familyId = familyId;
+      // Also update all existing family members that share the same familyName
+      const siblings = clients.filter(x => x.familyName === primary.familyName && x.id !== primaryClientId && !x.familyId);
+      for(const sib of siblings) {
+        await db.collection("clients").doc(sib.id).update({ familyId });
+        sib.familyId = familyId;
+      }
+    } catch(err) { console.warn("familyId backfill failed:", err); }
+  }
+
   const data = {
     firstName      : fn.charAt(0).toUpperCase() + fn.slice(1),
     lastName       : ln.charAt(0).toUpperCase() + ln.slice(1),
@@ -3446,6 +3535,7 @@ async function saveFamilyMember(primaryClientId) {
     country        : primary.country || "India",
     clientCategory : "Regular",
     familyName     : primary.familyName,
+    familyId       : familyId,
     familyRelation : rel,
     isPrimaryClient: false,
     linkedPrimaryId: primaryClientId,
@@ -3634,6 +3724,40 @@ async function backfillEnquiryNumbers() {
   }
   renderEnquiries();
   alert(`✅ Done! Assigned ENQ numbers to ${saved} enquiries.`);
+}
+
+// ── Backfill familyId for existing clients (owner only, run once) ──
+async function backfillFamilyIds() {
+  if(!CURRENT_USER || CURRENT_USER.id !== 1) return;
+  const needsFix = clients.filter(c => c.familyName && !c.familyId);
+  if(!needsFix.length) { alert("✅ All family clients already have a familyId!"); return; }
+  if(!confirm(`🔗 Assign familyId to ${needsFix.length} clients across all family groups?
+This links families by ID instead of name.`)) return;
+
+  // Group by familyName
+  const groups = {};
+  clients.filter(c => c.familyName).forEach(c => {
+    if(!groups[c.familyName]) groups[c.familyName] = [];
+    groups[c.familyName].push(c);
+  });
+
+  let updated = 0;
+  for(const [groupName, members] of Object.entries(groups)) {
+    // Use existing familyId if any member has one, else generate new
+    const existingId = members.find(m=>m.familyId)?.familyId
+      || ("FAM-" + Date.now() + "-" + Math.random().toString(36).slice(2,6).toUpperCase());
+    for(const m of members) {
+      if(!m.familyId) {
+        try {
+          await db.collection("clients").doc(m.id).update({ familyId: existingId });
+          m.familyId = existingId;
+          updated++;
+        } catch(err) { console.warn("Failed for", m.id, err); }
+      }
+    }
+  }
+  renderClients();
+  alert(`✅ Done! Assigned familyId to ${updated} clients across ${Object.keys(groups).length} family groups.`);
 }
 
 async function saveEnquiry(isEdit) {
