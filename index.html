@@ -983,7 +983,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 </div>
 
 <!-- MODALS -->
-<div class="overlay" id="overlay" onclick="closeOverlay(event)"><div class="modal" id="modal-body"></div></div>
+<div class="overlay" id="overlay"><div class="modal" id="modal-body"></div></div>
 <div class="overlay" id="day-overlay" onclick="closeDayOverlay(event)"><div class="modal" id="day-modal-body" style="max-width:460px"></div></div>
 
 <script>
@@ -2158,8 +2158,12 @@ const sOpts=()=>STAFF.map(s=>`<option value="${s.id}">${s.name}</option>`).join(
 
 function openModal(type){
   const mb=document.getElementById("modal-body");
+  // Track current modal type for guard system
+  const guardTypes = ['client','enquiry','editEnquiry','booking','editbooking','task','editclient'];
+  window._currentModalType = guardTypes.includes(type) ? type.replace('editEnquiry','enquiry').replace('editbooking','booking').replace('editclient','editclient') : null;
+  if(window._currentModalType) startDraftAutosave();
   if(type==="client"){
-    mb.innerHTML=`<div class="modal-title">Add Client <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">Add Client <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional – for corporate clients)</span></label><input id="c-company" placeholder="e.g. ABC Pvt. Ltd."/></div></div>
     <div class="form-grid"><div class="fg"><label>Client Category <span style="color:#dc2626">*</span></label><select id="c-cat"><option value="Regular">Regular</option>${CLIENT_CATS.filter(x=>x!=="Regular").map(x=>`<option value="${x}">${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="c-fn" placeholder="e.g. Rahul"/></div><div class="fg"><label>Last Name</label><input id="c-ln" placeholder="e.g. Sharma"/></div></div>
@@ -2190,7 +2194,7 @@ function openModal(type){
     const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Lost","Confirmed Booking"];
     // SERVICE_CATS is defined globally
 
-    mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid">
       <div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select></div>
       <div class="fg"><label>Service Category</label><select id="e-category" onchange="updateEnqForm()">${SERVICE_CATS.map(c=>`<option ${ex&&ex.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
@@ -2226,7 +2230,7 @@ function openModal(type){
     const inputStyle = "width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box";
     const labelStyle = "font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px";
     mb.innerHTML = `
-      <div class="modal-title">📋 Confirm Booking <button class="x" onclick="closeOverlay()">✕</button></div>
+      <div class="modal-title">📋 Confirm Booking <button class="x" onclick="safeCloseOverlay()">✕</button></div>
 
       <!-- Enquiry Summary (read-only) -->
       <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;padding:14px;margin-bottom:16px">
@@ -2301,7 +2305,7 @@ function openModal(type){
     const activeCat = isEditBk ? (exBk?.category||"International Tours") : preCat;
     const BK_CAT_OPTS=BK_CATS.filter(c=>c.id!=="all").map(c=>`<option${c.id===activeCat?' selected':''}>${c.id}</option>`).join("");
     const VISA_STATUS_OPT=["Pending","Submitted","Approved","Rejected"].map(s=>`<option>${s}</option>`).join("");
-    mb.innerHTML=`<div class="modal-title">${isEditBk?"Edit":"Add"} Booking <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">${isEditBk?"Edit":"Add"} Booking <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid">
       <div class="fg"><label>Service Category</label><select id="b-cat" onchange="updateBkForm()">${BK_CAT_OPTS}</select></div>
       <div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="b-client">${cOpts()}</select></div>
@@ -2373,14 +2377,14 @@ function openModal(type){
       }
     },50);
   } else if(type==="visa"){
-    mb.innerHTML=`<div class="modal-title">Add Visa Application <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">Add Visa Application <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Client</label><select id="v-client">${cOpts()}</select></div><div class="fg"><label>Passport No</label><input id="v-pass" placeholder="e.g. Z1234567"/></div></div>
     <div class="form-grid"><div class="fg"><label>Country</label><select id="v-country"><option value="">-- Select Country --</option><option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Antigua and Barbuda">Antigua and Barbuda</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahamas">Bahamas</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Barbados">Barbados</option><option value="Belarus">Belarus</option><option value="Belgium">Belgium</option><option value="Belize">Belize</option><option value="Benin">Benin</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Bosnia and Herzegovina">Bosnia and Herzegovina</option><option value="Botswana">Botswana</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Burkina Faso">Burkina Faso</option><option value="Burundi">Burundi</option><option value="Cabo Verde">Cabo Verde</option><option value="Cambodia">Cambodia</option><option value="Cameroon">Cameroon</option><option value="Canada">Canada</option><option value="Central African Republic">Central African Republic</option><option value="Chad">Chad</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Comoros">Comoros</option><option value="Congo">Congo</option><option value="Costa Rica">Costa Rica</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Djibouti">Djibouti</option><option value="Dominica">Dominica</option><option value="Dominican Republic">Dominican Republic</option><option value="Ecuador">Ecuador</option><option value="Egypt">Egypt</option><option value="El Salvador">El Salvador</option><option value="Equatorial Guinea">Equatorial Guinea</option><option value="Eritrea">Eritrea</option><option value="Estonia">Estonia</option><option value="Eswatini">Eswatini</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Gabon">Gabon</option><option value="Gambia">Gambia</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Grenada">Grenada</option><option value="Guatemala">Guatemala</option><option value="Guinea">Guinea</option><option value="Guinea-Bissau">Guinea-Bissau</option><option value="Guyana">Guyana</option><option value="Haiti">Haiti</option><option value="Honduras">Honduras</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kiribati">Kiribati</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lesotho">Lesotho</option><option value="Liberia">Liberia</option><option value="Libya">Libya</option><option value="Liechtenstein">Liechtenstein</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Madagascar">Madagascar</option><option value="Malawi">Malawi</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Mali">Mali</option><option value="Malta">Malta</option><option value="Marshall Islands">Marshall Islands</option><option value="Mauritania">Mauritania</option><option value="Mauritius">Mauritius</option><option value="Mexico">Mexico</option><option value="Micronesia">Micronesia</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Montenegro">Montenegro</option><option value="Morocco">Morocco</option><option value="Mozambique">Mozambique</option><option value="Myanmar">Myanmar</option><option value="Namibia">Namibia</option><option value="Nauru">Nauru</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nicaragua">Nicaragua</option><option value="Niger">Niger</option><option value="Nigeria">Nigeria</option><option value="North Korea">North Korea</option><option value="North Macedonia">North Macedonia</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palau">Palau</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Papua New Guinea">Papua New Guinea</option><option value="Paraguay">Paraguay</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Rwanda">Rwanda</option><option value="Saint Kitts and Nevis">Saint Kitts and Nevis</option><option value="Saint Lucia">Saint Lucia</option><option value="Saint Vincent">Saint Vincent</option><option value="Samoa">Samoa</option><option value="San Marino">San Marino</option><option value="Sao Tome and Principe">Sao Tome and Principe</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Senegal">Senegal</option><option value="Serbia">Serbia</option><option value="Seychelles">Seychelles</option><option value="Sierra Leone">Sierra Leone</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="Solomon Islands">Solomon Islands</option><option value="Somalia">Somalia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="South Sudan">South Sudan</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Suriname">Suriname</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Tajikistan">Tajikistan</option><option value="Tanzania">Tanzania</option><option value="Thailand">Thailand</option><option value="Timor-Leste">Timor-Leste</option><option value="Togo">Togo</option><option value="Tonga">Tonga</option><option value="Trinidad and Tobago">Trinidad and Tobago</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="Turkmenistan">Turkmenistan</option><option value="Tuvalu">Tuvalu</option><option value="Uganda">Uganda</option><option value="Ukraine">Ukraine</option><option value="United Arab Emirates">United Arab Emirates</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Vanuatu">Vanuatu</option><option value="Vatican City">Vatican City</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zambia">Zambia</option><option value="Zimbabwe">Zimbabwe</option></select></div><div class="fg"><label>Visa Type</label><select id="v-type"><option>Tourist</option><option>Business</option><option>Transit</option><option>Student</option><option>Work</option></select></div></div>
     <div class="form-grid"><div class="fg"><label>Applied Date</label><input type="date" id="v-applied"/></div><div class="fg"><label>Expected Date</label><input type="date" id="v-expect"/></div></div>
     <div class="form-grid"><div class="fg"><label>Status</label><select id="v-status">${VISA_STATUS.map(s=>`<option>${s}</option>`).join("")}</select></div><div class="fg"><label>Notes</label><input id="v-notes" placeholder="Any notes..."/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveVisa()">Save Application</button>`;
   } else if(type==="task"){
-    mb.innerHTML=`<div class="modal-title">Add Task <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">Add Task <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Assign To</label><select id="t-to">${sOpts()}</select></div><div class="fg"><label>Assigned By</label><select id="t-by">${sOpts()}</select></div></div>
     <div class="form-grid"><div class="fg"><label>Client (optional)</label><select id="t-client"><option value="0">-- None --</option>${cOpts()}</select></div><div class="fg"><label>Due Date</label><input type="date" id="t-due"/></div></div>
     <div class="form-grid g1"><div class="fg"><label>Priority</label><select id="t-pri"><option>High</option><option>Medium</option><option>Low</option></select></div></div>
@@ -2391,7 +2395,7 @@ function openModal(type){
     const exRpt = isEditRpt ? reports.find(x=>x.id===window._editReportId) : null;
     const prefillStaff = exRpt?.staffId || CURRENT_USER?.id || STAFF[1]?.id;
     const prefillDate = exRpt?.date || today();
-    mb.innerHTML=`<div class="modal-title">${isEditRpt?'Edit':'Submit'} Daily Report <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">${isEditRpt?'Edit':'Submit'} Daily Report <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Staff Member</label><select id="r-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}"${s.id===prefillStaff?' selected':''}>${s.name}</option>`).join("")}</select></div><div class="fg"><label>Date</label><input type="date" id="r-date" value="${prefillDate}"/></div></div>
 
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:12px">
@@ -2442,7 +2446,7 @@ function openModal(type){
     const isEditM = type==="editmarketing";
     const exM = isEditM ? marketing.find(x=>x.id===window._editMktId) : null;
     const isOwner = CURRENT_USER && CURRENT_USER.id===1;
-    mb.innerHTML=`<div class="modal-title">${isEditM?"Edit":"Add"} Marketing Entry <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">${isEditM?"Edit":"Add"} Marketing Entry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid">
       <div class="fg"><label>Date</label><input type="date" id="m-date" value="${exM?exM.date:today()}"/></div>
       <div class="fg"><label>Staff Member</label>
@@ -2474,7 +2478,7 @@ function openModal(type){
       if(staffSel) staffSel.value = CURRENT_USER?.id || "";
     }
   } else if(type==="target"){
-    mb.innerHTML=`<div class="modal-title">Set Monthly Target <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">Set Monthly Target <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Staff Member</label><select id="tg-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("")}</select></div><div class="fg"><label>Month</label><input type="month" id="tg-month" value="${thisMonth()}"/></div></div>
     <div class="form-grid g3"><div class="fg"><label>Bookings Target</label><input type="number" id="tg-book" placeholder="e.g. 15" min="0"/></div><div class="fg"><label>Mkt Calls Target</label><input type="number" id="tg-calls" placeholder="e.g. 100" min="0"/></div><div class="fg"><label>New Clients Target</label><input type="number" id="tg-clients" placeholder="e.g. 10" min="0"/></div></div>
     <div class="form-grid g3"><div class="fg"><label>Bookings Achieved</label><input type="number" id="tg-abook" value="0" min="0"/></div><div class="fg"><label>Calls Achieved</label><input type="number" id="tg-acalls" value="0" min="0"/></div><div class="fg"><label>Clients Achieved</label><input type="number" id="tg-aclients" value="0" min="0"/></div></div>
@@ -2482,27 +2486,27 @@ function openModal(type){
   }
   else if(type==="mktcall"){
     const c=window._mktClientId?clients.find(x=>x.id===window._mktClientId):null;
-    mb.innerHTML=`<div class="modal-title">📞 Log Marketing Call <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">📞 Log Marketing Call <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     ${c?`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e"><strong>Client:</strong> ${c.firstName} ${c.lastName} · ${c.mobile}</div>`:""}
     <div class="form-grid"><div class="fg"><label>Date</label><input type="date" id="mc-date" value="${today()}"/></div><div class="fg"><label>Staff Member</label><select id="mc-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>Calls Made</label><input type="number" id="mc-calls" value="1" min="1"/></div><div class="fg"><label>New Clients From Call</label><input type="number" id="mc-clients" value="0" min="0"/></div></div>
     <div class="form-grid g1"><div class="fg"><label>Notes / Discussion</label><textarea id="mc-notes" rows="3" placeholder="e.g. Called ${c?c.firstName+' today':'client'}, discussed Dubai package..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMktCall()">Save Call Log</button>`;
   } else if(type==="addstaff"){
-    mb.innerHTML=`<div class="modal-title">Add Staff Member <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">Add Staff Member <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Full Name</label><input id="ns-name" placeholder="e.g. Mr. Raj Patel"/></div><div class="fg"><label>Role / Department</label><input id="ns-role" placeholder="e.g. Sales Executive"/></div></div>
     <div class="form-grid g1"><div class="fg"><label>Initials (2 letters)</label><input id="ns-init" placeholder="e.g. RP" maxlength="3"/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveNewStaff()">Add Staff</button>`;
   } else if(type==="editstaff"){
     const s=STAFF.find(x=>x.id===window._editStaffId);
-    mb.innerHTML=`<div class="modal-title">Edit Staff Member <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">Edit Staff Member <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Full Name</label><input id="es-name" value="${s?s.name:""}"/></div><div class="fg"><label>Role / Department</label><input id="es-role" value="${s?s.role:""}"/></div></div>
     <div class="form-grid g1"><div class="fg"><label>Initials</label><input id="es-init" value="${s?s.initials:""}" maxlength="3"/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEditStaff()">Save Changes</button>`;
   } else if(type==="editclient"){
     const c=clients.find(x=>x.id===window._editClientId);
     if(!c)return;
-    mb.innerHTML=`<div class="modal-title">✏️ Edit Client <button class="x" onclick="closeOverlay()">✕</button></div>
+    mb.innerHTML=`<div class="modal-title">✏️ Edit Client <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional)</span></label><input id="ec-company" value="${c.companyName||""}"/></div></div>
     <div class="form-grid"><div class="fg"><label>Client Category</label><select id="ec-cat">${CLIENT_CATS.map(x=>`<option value="${x}"${x===(c.clientCategory||"Regular")?" selected":""}>${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="ec-fn" value="${c.firstName}"/></div><div class="fg"><label>Last Name</label><input id="ec-ln" value="${c.lastName}"/></div></div>
@@ -2547,6 +2551,22 @@ function openModal(type){
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEditClient()">Save Changes</button>`;
   }
   document.getElementById("overlay").classList.add("open");
+  // Check for draft restore (Add forms only)
+  if(type==="client" || type==="enquiry" || type==="booking" || type==="task") {
+    const normalType = type==="enquiry"?"enquiry":type==="booking"?"booking":type;
+    const hasDraft = sessionStorage.getItem("fenix_draft_"+normalType);
+    if(hasDraft) {
+      setTimeout(()=>{
+        const restored = draftRestore(normalType);
+        if(restored) {
+          const banner = document.createElement("div");
+          banner.style.cssText = "position:sticky;top:0;background:#fff8e1;border-bottom:2px solid #f59e0b;padding:7px 14px;font-size:12px;color:#92400e;display:flex;justify-content:space-between;align-items:center;z-index:10;border-radius:0";
+          banner.innerHTML = `<span>📝 Draft restored from your last session</span><button onclick="draftClear();this.parentElement.remove();" style="background:none;border:none;color:#92400e;cursor:pointer;font-size:11px;text-decoration:underline">Discard draft</button>`;
+          document.getElementById("modal-body").prepend(banner);
+        }
+      }, 50);
+    }
+  }
 }
 
 // ENQUIRY HELPERS
@@ -2666,7 +2686,7 @@ async function saveEditClient(){
     if(c.createdBy && !data.createdBy) data.createdBy = c.createdBy;
     await fbUpdate("clients", c.id, data);
     Object.assign(c, data);
-    window._editClientId=null; closeOverlay(); renderClients();
+    window._editClientId=null; draftClear(); closeOverlay(); renderClients();
   } catch(e) { alert("Save failed: "+e.message); }
 }
 // Destination tab switcher
@@ -2795,7 +2815,130 @@ function renderMktCalls(){
   }).join("")||`<tr><td colspan="7" class="empty">No marketing entries</td></tr>`;
 }
 
-function closeOverlay(e){if(!e||e.target===document.getElementById("overlay"))document.getElementById("overlay").classList.remove("open");}
+// ══════════════════════════════════════════════════════════════
+//  MODAL GUARD — Prevent accidental data loss on close
+// ══════════════════════════════════════════════════════════════
+
+// List of field IDs that count as "has data" for each modal type
+const MODAL_GUARD_FIELDS = {
+  client:      ['c-fn','c-ln','c-mob','c-email','c-company','c-city'],
+  enquiry:     ['e-dest-intl','e-dest-dom','e-dest-custom','e-notes','e-budget'],
+  booking:     ['b-dest','b-amt','b-notes'],
+  editclient:  ['ec-fn','ec-mob'],
+  editbooking: ['b-dest','b-amt'],
+  task:        ['t-title','t-notes'],
+};
+
+// Track which modal type is currently open
+window._currentModalType = null;
+
+// Check if form has any user-entered data
+function modalHasData() {
+  const type = window._currentModalType;
+  if(!type) return false;
+  const fields = MODAL_GUARD_FIELDS[type] || [];
+  return fields.some(id => {
+    const el = document.getElementById(id);
+    if(!el) return false;
+    const val = el.value || '';
+    // Ignore placeholder/default values
+    return val.trim().length > 0;
+  });
+}
+
+// Safe close — asks for confirmation if form has data
+function safeCloseOverlay() {
+  if(modalHasData()) {
+    showUnsavedDialog();
+  } else {
+    closeOverlay();
+  }
+}
+
+// Show "unsaved changes" confirmation dialog
+function showUnsavedDialog() {
+  // Remove existing dialog if any
+  document.getElementById('unsaved-dialog')?.remove();
+
+  const dialog = document.createElement('div');
+  dialog.id = 'unsaved-dialog';
+  dialog.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px';
+  dialog.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:28px 28px 22px;max-width:380px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,0.35);text-align:center">
+      <div style="font-size:36px;margin-bottom:10px">⚠️</div>
+      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:8px">Unsaved Changes</div>
+      <div style="font-size:13px;color:#64748b;margin-bottom:24px;line-height:1.5">You have unsaved data in this form.<br>Are you sure you want to close?</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="document.getElementById('unsaved-dialog').remove();closeOverlay();draftClear();"
+          style="padding:10px 22px;background:#dc2626;color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">
+          Yes, Discard &amp; Close
+        </button>
+        <button onclick="document.getElementById('unsaved-dialog').remove();"
+          style="padding:10px 22px;background:#f1f5f9;color:#374151;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer">
+          No, Keep Editing
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(dialog);
+}
+
+// ── Draft save/restore (session memory for Add Client & Add Enquiry) ──
+const DRAFT_FIELDS = {
+  client: ['c-company','c-cat','c-fn','c-ln','c-gen','c-mob','c-altmob','c-email','c-occ','c-country','c-state','c-city','c-area','c-pin','c-family-name','c-relation','c-is-primary'],
+  enquiry: ['e-client','e-category','e-rating','e-status','e-type','e-staff','e-notes','e-budget','e-dest-intl','e-dest-dom','e-dest-custom','e-start','e-end'],
+  booking: ['b-client','b-category','b-dest','b-staff','b-amt','b-paid','b-notes','b-status','b-pay-status'],
+  task:    ['t-title','t-client','t-due','t-priority','t-assignee','t-notes'],
+};
+
+function draftSave() {
+  const type = window._currentModalType;
+  const fields = DRAFT_FIELDS[type];
+  if(!type || !fields) return;
+  const draft = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) draft[id] = el.value;
+  });
+  if(Object.values(draft).some(v=>v&&v.trim())) {
+    sessionStorage.setItem('fenix_draft_' + type, JSON.stringify(draft));
+  }
+}
+
+function draftRestore(type) {
+  const stored = sessionStorage.getItem('fenix_draft_' + type);
+  if(!stored) return false;
+  const draft = JSON.parse(stored);
+  let any = false;
+  Object.entries(draft).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if(el && val) { el.value = val; any = true; }
+  });
+  return any;
+}
+
+function draftClear() {
+  const type = window._currentModalType;
+  if(type) sessionStorage.removeItem('fenix_draft_' + type);
+  window._currentModalType = null;
+}
+
+// Auto-save draft every 3 seconds while modal is open
+let _draftInterval = null;
+function startDraftAutosave() {
+  stopDraftAutosave();
+  _draftInterval = setInterval(draftSave, 3000);
+}
+function stopDraftAutosave() {
+  if(_draftInterval) { clearInterval(_draftInterval); _draftInterval = null; }
+}
+
+function closeOverlay(e){
+  if(e && e.target !== document.getElementById("overlay")) return; // only programmatic close or X button
+  document.getElementById("overlay").classList.remove("open");
+  stopDraftAutosave();
+  window._currentModalType = null;
+}
+
 
 
 
@@ -3430,6 +3573,7 @@ async function saveClient() {
   _saving = true;
   try {
     await fbAdd("clients", data);
+    draftClear();
     closeOverlay();
   } catch(e) { alert("Save failed: "+e.message); }
   finally { _saving = false; }
@@ -3610,7 +3754,7 @@ async function saveEnquiry(isEdit) {
       await fbUpdate("enquiries", e.id, data); Object.assign(e,data);
       window._prefilledClientId=null;
       window._familyEnqPrimaryId=null; window._familyEnqPrimaryName=null; window._familyEnqRelation=null;
-      closeOverlay(); renderEnquiries();
+      draftClear(); closeOverlay(); renderEnquiries();
     } else {
       if(_saving) return;
       _saving = true;
@@ -3618,6 +3762,7 @@ async function saveEnquiry(isEdit) {
         await fbAdd("enquiries", data);
         window._prefilledClientId=null;
         window._familyEnqPrimaryId=null; window._familyEnqPrimaryName=null; window._familyEnqRelation=null;
+        draftClear();
         closeOverlay();
       } finally { _saving = false; }
     }
@@ -3701,10 +3846,10 @@ async function saveBooking(isEdit) {
       // Preserve existing payment history — never overwrite on edit
       if(b && b.paymentHistory && b.paymentHistory.length) data.paymentHistory = b.paymentHistory;
       await fbUpdate("bookings",b.id,data); Object.assign(b,data);
-      closeOverlay(); renderBookings();
+      draftClear(); closeOverlay(); renderBookings();
     } else {
       await fbAdd("bookings",data);
-      closeOverlay();
+      draftClear(); closeOverlay();
     }
     window._bkPreCat=null; renderCalendar("book");
     if(!isEdit) fireEventNotif('booking', `New booking confirmed for ${cName(data.clientId)} — ${data.destination||data.category||''}`);
@@ -3730,7 +3875,7 @@ async function saveTask() {
   _saving = true;
   try {
     const newTaskId = await fbAdd("tasks", data);
-    closeOverlay();
+    draftClear(); closeOverlay();
     // Notify the assigned staff member
     const assignedStaff = STAFF.find(s => s.id === assignedTo);
     if(assignedStaff && assignedTo !== CURRENT_USER?.id) {
