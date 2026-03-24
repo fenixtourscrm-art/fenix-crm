@@ -510,6 +510,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           </div>
         </div>
         <button class="btn btn-primary" onclick="openModal('enquiry')">+ Add Enquiry</button>
+        <button id="enq-backfill-btn" class="btn" style="display:none;background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:11px" onclick="backfillEnquiryNumbers()" title="Assign ENQ numbers to old enquiries">🔢 Fix ENQ Nos</button>
       </div>
       <div class="card"><table><thead><tr>
         <th>ENQ NO</th><th>TYPE</th><th>CLIENT</th><th>SOURCE</th><th>CATEGORY</th><th>DESTINATION</th><th>PAX</th><th>BUDGET</th><th>RATING</th><th>FOLLOW-UP</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th>
@@ -1085,6 +1086,9 @@ function showTab(tab,el){
 }
 
 function renderAll(){
+  // Show/hide backfill button for owner only
+  const bfBtn = document.getElementById("enq-backfill-btn");
+  if(bfBtn) bfBtn.style.display = (CURRENT_USER && CURRENT_USER.id===1) ? "" : "none";
   try{renderDashboard();}catch(e){console.error('renderDashboard:',e);}
   try{renderClients();}catch(e){console.error('renderClients:',e);}
   try{renderEnquiries();}catch(e){console.error('renderEnquiries:',e);}
@@ -1603,6 +1607,7 @@ async function saveBookingFromEnquiry() {
       createdByName:  CURRENT_USER ? CURRENT_USER.name : "Unknown",
       createdAt:      new Date().toISOString(),
       fromEnquiryId:  enqId,
+      fromEnquiryNo:  e.enquiryNo || "",
       primaryClientId:   e.primaryClientId   || "",
       primaryClientName: e.primaryClientName || "",
       familyRelation:    e.familyRelation    || "",
@@ -1774,7 +1779,7 @@ function renderBookingList(){
         <strong>${cName(b.clientId)}</strong>
         ${b.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${b.familyRelation||"Family"} of ${b.primaryClientName}</div>`:""}
       </td>
-      <td style="font-size:11px"><div style="font-weight:600">${b.destination||"—"}</div>${b.tourType?`<div style="color:#94a3b8;font-size:10px">${b.tourType}</div>`:""}</td>
+      <td style="font-size:11px"><div style="font-weight:600">${b.destination||"—"}</div>${b.tourType?`<div style="color:#94a3b8;font-size:10px">${b.tourType}</div>`:""}<div style="font-size:9px;color:#7c3aed;font-family:monospace;margin-top:2px">${b.fromEnquiryNo?"ENQ: "+b.fromEnquiryNo:""}</div></td>
       <td style="text-align:center;font-size:11px">${totalPax}<br><span style="color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${b.adults||0}A ${b.childBed||0}C ${b.infant||0}I`}</span></td>
       <td style="font-size:11px">${b.travelDate||"—"}</td>
       <td style="font-size:12px;font-weight:700;color:#0f172a">${fmt(totalAmt)}</td>
@@ -2018,11 +2023,27 @@ function globalSearch(q){
   const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source} ${e.category||""}`.toLowerCase().includes(ql));
   const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""} ${b.category||""}`.toLowerCase().includes(ql));
 
+  // Permission: owner (id=1) can delete, staff cannot
+  const _canDelete = CURRENT_USER && CURRENT_USER.id === 1;
+  const _delBtn = (type, id) => _canDelete
+    ? `<button class="btn" style="font-size:10px;padding:3px 8px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;white-space:nowrap" onclick="del('${type}','${id}')">🗑 Del</button>`
+    : "";
+
   const actionBtns=(c)=>`
     <div style="display:flex;gap:4px;flex-wrap:wrap">
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#0369a1;color:#fff;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button>
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" onclick="generateEnquiry('${c.id}')">🎯 Enquiry</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openModal('booking');window._prefilledClientId='${c.id}'">✈️ Booking</button>
+      ${_delBtn('clients',c.id)}
+    </div>`;
+
+  const familyActionBtns=(c)=>`
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#0369a1;color:#fff;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editClient('${c.id}')">✏️ Edit</button>
+      <button class="btn" style="font-size:10px;padding:3px 8px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" onclick="openFamilyMemberEnquiry('${c.id}',null,null,null,null,'${c.linkedPrimaryId||""}',null)">🎯 Enquiry</button>
+      ${_delBtn('clients',c.id)}
     </div>`;
 
   const enqActionBtns=(e)=>`
@@ -2030,6 +2051,7 @@ function globalSearch(q){
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="openEditEnq('${e.id}')">✏️ Edit</button>
       ${e.status==="Active"?`<button class="btn" style="font-size:10px;padding:3px 8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0" onclick="markBooked('${e.id}')">✅ Book</button>`:""}
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openFollowUpPopup('${e.id}',null)">📅 Follow-up</button>
+      ${_delBtn('enquiries',e.id)}
     </div>`;
 
   const bkActionBtns=(b)=>`
@@ -2037,6 +2059,7 @@ function globalSearch(q){
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#fff7ed;color:#ea580c;border:1px solid #fed7aa" onclick="editBk('${b.id}')">✏️ Edit</button>
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0" onclick="openAddPayment('${b.id}')">💰 Payment</button>
       <button class="btn" style="font-size:10px;padding:3px 8px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0" onclick="revertToEnquiry('${b.id}')">↩ Inquiry</button>
+      ${_delBtn('bookings',b.id)}
     </div>`;
 
   document.getElementById("search-results").innerHTML=`
@@ -2059,13 +2082,16 @@ function globalSearch(q){
       <td>${c.mobile}</td>
       <td style="font-size:11px">${c.familyName}</td>
       <td style="font-size:11px;color:#94a3b8">via ${c._foundViaFamily}</td>
-      <td>${actionBtns(c)}</td>
+      <td>${familyActionBtns(c)}</td>
     </tr>`).join("")}</tbody></table></div>`:""}
     ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>CATEGORY</th><th>RATING</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th></tr></thead>
     <tbody>${fe.map(e=>`<tr>
-      <td><strong>${cName(e.clientId)}</strong></td>
-      <td>${e.destination||"—"}</td>
+      <td>
+        <strong>${cName(e.clientId)}</strong>
+        ${e.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>`:""}
+      </td>
+      <td><div>${e.destination||"—"}</div><div style="font-size:9px;font-family:monospace;color:#7c3aed;margin-top:2px">${e.enquiryNo||"—"}</div></td>
       <td style="font-size:11px">${e.category||"—"}</td>
       <td>${rBadge(e.rating)}</td><td>${sBadge(e.status)}</td>
       <td style="font-size:11px">${sName(e.staffId)}</td>
@@ -2075,8 +2101,11 @@ function globalSearch(q){
     ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
     <tbody>${fb.map(b=>`<tr>
-      <td><strong>${cName(b.clientId)}</strong></td>
-      <td>${b.destination||b.category||"—"}</td>
+      <td>
+        <strong>${cName(b.clientId)}</strong>
+        ${b.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600">${b.familyRelation||"Family"} of ${b.primaryClientName}</div>`:""}
+      </td>
+      <td><div>${b.destination||b.category||"—"}</div><div style="font-size:9px;font-family:monospace;color:#7c3aed;margin-top:2px">${b.fromEnquiryNo?"ENQ: "+b.fromEnquiryNo:""}</div></td>
       <td>${b.travelDate||"—"}</td>
       <td style="font-weight:700;color:#059669">${fmt(b.amount)}</td>
       <td>${sBadge(b.status||"Confirmed")}</td>
@@ -3412,11 +3441,55 @@ function generateENQNumber() {
   const datePart = d.getFullYear().toString() +
     String(d.getMonth()+1).padStart(2,'0') +
     String(d.getDate()).padStart(2,'0');
-  // Count today's enquiries for sequence
+  const prefix = 'ENQ-' + datePart + '-';
   const todayStr = d.toISOString().slice(0,10);
-  const todayCount = enquiries.filter(e => (e.createdAt||'').slice(0,10) === todayStr).length + 1;
-  const seq = String(todayCount).padStart(4,'0');
-  return 'ENQ-' + datePart + '-' + seq;
+
+  // Find highest sequence used today from existing enquiryNo values
+  // This is more reliable than counting createdAt dates
+  const todayNums = enquiries
+    .map(e => e.enquiryNo||'')
+    .filter(n => n.startsWith(prefix))
+    .map(n => parseInt(n.replace(prefix,''))||0);
+  const maxSeq = todayNums.length ? Math.max(...todayNums) : 0;
+  const seq = String(maxSeq + 1).padStart(4,'0');
+  return prefix + seq;
+}
+
+// ── Backfill missing ENQ numbers for existing enquiries (owner only, run once) ──
+async function backfillEnquiryNumbers() {
+  if(!CURRENT_USER || CURRENT_USER.id !== 1) return;
+  const missing = enquiries.filter(e => !e.enquiryNo);
+  if(!missing.length) { alert("✅ All enquiries already have ENQ numbers!"); return; }
+  if(!confirm(`🔢 Assign ENQ numbers to ${missing.length} existing enquiries? This runs once and cannot be undone.`)) return;
+
+  // Sort by createdAt so earliest gets 0001
+  const sorted = [...missing].sort((a,b) => (a.createdAt||"").localeCompare(b.createdAt||""));
+
+  // Build a map of date → next seq, checking existing numbers
+  const seqMap = {};
+  enquiries.filter(e=>e.enquiryNo).forEach(e=>{
+    const match = (e.enquiryNo||"").match(/^ENQ-(\d{8})-(\d{4})$/);
+    if(match){
+      const dateKey = match[1];
+      const num = parseInt(match[2])||0;
+      seqMap[dateKey] = Math.max(seqMap[dateKey]||0, num);
+    }
+  });
+
+  let saved = 0;
+  for(const e of sorted) {
+    const d = e.createdAt ? new Date(e.createdAt) : new Date();
+    const dateKey = d.getFullYear().toString() + String(d.getMonth()+1).padStart(2,'0') + String(d.getDate()).padStart(2,'0');
+    seqMap[dateKey] = (seqMap[dateKey]||0) + 1;
+    const enquiryNo = 'ENQ-' + dateKey + '-' + String(seqMap[dateKey]).padStart(4,'0');
+    try {
+      await db.collection("enquiries").doc(e.id).update({ enquiryNo });
+      e.enquiryNo = enquiryNo;
+      saved++;
+    } catch(err) { console.error("Backfill failed for", e.id, err); }
+  }
+  renderEnquiries();
+  alert(`✅ Done! Assigned ENQ numbers to ${saved} enquiries.`);
 }
 
 async function saveEnquiry(isEdit) {
@@ -3530,6 +3603,8 @@ async function saveEnquiry(isEdit) {
   try {
     if(isEdit) {
       const e=enquiries.find(x=>x.id===window._editEnqId);
+      // CRITICAL: preserve existing enquiryNo — never regenerate on edit
+      if(e.enquiryNo) data.enquiryNo = e.enquiryNo;
       data.lastEditedBy = CURRENT_USER ? CURRENT_USER.name : "Unknown";
       data.lastEditedAt = new Date().toISOString();
       await fbUpdate("enquiries", e.id, data); Object.assign(e,data);
