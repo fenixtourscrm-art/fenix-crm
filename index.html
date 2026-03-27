@@ -659,77 +659,44 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
     <!-- TRAVEL QUIZ TAB -->
     <div class="tab" id="tab-quiz">
-
-      <!-- ── ACADEMY HEADER ── -->
-      <div style="background:linear-gradient(135deg,#1e1b4b,#312e81,#4f46e5);border-radius:16px;padding:20px 24px;margin-bottom:16px;color:#fff;position:relative;overflow:hidden">
-        <div style="position:absolute;right:-20px;top:-20px;font-size:120px;opacity:.07;pointer-events:none">🎓</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">
-          <div>
-            <div style="font-size:20px;font-weight:900;letter-spacing:-.3px">🎓 Travel Academy</div>
-            <div style="font-size:12px;color:#a5b4fc;margin-top:4px">Learn · Play · Compete · Sell Better · Every Day</div>
-          </div>
-          <!-- XP Level Badge -->
-          <div id="xp-level-badge" style="background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;padding:10px 18px;text-align:center;min-width:130px">
-            <div id="xp-level-name" style="font-size:14px;font-weight:800;color:#fff">—</div>
-            <div id="xp-level-bar-wrap" style="height:6px;background:rgba(255,255,255,.2);border-radius:99px;margin:5px 0 3px">
-              <div id="xp-level-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#fbbf24,#f97316);border-radius:99px;transition:width .6s ease"></div>
-            </div>
-            <div id="xp-level-pts" style="font-size:10px;color:#c7d2fe">0 XP</div>
-          </div>
+      <!-- Header -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+        <div>
+          <div class="section-title" style="margin:0">🎓 Travel Academy</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px">Learn · Play · Compete — something new every day!</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="academy-quiz-btn" class="btn" onclick="setAcademyTab('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
+          <button id="academy-fact-btn" class="btn" onclick="setAcademyTab('fact')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🌍 Travel Fact</button>
+          <button id="academy-guess-btn" class="btn" onclick="setAcademyTab('guess')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🗺️ Guess Destination</button>
         </div>
       </div>
 
-      <!-- ── STATS BAR ── -->
-      <div id="quiz-stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px">
-        <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:11px;padding:12px;color:#fff;text-align:center">
-          <div id="qs-today" style="font-size:20px;font-weight:800">—</div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:1px">Today</div>
+      <!-- Personal Stats Bar -->
+      <div id="quiz-stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-today" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">Today's Score</div>
         </div>
-        <div style="background:linear-gradient(135deg,#f97316,#dc2626);border-radius:11px;padding:12px;color:#fff;text-align:center">
-          <div id="qs-month" style="font-size:20px;font-weight:800">—</div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:1px">This Month</div>
+        <div style="background:linear-gradient(135deg,#f97316,#dc2626);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-month" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">This Month</div>
         </div>
-        <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:11px;padding:12px;color:#fff;text-align:center">
-          <div id="qs-streak" style="font-size:20px;font-weight:800">—</div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:1px">🔥 Streak</div>
+        <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-streak" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">🔥 Streak</div>
         </div>
-        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:11px;padding:12px;color:#fff;text-align:center">
-          <div id="qs-rank" style="font-size:20px;font-weight:800">—</div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:1px">🏆 Rank</div>
+        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-rank" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">🏆 Team Rank</div>
         </div>
-        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:11px;padding:12px;color:#fff;text-align:center">
-          <div id="qs-total" style="font-size:20px;font-weight:800">—</div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:1px">Total XP</div>
-        </div>
-        <div style="background:linear-gradient(135deg,#ec4899,#be185d);border-radius:11px;padding:12px;color:#fff;text-align:center">
-          <div id="qs-badges" style="font-size:20px;font-weight:800">—</div>
-          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:1px">🏅 Badges</div>
+        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:14px;color:#fff;text-align:center">
+          <div id="qs-total" style="font-size:22px;font-weight:800">—</div>
+          <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">Total Points</div>
         </div>
       </div>
 
-      <!-- ── BADGES ROW ── -->
-      <div id="badges-row" style="margin-bottom:14px;display:none">
-        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">My Badges</div>
-        <div id="badges-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-      </div>
-
-      <!-- ── NAV TABS ── -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-        <button id="academy-quiz-btn"      class="btn" onclick="setAcademyTab('quiz')"      style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
-        <button id="academy-weekly-btn"    class="btn" onclick="setAcademyTab('weekly')"    style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">⚡ Weekly Challenge</button>
-        <button id="academy-learn-btn"     class="btn" onclick="setAcademyTab('learn')"     style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">📖 Learn</button>
-        <button id="academy-fact-btn"      class="btn" onclick="setAcademyTab('fact')"      style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🌍 Travel Fact</button>
-        <button id="academy-guess-btn"     class="btn" onclick="setAcademyTab('guess')"     style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🗺️ Guess Dest</button>
-        <button id="academy-visa-btn"      class="btn" onclick="setAcademyTab('visa')"      style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🛂 Visa Lookup</button>
-        <button id="academy-dest-btn"      class="btn" onclick="setAcademyTab('dest')"      style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">✈️ Dest Deep Dive</button>
-        <button id="academy-compare-btn"   class="btn" onclick="setAcademyTab('compare')"   style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">⚖️ Compare</button>
-        <button id="academy-objection-btn" class="btn" onclick="setAcademyTab('objection')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">💬 Sales Scripts</button>
-        <button id="academy-challenge-btn" class="btn" onclick="setAcademyTab('challenge')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">⚔️ Challenge</button>
-        <button id="academy-aigen-btn"     class="btn" onclick="setAcademyTab('aigen')"     style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🤖 AI Questions</button>
-        <button id="academy-owner-btn"     class="btn" onclick="setAcademyTab('owner')"     style="display:none;background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">📊 Owner View</button>
-      </div>
-
-      <!-- ── QUIZ PANEL ── -->
+      <!-- QUIZ MODE PANEL -->
       <div id="quiz-panel">
         <div id="quiz-loading" style="text-align:center;padding:40px;color:#64748b">
           <div style="font-size:40px;margin-bottom:12px">🧠</div>
@@ -739,40 +706,22 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div id="quiz-result" style="display:none"></div>
       </div>
 
-      <!-- ── WEEKLY CHALLENGE PANEL ── -->
-      <div id="weekly-panel" style="display:none"><div id="weekly-content"></div></div>
+      <!-- LEARN MODE PANEL -->
+      <div id="learn-panel" style="display:none">
+        <div id="learn-content"></div>
+      </div>
 
-      <!-- ── LEARN PANEL ── -->
-      <div id="learn-panel" style="display:none"><div id="learn-content"></div></div>
+      <!-- TRAVEL FACT OF THE DAY PANEL -->
+      <div id="fact-panel" style="display:none">
+        <div id="fact-content"></div>
+      </div>
 
-      <!-- ── FACT PANEL ── -->
-      <div id="fact-panel" style="display:none"><div id="fact-content"></div></div>
+      <!-- GUESS THE DESTINATION PANEL -->
+      <div id="guess-panel" style="display:none">
+        <div id="guess-content"></div>
+      </div>
 
-      <!-- ── GUESS PANEL ── -->
-      <div id="guess-panel" style="display:none"><div id="guess-content"></div></div>
-
-      <!-- ── VISA LOOKUP PANEL ── -->
-      <div id="visa-panel" style="display:none"><div id="visa-content"></div></div>
-
-      <!-- ── DESTINATION DEEP DIVE PANEL ── -->
-      <div id="dest-deep-panel" style="display:none"><div id="dest-deep-content"></div></div>
-
-      <!-- ── COMPARE PANEL ── -->
-      <div id="compare-panel" style="display:none"><div id="compare-content"></div></div>
-
-      <!-- ── OBJECTION / UPSELL PANEL ── -->
-      <div id="objection-panel" style="display:none"><div id="objection-content"></div></div>
-
-      <!-- ── STAFF CHALLENGE PANEL ── -->
-      <div id="challenge-panel" style="display:none"><div id="challenge-content"></div></div>
-
-      <!-- ── AI QUESTION GENERATOR PANEL ── -->
-      <div id="aigen-panel" style="display:none"><div id="aigen-content"></div></div>
-
-      <!-- ── OWNER DASHBOARD PANEL ── -->
-      <div id="owner-academy-panel" style="display:none"><div id="owner-academy-content"></div></div>
-
-      <!-- ── LEADERBOARD ── -->
+      <!-- LEADERBOARD (always visible below) -->
       <div id="academy-leaderboard-wrap" style="margin-top:24px">
         <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">🏆 Travel Academy Leaderboard — This Month</div>
         <div id="quiz-leaderboard"></div>
@@ -7903,57 +7852,44 @@ let academyTab = 'quiz'; // 'quiz' | 'fact' | 'guess'
 
 function initQuiz() {
   loadQuizScores();
-  // Show owner-only button
-  const ownerBtn = document.getElementById('academy-owner-btn');
-  if(ownerBtn) ownerBtn.style.display = (CURRENT_USER&&CURRENT_USER.id===1) ? '' : 'none';
   setAcademyTab(academyTab);
 }
 
 function setAcademyTab(tab) {
   academyTab = tab;
-  const allTabs = ['quiz','weekly','learn','fact','guess','visa','dest','compare','objection','challenge','aigen','owner'];
-  // Update nav button styles
-  allTabs.forEach(t => {
+  // Update button styles
+  ['quiz','fact','guess'].forEach(t => {
     const btn = document.getElementById('academy-'+t+'-btn');
-    if(btn) { btn.style.background = t===tab?'#8b5cf6':'#f1f5f9'; btn.style.color = t===tab?'#fff':'#64748b'; }
+    if(btn) {
+      btn.style.background = t === tab ? '#8b5cf6' : '#f1f5f9';
+      btn.style.color      = t === tab ? '#fff'    : '#64748b';
+    }
   });
-  // Hide all panels
-  ['quiz-panel','weekly-panel','learn-panel','fact-panel','guess-panel',
-   'visa-panel','dest-deep-panel','compare-panel','objection-panel',
-   'challenge-panel','aigen-panel','owner-academy-panel','quiz-stats-bar'].forEach(id => {
-    const el = document.getElementById(id); if(el) el.style.display = 'none';
-  });
-  // Show relevant panels
-  const show = {
-    quiz:      ['quiz-panel','quiz-stats-bar'],
-    weekly:    ['weekly-panel','quiz-stats-bar'],
-    learn:     ['learn-panel'],
-    fact:      ['fact-panel'],
-    guess:     ['guess-panel'],
-    visa:      ['visa-panel'],
-    dest:      ['dest-deep-panel'],
-    compare:   ['compare-panel'],
-    objection: ['objection-panel'],
-    challenge: ['challenge-panel'],
-    aigen:     ['aigen-panel'],
-    owner:     ['owner-academy-panel'],
+  // Show/hide content panels
+  const panels = {
+    quiz:  ['quiz-panel', 'quiz-stats-bar'],
+    fact:  ['fact-panel'],
+    guess: ['guess-panel'],
   };
-  (show[tab]||[]).forEach(id => { const el=document.getElementById(id); if(el) el.style.display=''; });
+  ['quiz-panel','learn-panel','fact-panel','guess-panel','quiz-stats-bar'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = 'none';
+  });
+  (panels[tab] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.style.display = '';
+  });
+  // Leaderboard always visible on all tabs
   const lb = document.getElementById('academy-leaderboard-wrap');
-  if(lb) lb.style.display = ['owner'].includes(tab) ? 'none' : '';
+  if(lb) lb.style.display = '';
 
-  if(tab==='quiz')      setQuizMode('quiz');
-  else if(tab==='weekly')    renderWeeklyChallenge();
-  else if(tab==='learn')     renderLearnMode();
-  else if(tab==='fact')      renderFactOfTheDay();
-  else if(tab==='guess')     renderGuessGame();
-  else if(tab==='visa')      renderVisaLookup();
-  else if(tab==='dest')      renderDestDeepDive();
-  else if(tab==='compare')   renderCountryCompare();
-  else if(tab==='objection') renderSalesScripts();
-  else if(tab==='challenge') renderStaffChallenge();
-  else if(tab==='aigen')     renderAIQuestionGen();
-  else if(tab==='owner')     renderOwnerAcademy();
+  if(tab === 'quiz') {
+    setQuizMode('quiz');
+  } else if(tab === 'fact') {
+    renderFactOfTheDay();
+  } else if(tab === 'guess') {
+    renderGuessGame();
+  }
 }
 
 function setQuizMode(mode) {
@@ -8358,927 +8294,6 @@ function renderLeaderboard() {
     </div>`;
 }
 
-
-
-// ════════════════════════════════════════════════════════════════════
-//  TRAVEL ACADEMY — ADVANCED FEATURES (14 modules)
-// ════════════════════════════════════════════════════════════════════
-
-// ── XP LEVEL SYSTEM (Feature 8) ──────────────────────────────────
-const XP_LEVELS = [
-  { name:"🌱 Trainee",  min:0,    max:49,   color:"#94a3b8" },
-  { name:"🎒 Agent",    min:50,   max:149,  color:"#0ea5e9" },
-  { name:"⭐ Senior",   min:150,  max:299,  color:"#8b5cf6" },
-  { name:"🏅 Expert",   min:300,  max:499,  color:"#f97316" },
-  { name:"🌟 Master",   min:500,  max:799,  color:"#eab308" },
-  { name:"👑 Legend",   min:800,  max:99999,color:"#f43f5e" },
-];
-
-function getXPLevel(totalPoints) {
-  return XP_LEVELS.find(l => totalPoints >= l.min && totalPoints <= l.max) || XP_LEVELS[0];
-}
-
-function renderXPBadge() {
-  if(!CURRENT_USER) return;
-  const userId = String(CURRENT_USER.id);
-  const myData = quizScores[userId] || {};
-  const total = myData.totalPoints || 0;
-  const level = getXPLevel(total);
-  const next = XP_LEVELS[XP_LEVELS.indexOf(level)+1];
-  const pct = next ? Math.round(((total-level.min)/(next.min-level.min))*100) : 100;
-
-  const nameEl = document.getElementById('xp-level-name');
-  const barEl  = document.getElementById('xp-level-bar');
-  const ptsEl  = document.getElementById('xp-level-pts');
-  if(nameEl) nameEl.textContent = level.name;
-  if(barEl)  barEl.style.width  = pct+'%';
-  if(ptsEl)  ptsEl.textContent  = total+' XP'+(next?` · Next: ${next.min}`:'');
-}
-
-// Inject level next to name in leaderboard (called from renderLeaderboard)
-function getLevelTag(totalPoints) {
-  const l = getXPLevel(totalPoints);
-  return `<span style="font-size:9px;background:${l.color}25;color:${l.color};padding:1px 6px;border-radius:99px;font-weight:700;margin-left:5px">${l.name}</span>`;
-}
-
-// ── BADGE SYSTEM (Feature 5) ──────────────────────────────────────
-const BADGE_DEFS = [
-  { id:'streak7',   icon:'🔥', name:'7-Day Streak',      desc:'Quiz 7 days in a row',          check: d => (d.streak||0) >= 7 },
-  { id:'streak30',  icon:'🔥', name:'30-Day Streak',     desc:'Quiz 30 days in a row',         check: d => (d.streak||0) >= 30 },
-  { id:'perfect',   icon:'💯', name:'Perfect Score',     desc:'Score 8/8 on daily quiz',       check: d => Object.entries(d).some(([k,v])=>k.startsWith('day_')&&v>=8) },
-  { id:'pts100',    icon:'⭐', name:'Century',           desc:'Earn 100 total points',         check: d => (d.totalPoints||0) >= 100 },
-  { id:'pts500',    icon:'🌟', name:'Star Achiever',     desc:'Earn 500 total points',         check: d => (d.totalPoints||0) >= 500 },
-  { id:'weekly1',   icon:'⚡', name:'Challenge Accepted', desc:'Complete first weekly challenge',check: d => (d.weeklyChallenges||0) >= 1 },
-  { id:'weekly4',   icon:'🏆', name:'Challenge Champion', desc:'Complete 4 weekly challenges',  check: d => (d.weeklyChallenges||0) >= 4 },
-  { id:'pvp1',      icon:'⚔️', name:'First Duel',        desc:'Win a staff vs staff challenge', check: d => (d.pvpWins||0) >= 1 },
-];
-
-function getMyBadges() {
-  if(!CURRENT_USER) return [];
-  const myData = quizScores[String(CURRENT_USER.id)] || {};
-  return BADGE_DEFS.filter(b => b.check(myData));
-}
-
-function renderBadges() {
-  const badges = getMyBadges();
-  const row = document.getElementById('badges-row');
-  const list = document.getElementById('badges-list');
-  const countEl = document.getElementById('qs-badges');
-  if(countEl) countEl.textContent = badges.length || '—';
-  if(!list || !row) return;
-  if(badges.length === 0) { row.style.display='none'; return; }
-  row.style.display = '';
-  list.innerHTML = badges.map(b => `
-    <div title="${b.desc}" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:7px;cursor:default">
-      <span style="font-size:18px">${b.icon}</span>
-      <div>
-        <div style="font-size:11px;font-weight:700;color:#0f172a">${b.name}</div>
-        <div style="font-size:10px;color:#94a3b8">${b.desc}</div>
-      </div>
-    </div>`).join('');
-}
-
-// ── WEEKLY CHALLENGE (Feature 6) ─────────────────────────────────
-function getWeeklyQuestions() {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay()+6)%7)); // Monday of current week
-  const seed = parseInt(monday.toISOString().slice(0,10).replace(/-/g,''));
-  let s = seed;
-  function rand() { s = ((s*1664525)+1013904223)&0xffffffff; return (s>>>0)/4294967296; }
-  const shuffled = [...QUIZ_BANK].sort(()=>rand()-.5);
-  return shuffled.slice(0,5);
-}
-
-function getWeekKey() {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - ((now.getDay()+6)%7));
-  return 'wk_' + monday.toISOString().slice(0,10).replace(/-/g,'');
-}
-
-function renderWeeklyChallenge() {
-  const el = document.getElementById('weekly-content');
-  if(!el) return;
-  const wk = getWeekKey();
-  const userId = CURRENT_USER ? String(CURRENT_USER.id) : '0';
-  const myData = quizScores[userId] || {};
-  const done = myData[wk] !== undefined;
-  const score = myData[wk] || 0;
-  const questions = getWeeklyQuestions();
-
-  // Sunday deadline
-  const now = new Date();
-  const sunday = new Date(now); sunday.setDate(now.getDate() + (7-((now.getDay()+6)%7))%7 || 7);
-  const daysLeft = Math.ceil((sunday - now) / 86400000);
-
-  if(done) {
-    el.innerHTML = `
-      <div style="background:#fff;border:2px solid #8b5cf6;border-radius:16px;padding:28px;text-align:center;max-width:500px;margin:0 auto">
-        <div style="font-size:48px;margin-bottom:10px">⚡</div>
-        <div style="font-size:20px;font-weight:800;color:#0f172a;margin-bottom:6px">Weekly Challenge Complete!</div>
-        <div style="font-size:32px;font-weight:900;color:#8b5cf6;margin-bottom:8px">${score} / 5</div>
-        <div style="font-size:13px;color:#64748b;margin-bottom:6px">You earned <strong style="color:#f97316">${score*3} bonus XP</strong> this week!</div>
-        <div style="font-size:11px;color:#94a3b8">New challenge every Monday · ${daysLeft} days until next</div>
-      </div>`;
-    return;
-  }
-
-  // Store state for weekly quiz
-  window._weeklyState = { questions, current:0, answers:[], done:false };
-
-  el.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:14px;padding:16px 20px;margin-bottom:16px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-      <div>
-        <div style="font-size:16px;font-weight:800">⚡ Weekly Challenge</div>
-        <div style="font-size:11px;color:#a5b4fc;margin-top:2px">5 harder questions · 3× points each · Ends in ${daysLeft} day${daysLeft!==1?'s':''}</div>
-      </div>
-      <div style="background:rgba(255,255,255,.15);padding:8px 16px;border-radius:99px;font-size:14px;font-weight:800">5Q · ${5*3} XP possible</div>
-    </div>
-    <div id="weekly-q-wrap"></div>`;
-  renderWeeklyQuestion();
-}
-
-function renderWeeklyQuestion() {
-  const ws = window._weeklyState;
-  if(!ws) return;
-  const el = document.getElementById('weekly-q-wrap');
-  if(!el) return;
-  if(ws.current >= ws.questions.length) { finishWeekly(); return; }
-  const q = ws.questions[ws.current];
-  const num = ws.current+1; const tot = ws.questions.length;
-  const pct = Math.round((ws.current/tot)*100);
-  const catColors = { Visa:'#8b5cf6',Documents:'#0ea5e9',Destinations:'#f97316',Airlines:'#0369a1',Hotels:'#10b981',Geography:'#16a34a' };
-  const catColor = catColors[q.cat]||'#64748b';
-  el.innerHTML = `
-    <div style="background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;overflow:hidden">
-      <div style="height:5px;background:#f1f5f9"><div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#8b5cf6,#6d28d9);transition:width .4s"></div></div>
-      <div style="padding:22px 24px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <span style="background:${catColor}20;color:${catColor};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700">${q.cat}</span>
-          <span style="font-size:12px;color:#94a3b8;font-weight:600">Q${num}/${tot} · ⚡ 3× XP</span>
-        </div>
-        <div style="font-size:16px;font-weight:800;color:#0f172a;line-height:1.5;margin-bottom:20px">${q.q}</div>
-        <div style="display:grid;gap:10px" id="weekly-opts">
-          ${q.opts.map((opt,i)=>`<button onclick="selectWeeklyAnswer(${i})" id="wo-${i}"
-            style="text-align:left;padding:13px 16px;border:2px solid #e2e8f0;border-radius:12px;background:#fafafa;font-size:13px;font-weight:600;color:#374151;cursor:pointer;width:100%">
-            <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:#f1f5f9;color:#64748b;font-size:11px;font-weight:700;margin-right:10px">${String.fromCharCode(65+i)}</span>${opt}
-          </button>`).join('')}
-        </div>
-      </div>
-    </div>`;
-}
-
-function selectWeeklyAnswer(idx) {
-  const ws = window._weeklyState;
-  if(!ws) return;
-  const q = ws.questions[ws.current];
-  ws.answers.push(idx);
-  q.opts.forEach((_,i) => {
-    const btn = document.getElementById('wo-'+i);
-    if(!btn) return;
-    btn.onclick = null; btn.style.cursor='default';
-    if(i===q.ans) { btn.style.background='#dcfce7'; btn.style.border='2px solid #16a34a'; btn.style.color='#166534'; }
-    else if(i===idx&&idx!==q.ans) { btn.style.background='#fee2e2'; btn.style.border='2px solid #dc2626'; btn.style.color='#991b1b'; }
-  });
-  const opts = document.getElementById('weekly-opts');
-  if(opts) opts.insertAdjacentHTML('afterend',`
-    <div style="margin-top:14px;background:${idx===q.ans?'#f0fdf4':'#fff7ed'};border:1.5px solid ${idx===q.ans?'#86efac':'#fed7aa'};border-radius:12px;padding:12px 16px">
-      <div style="font-size:12px;font-weight:800;color:${idx===q.ans?'#166534':'#9a3412'};margin-bottom:4px">${idx===q.ans?'✅ Correct! +3 XP':'❌ Incorrect'}</div>
-      <div style="font-size:12px;color:#374151;line-height:1.6">${q.exp}</div>
-    </div>
-    <button onclick="window._weeklyState.current++;renderWeeklyQuestion()"
-      style="width:100%;margin-top:12px;padding:12px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">
-      ${ws.current+1<ws.questions.length?'Next →':'See Results 🎉'}
-    </button>`);
-}
-
-async function finishWeekly() {
-  const ws = window._weeklyState;
-  if(!ws) return;
-  const score = ws.answers.filter((a,i)=>a===ws.questions[i].ans).length;
-  const xpEarned = score * 3;
-  const wk = getWeekKey();
-  const el = document.getElementById('weekly-q-wrap');
-  if(el) el.innerHTML = `
-    <div style="background:#fff;border-radius:16px;border:2px solid #8b5cf6;padding:28px;text-align:center">
-      <div style="font-size:48px;margin-bottom:10px">⚡</div>
-      <div style="font-size:24px;font-weight:900;color:#0f172a">${score} / 5</div>
-      <div style="font-size:16px;color:#8b5cf6;font-weight:700;margin:6px 0">+${xpEarned} Bonus XP Earned!</div>
-      <div style="font-size:13px;color:#64748b">Come back next Monday for a new challenge</div>
-    </div>`;
-  if(CURRENT_USER) {
-    try {
-      const userId = String(CURRENT_USER.id);
-      const ref = db.collection('quizscores').doc(userId);
-      const snap = await ref.get();
-      const data = snap.exists ? snap.data() : {};
-      await ref.set({
-        [wk]: score,
-        totalPoints: (data.totalPoints||0) + xpEarned,
-        weeklyChallenges: (data.weeklyChallenges||0) + 1,
-      }, { merge:true });
-    } catch(e) { console.error(e); }
-  }
-}
-
-// ── PERSONALISED QUIZ (Feature 2) — uses weak category tracking ──
-function getPersonalisedQuestions() {
-  if(!CURRENT_USER) return getTodaysQuestions();
-  const userId = String(CURRENT_USER.id);
-  const myData = quizScores[userId] || {};
-  const catWrong = myData.catWrong || {}; // {Visa:5, Hotels:2, ...}
-  const totalWrong = Object.values(catWrong).reduce((s,v)=>s+v,0) || 1;
-
-  // Weight categories by wrong rate — more wrong = more questions
-  const cats = [...new Set(QUIZ_BANK.map(q=>q.cat))];
-  const weights = {};
-  cats.forEach(c => { weights[c] = 1 + ((catWrong[c]||0)/totalWrong)*4; }); // base 1, up to 5
-
-  // Sample questions weighted by category difficulty
-  const pool = [...QUIZ_BANK].sort((a,b) => (weights[b.cat]||1)-(weights[a.cat]||1));
-  const picked = [];
-  cats.forEach(cat => {
-    const n = Math.max(1, Math.round((weights[cat]||1)));
-    pool.filter(q=>q.cat===cat).slice(0,n).forEach(q=>{ if(picked.length<8) picked.push(q); });
-  });
-  while(picked.length < 8) { const r = pool[Math.floor(Math.random()*pool.length)]; if(!picked.includes(r)) picked.push(r); }
-  return picked.slice(0,8);
-}
-
-// Patch selectAnswer to track category wrong answers
-const _origSelectAnswer = typeof selectAnswer !== 'undefined' ? selectAnswer : null;
-
-// ── VISA LOOKUP (Feature 11) ─────────────────────────────────────
-const VISA_DB = {
-  "Thailand":        { flag:"🇹🇭", visa:"Visa on Arrival",    days:30,  fee:"₹2,000",     process:"On arrival",    docs:"Passport (6m+), Photo, Onward ticket, Hotel booking",   notes:"Very popular for Indians. Easy entry." },
-  "Dubai":           { flag:"🇦🇪", visa:"Tourist Visa Required",days:30, fee:"₹6,000–9,000",process:"3–5 days",     docs:"Passport, Photo, Bank statement, Hotel booking",         notes:"Apply via airline or authorized agent." },
-  "Singapore":       { flag:"🇸🇬", visa:"Visa Free",           days:30,  fee:"Free",        process:"No visa",       docs:"Passport (6m+), Return ticket, Sufficient funds",         notes:"No visa for Indians for 30 days!" },
-  "Maldives":        { flag:"🇲🇻", visa:"Visa on Arrival",    days:30,  fee:"Free",         process:"On arrival",    docs:"Passport (6m+), Return ticket, Hotel booking",            notes:"Free VOA for all nationalities." },
-  "Bali/Indonesia":  { flag:"🇮🇩", visa:"Visa on Arrival",    days:30,  fee:"₹2,200",       process:"On arrival",    docs:"Passport (6m+), Return ticket, Sufficient funds",         notes:"Available at Ngurah Rai Airport." },
-  "Malaysia":        { flag:"🇲🇾", visa:"Visa Free",           days:30,  fee:"Free",         process:"No visa",       docs:"Passport (6m+), Return ticket, Hotel booking",            notes:"No visa required for Indians." },
-  "Sri Lanka":       { flag:"🇱🇰", visa:"ETA Online",          days:30,  fee:"₹2,500",       process:"1–2 days",      docs:"Passport, Online ETA application, Hotel details",         notes:"Apply online before travel at eta.gov.lk" },
-  "Schengen/Europe": { flag:"🇪🇺", visa:"Schengen Visa",       days:90,  fee:"₹8,000+",      process:"15–30 days",    docs:"Passport, Photos, ITR 3yr, Bank 3m, Hotel, Insurance, Cover letter",notes:"Apply at embassy of longest-stay country." },
-  "UK":              { flag:"🇬🇧", visa:"UK Standard Visitor",  days:180, fee:"₹15,000+",     process:"15–20 days",    docs:"Passport, Bank 6m, ITR, Property proof, Cover letter",   notes:"Strong financial history improves approval." },
-  "USA":             { flag:"🇺🇸", visa:"B1/B2 Tourist",       days:180, fee:"₹16,000+",     process:"1–4 months",    docs:"DS-160, Passport, Bank, ITR, Ties to home country",       notes:"Interview at consulate required." },
-  "Australia":       { flag:"🇦🇺", visa:"Tourist Visa ETA",    days:90,  fee:"₹7,500",       process:"3–20 days",     docs:"Passport, Bank, Employment proof, Travel history",        notes:"Apply online. Strong travel history helps." },
-  "Japan":           { flag:"🇯🇵", visa:"Tourist Visa",        days:15,  fee:"₹4,000",       process:"5–7 days",      docs:"Passport, Photos, Bank 3m, Hotel, Itinerary",             notes:"Apply through authorized travel agent." },
-  "New Zealand":     { flag:"🇳🇿", visa:"Tourist Visa",        days:90,  fee:"₹10,000",      process:"20–25 days",    docs:"Passport, Bank, Employment letter, Travel insurance",     notes:"Online application available." },
-  "Canada":          { flag:"🇨🇦", visa:"Temporary Resident",  days:180, fee:"₹8,500",       process:"2–8 weeks",     docs:"Passport, Bank, ITR, Employment, Cover letter",           notes:"Apply online via IRCC portal." },
-  "Turkey":          { flag:"🇹🇷", visa:"e-Visa Online",       days:30,  fee:"₹3,500",       process:"1–3 days",      docs:"Passport, Credit card, Email",                            notes:"Easy online e-Visa at evisa.gov.tr" },
-  "Egypt":           { flag:"🇪🇬", visa:"Visa on Arrival",     days:30,  fee:"₹2,500",       process:"On arrival",    docs:"Passport (6m+), Cash for fee",                            notes:"USD 25 fee payable at airport." },
-  "Kenya":           { flag:"🇰🇪", visa:"eVisa Online",        days:90,  fee:"₹5,000",       process:"3–5 days",      docs:"Passport, Photo, Yellow fever card, eVisa form",          notes:"Apply at evisa.immigration.go.ke" },
-  "Vietnam":         { flag:"🇻🇳", visa:"e-Visa Online",       days:90,  fee:"₹2,000",       process:"3 days",        docs:"Passport, Photo, Credit card",                            notes:"Apply at evisa.xuatnhapcanh.gov.vn" },
-  "Nepal":           { flag:"🇳🇵", visa:"Visa on Arrival",     days:15,  fee:"Free",          process:"On arrival",    docs:"Passport or Voter ID",                                    notes:"Indians can use Voter ID — no passport needed!" },
-  "Bhutan":          { flag:"🇧🇹", visa:"Bhutan Visa",         days:15,  fee:"₹8,000 SDF/day",process:"1–2 days",     docs:"Passport, Visa through authorized tour operator",         notes:"Sustainable Development Fee applies daily." },
-};
-
-function renderVisaLookup() {
-  const el = document.getElementById('visa-content');
-  if(!el) return;
-  const countries = Object.keys(VISA_DB);
-  el.innerHTML = `
-    <div style="background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;padding:20px;margin-bottom:16px">
-      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">🛂 Visa Quick Lookup</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:14px">Instant visa rules for Indian passport holders — use during client calls</div>
-      <div style="position:relative;margin-bottom:16px">
-        <input id="visa-search-input" placeholder="🔍 Type a country — e.g. Thailand, Dubai, Europe..."
-          oninput="filterVisaLookup(this.value)"
-          style="width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;outline:none;box-sizing:border-box"/>
-      </div>
-      <div id="visa-quick-btns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-        ${['Thailand','Dubai','Bali/Indonesia','Singapore','Maldives','Schengen/Europe','UK','USA'].map(c=>`
-          <button onclick="showVisaCard('${c}')" style="padding:5px 12px;background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">${VISA_DB[c].flag} ${c}</button>
-        `).join('')}
-      </div>
-      <div id="visa-result"></div>
-    </div>
-    <div id="visa-all-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px">
-      ${countries.map(c => visaCard(c, false)).join('')}
-    </div>`;
-}
-
-function visaCard(country, full=true) {
-  const v = VISA_DB[country];
-  if(!v) return '';
-  const typeColor = v.visa.includes('Free')?'#059669':v.visa.includes('Arrival')?'#0369a1':v.visa.includes('Online')||v.visa.includes('ETA')?'#7c3aed':'#dc2626';
-  const typeBg    = v.visa.includes('Free')?'#dcfce7':v.visa.includes('Arrival')?'#e0f2fe':v.visa.includes('Online')||v.visa.includes('ETA')?'#ede9fe':'#fee2e2';
-  return `<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;transition:.15s" onmouseover="this.style.borderColor='#8b5cf6'" onmouseout="this.style.borderColor='#e2e8f0'">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div style="font-size:16px;font-weight:800;color:#0f172a">${v.flag} ${country}</div>
-      <span style="background:${typeBg};color:${typeColor};padding:3px 9px;border-radius:99px;font-size:10px;font-weight:800">${v.visa}</span>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;margin-bottom:8px">
-      <div style="background:#f8fafc;border-radius:7px;padding:7px 9px"><div style="color:#94a3b8;font-size:10px">Max Stay</div><div style="font-weight:700;color:#0f172a">${v.days} days</div></div>
-      <div style="background:#f8fafc;border-radius:7px;padding:7px 9px"><div style="color:#94a3b8;font-size:10px">Fee</div><div style="font-weight:700;color:#0f172a">${v.fee}</div></div>
-      <div style="background:#f8fafc;border-radius:7px;padding:7px 9px"><div style="color:#94a3b8;font-size:10px">Processing</div><div style="font-weight:700;color:#0f172a">${v.process}</div></div>
-    </div>
-    <div style="font-size:11px;color:#64748b;margin-bottom:6px"><strong>Docs:</strong> ${v.docs}</div>
-    <div style="font-size:11px;background:#fffbeb;border-left:3px solid #f59e0b;padding:6px 10px;border-radius:0 6px 6px 0;color:#92400e">💡 ${v.notes}</div>
-  </div>`;
-}
-
-function showVisaCard(country) {
-  const el = document.getElementById('visa-result');
-  if(el) el.innerHTML = visaCard(country, true);
-  document.getElementById('visa-all-grid')?.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-function filterVisaLookup(q) {
-  const ql = q.toLowerCase();
-  const grid = document.getElementById('visa-all-grid');
-  if(!grid) return;
-  if(!q) { grid.innerHTML = Object.keys(VISA_DB).map(c=>visaCard(c,false)).join(''); return; }
-  const matches = Object.keys(VISA_DB).filter(c => c.toLowerCase().includes(ql) || VISA_DB[c].visa.toLowerCase().includes(ql));
-  grid.innerHTML = matches.length ? matches.map(c=>visaCard(c,false)).join('') : `<div style="color:#94a3b8;padding:20px;text-align:center;grid-column:1/-1">No results for "${q}"</div>`;
-  if(matches.length===1) showVisaCard(matches[0]);
-}
-
-// ── DESTINATION DEEP DIVE (Feature 3) ────────────────────────────
-const DEST_DEEP = {
-  "Dubai 🇦🇪": {
-    hero:"🏙️", tagline:"City of Gold & Glamour",
-    bestTime:"Oct–Apr (cool & dry)", flightTime:"3h from Ahmedabad",
-    avgCost:"₹60,000–₹1,20,000 per person", visa:"Tourist Visa – 3–5 days – ₹6,000–9,000",
-    topHotels:["Atlantis The Palm","Burj Al Arab","JW Marriott Marina","Rove Downtown"],
-    mustSell:["Desert Safari","Dubai Frame + Burj Khalifa combo","Gold & Spice Souk","Abu Dhabi day trip","Dubai Creek Dhow dinner"],
-    clientTypes:"Families, Couples, Luxury, Shopping lovers",
-    upsell:"Travel insurance, visa assistance, airport transfer, Dhow dinner cruise"
-  },
-  "Bali 🇮🇩": {
-    hero:"🌴", tagline:"Island of the Gods",
-    bestTime:"Apr–Oct (dry season)", flightTime:"6–7h from Ahmedabad (via KL/SIN)",
-    avgCost:"₹45,000–₹90,000 per person", visa:"Visa on Arrival – ₹2,200",
-    topHotels:["Four Seasons Sayan","Viceroy Bali","Alaya Resort Ubud","Kuta Beach Club"],
-    mustSell:["Uluwatu Temple sunset","Rice terrace trek Tegalalang","Cooking class Ubud","Mount Batur sunrise","Spa day"],
-    clientTypes:"Honeymooners, Couples, Budget backpackers, Yoga/wellness",
-    upsell:"Travel insurance, private villa upgrade, scooter rental, cooking class"
-  },
-  "Thailand 🇹🇭": {
-    hero:"🐘", tagline:"Land of Smiles",
-    bestTime:"Nov–Feb (cool & dry)", flightTime:"4–5h from Ahmedabad",
-    avgCost:"₹40,000–₹85,000 per person", visa:"Visa on Arrival – ₹2,000",
-    topHotels:["Anantara Riverside Bangkok","Centara Grand Pattaya","Silavadee Koh Samui","Mandarin Oriental Bangkok"],
-    mustSell:["Bangkok temples + Grand Palace","Phi Phi Island trip","Thai cooking class","Elephant sanctuary Chiang Mai","Floating market"],
-    clientTypes:"Families, Budget couples, Groups, Backpackers",
-    upsell:"Island hopping package, Muay Thai show, Thai massage, travel insurance"
-  },
-  "Maldives 🇲🇻": {
-    hero:"🏝️", tagline:"Paradise on Earth",
-    bestTime:"Nov–Apr (dry season)", flightTime:"4h from Ahmedabad",
-    avgCost:"₹1,00,000–₹3,00,000 per person", visa:"Free VOA",
-    topHotels:["Soneva Fushi","Six Senses Laamu","Cinnamon Dhonveli","Bandos Island Resort"],
-    mustSell:["Water villa stay","Snorkeling & diving","Sunset dolphin cruise","Underwater restaurant","Seaplane transfer"],
-    clientTypes:"Honeymoon, Anniversary, Luxury couples",
-    upsell:"Seaplane upgrade, water sports package, spa, underwater dining"
-  },
-  "Europe 🇪🇺": {
-    hero:"🗼", tagline:"A Continent of Wonders",
-    bestTime:"Apr–Jun, Sep–Oct (shoulder season)", flightTime:"9–11h from Ahmedabad",
-    avgCost:"₹1,50,000–₹3,50,000 per person", visa:"Schengen – 15–30 days – ₹8,000+",
-    topHotels:["Marriott Paris","Leonardo Royal London","Motel One Barcelona","A&O Hostels (budget)"],
-    mustSell:["Paris Eiffel + Louvre","Rome Colosseum + Vatican","Switzerland train pass","Amsterdam canal tour","Swiss Alps tour"],
-    clientTypes:"Families, Seniors, Honeymooners, First-timers",
-    upsell:"Travel insurance (mandatory for Schengen), Rail pass, City passes"
-  },
-  "Singapore 🇸🇬": {
-    hero:"🦁", tagline:"Lion City — No Visa Needed!",
-    bestTime:"Feb–Apr (dry & cool)", flightTime:"5–6h from Ahmedabad",
-    avgCost:"₹70,000–₹1,40,000 per person", visa:"VISA FREE for Indians",
-    topHotels:["Marina Bay Sands","Raffles Hotel","Capella Singapore","Hotel Mono"],
-    mustSell:["Gardens by the Bay","Universal Studios","Sentosa Island","Singapore Zoo night safari","Little India & Chinatown"],
-    clientTypes:"Families, First international trip, Stopover, Business",
-    upsell:"Universal Studios tickets, Night Safari, cable car, travel insurance"
-  },
-};
-
-function renderDestDeepDive() {
-  const el = document.getElementById('dest-deep-content');
-  if(!el) return;
-  el.innerHTML = `
-    <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">✈️ Destination Deep Dive</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:16px">Complete reference for top-selling destinations — everything you need for a client call</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px" id="dest-deep-grid">
-      ${Object.keys(DEST_DEEP).map(d => destDeepCard(d)).join('')}
-    </div>
-    <div id="dest-deep-detail" style="margin-top:16px"></div>`;
-}
-
-function destDeepCard(destName) {
-  const d = DEST_DEEP[destName];
-  return `<div onclick="openDestDeep('${destName.replace(/'/g,'')}')"
-    style="background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:18px;cursor:pointer;transition:.15s"
-    onmouseover="this.style.borderColor='#f97316';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='#e2e8f0';this.style.transform='none'">
-    <div style="font-size:32px;margin-bottom:8px">${d.hero}</div>
-    <div style="font-size:15px;font-weight:800;color:#0f172a">${destName}</div>
-    <div style="font-size:11px;color:#f97316;font-weight:600;margin-top:2px">${d.tagline}</div>
-    <div style="font-size:11px;color:#64748b;margin-top:8px">🕐 ${d.flightTime} · 💰 ${d.avgCost}</div>
-    <div style="font-size:11px;color:#0369a1;margin-top:4px">🛂 ${d.visa.split('–')[0]}</div>
-  </div>`;
-}
-
-function openDestDeep(destName) {
-  const d = DEST_DEEP[destName];
-  if(!d) return;
-  const el = document.getElementById('dest-deep-detail');
-  if(!el) return;
-  el.innerHTML = `
-    <div style="background:#fff;border:2px solid #f97316;border-radius:16px;padding:24px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-        <div><div style="font-size:20px;font-weight:900;color:#0f172a">${d.hero} ${destName}</div>
-          <div style="font-size:13px;color:#f97316;font-weight:600">${d.tagline}</div></div>
-        <button onclick="document.getElementById('dest-deep-detail').innerHTML=''" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12px">✕ Close</button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:16px">
-        <div style="background:#fff7ed;border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:#ea580c;text-transform:uppercase">📅 Best Time</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:3px">${d.bestTime}</div></div>
-        <div style="background:#eff6ff;border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase">✈️ Flight Time</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:3px">${d.flightTime}</div></div>
-        <div style="background:#f0fdf4;border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase">💰 Avg Cost</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:3px">${d.avgCost}</div></div>
-        <div style="background:#faf5ff;border-radius:10px;padding:12px"><div style="font-size:10px;font-weight:700;color:#7c3aed;text-transform:uppercase">🛂 Visa</div><div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:3px">${d.visa}</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div style="background:#f8fafc;border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">🏨 Top Hotels</div>
-          ${d.topHotels.map(h=>`<div style="font-size:12px;color:#374151;padding:3px 0;border-bottom:1px solid #f1f5f9">• ${h}</div>`).join('')}
-        </div>
-        <div style="background:#f8fafc;border-radius:10px;padding:12px">
-          <div style="font-size:11px;font-weight:700;color:#f97316;text-transform:uppercase;margin-bottom:8px">🎯 Must-Sell Activities</div>
-          ${d.mustSell.map(a=>`<div style="font-size:12px;color:#374151;padding:3px 0;border-bottom:1px solid #f1f5f9">• ${a}</div>`).join('')}
-        </div>
-      </div>
-      <div style="background:#fffbeb;border-radius:10px;padding:12px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;margin-bottom:6px">👥 Client Types</div>
-        <div style="font-size:13px;color:#374151">${d.clientTypes}</div>
-      </div>
-      <div style="background:#f0fdf4;border-radius:10px;padding:12px">
-        <div style="font-size:11px;font-weight:700;color:#16a34a;text-transform:uppercase;margin-bottom:6px">💰 Upsell Opportunities</div>
-        <div style="font-size:13px;color:#374151">${d.upsell}</div>
-      </div>
-    </div>`;
-  el.scrollIntoView({behavior:'smooth',block:'start'});
-}
-
-// ── COUNTRY COMPARE (Feature 14) ─────────────────────────────────
-function renderCountryCompare() {
-  const el = document.getElementById('compare-content');
-  if(!el) return;
-  const opts = Object.keys(DEST_DEEP).map(d=>`<option value="${d}">${d}</option>`).join('');
-  el.innerHTML = `
-    <div style="background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;padding:20px">
-      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">⚖️ Country Comparison Tool</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:16px">Compare two destinations side-by-side for undecided clients</div>
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:center;margin-bottom:16px">
-        <select id="cmp-a" style="padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;outline:none">${opts}</select>
-        <div style="font-size:20px;font-weight:900;color:#64748b">VS</div>
-        <select id="cmp-b" style="padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;font-weight:700;outline:none">${Object.keys(DEST_DEEP).map((d,i)=>`<option value="${d}"${i===1?' selected':''}>${d}</option>`).join('')}</select>
-      </div>
-      <button onclick="runCompare()" style="width:100%;padding:12px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">⚖️ Compare Now</button>
-      <div id="compare-result" style="margin-top:16px"></div>
-    </div>`;
-}
-
-function runCompare() {
-  const a = document.getElementById('cmp-a')?.value;
-  const b = document.getElementById('cmp-b')?.value;
-  const da = DEST_DEEP[a]; const db2 = DEST_DEEP[b];
-  if(!da||!db2) return;
-  const el = document.getElementById('compare-result');
-  const rows = [
-    ['Hero','','',''],
-    ['Flight Time',da.flightTime,db2.flightTime,'Time'],
-    ['Avg Cost',da.avgCost,db2.avgCost,'Budget'],
-    ['Visa',da.visa.split('–')[0],db2.visa.split('–')[0],'Ease'],
-    ['Best Time',da.bestTime,db2.bestTime,'Season'],
-    ['Best For',da.clientTypes,db2.clientTypes,'Target'],
-    ['Upsell',da.upsell,db2.upsell,'Revenue'],
-  ];
-  el.innerHTML = `
-    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
-      <div style="display:grid;grid-template-columns:120px 1fr 1fr;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;background:#f8fafc;padding:10px 16px;gap:10px">
-        <div></div><div style="text-align:center">${a}</div><div style="text-align:center">${b}</div>
-      </div>
-      ${rows.slice(1).map(([label,va,vb])=>`
-        <div style="display:grid;grid-template-columns:120px 1fr 1fr;gap:10px;padding:12px 16px;border-top:1px solid #f1f5f9;align-items:start">
-          <div style="font-size:11px;font-weight:700;color:#64748b">${label}</div>
-          <div style="font-size:12px;color:#0f172a;background:#fff7ed;border-radius:8px;padding:8px 10px">${va}</div>
-          <div style="font-size:12px;color:#0f172a;background:#eff6ff;border-radius:8px;padding:8px 10px">${vb}</div>
-        </div>`).join('')}
-    </div>`;
-}
-
-// ── SALES SCRIPTS & OBJECTION HANDLER (Features 12 & 13) ─────────
-const SALES_SCRIPTS = {
-  "Too Expensive": {
-    icon:"💰", color:"#dc2626",
-    scripts:[
-      { title:"Break it Down",  text:"Let me show you the per-day cost — for a 7-night Dubai package at ₹80,000, that's just ₹11,000 per day for flights, hotel, visa, and meals. That's less than a weekend staycation in India." },
-      { title:"Value Add",      text:"This package includes visa, travel insurance, airport transfers, and breakfast daily. If you book separately, these add up to ₹20,000 more. You're actually saving significantly." },
-      { title:"Flexible Option",text:"I completely understand. Let me offer a modified version — same destinations, slightly different hotels, which brings it down by ₹15,000. Would that work better for your budget?" },
-    ]
-  },
-  "Need to Think": {
-    icon:"🤔", color:"#d97706",
-    scripts:[
-      { title:"Create Urgency", text:"Absolutely, take your time. Just so you know, this package has 2 seats left at this price. Airlines tend to increase fares as travel dates approach. Shall I hold it for 24 hours?" },
-      { title:"Clarify Concern",text:"Of course! While you think, can I understand what's holding you back? Is it the price, the dates, or something specific about the package? I'd love to address any concerns." },
-      { title:"Soft Follow-up", text:"No problem at all. I'll send you a detailed PDF with the complete itinerary, costs, and hotel photos. You can share with family too. What's the best email to send it to?" },
-    ]
-  },
-  "Bad Timing": {
-    icon:"📅", color:"#0369a1",
-    scripts:[
-      { title:"Future Lock",    text:"No problem! The good news is you can book now and travel later. You lock in today's price and visa fees, and I'll hold your preferred dates. Would April or May work better?" },
-      { title:"Flexible Dates", text:"Let's look at a few date options together. Travel in shoulder season (April or October) is actually 20–30% cheaper and less crowded. I can find you a better deal." },
-      { title:"Advance Plan",   text:"Many of our best bookings happen 3–4 months in advance. The families that plan early get the best hotels and cheaper flights. Shall I pencil in a tentative date?" },
-    ]
-  },
-  "Already Checked Online": {
-    icon:"💻", color:"#7c3aed",
-    scripts:[
-      { title:"Agent Value",    text:"Online portals show standard packages. What I offer is a curated, hassle-free experience — visa assistance, 24/7 support, airport transfers, and local contacts abroad. No portal gives you that." },
-      { title:"Price Match",    text:"Can you share what you found? In most cases, I can match or beat online prices, plus add complimentary services that platforms charge extra for. Let me check right now." },
-      { title:"Risk Factor",    text:"Many clients who book online call me when something goes wrong — cancelled flights, wrong hotels. With me, you have one person responsible for everything. Peace of mind has real value." },
-    ]
-  },
-  "Not Sure About Destination": {
-    icon:"🗺️", color:"#059669",
-    scripts:[
-      { title:"Ask Preferences",text:"Let me ask a few quick questions — how many days, what's your budget range, and who's travelling? In 2 minutes I can give you 3 perfect options tailored to you." },
-      { title:"Trending Now",   text:"Right now, most families are choosing Thailand or Bali — great value, easy visa, beautiful beaches. Couples are loving Maldives for honeymoon. Which sounds more like you?" },
-      { title:"Comparison Offer",text:"Let me send you a quick comparison of 3 destinations that match your budget and interests. You'll see prices, visa requirements, and highlights side by side. Much easier to decide." },
-    ]
-  },
-};
-
-const UPSELL_SCRIPTS = [
-  { title:"Travel Insurance",  icon:"🛡️", color:"#0369a1", pitch:"Before I confirm, I always recommend our travel insurance — just ₹800 per person. It covers flight cancellation, medical emergencies, and lost baggage. Many clients skip it and regret it. Can I include it?" },
-  { title:"Airport Transfer",  icon:"🚗", color:"#059669", pitch:"I can include a private airport pickup and drop at ₹2,500 total. Arrive in an unfamiliar city stress-free — no haggling with taxis, your driver will be waiting with a name board." },
-  { title:"Hotel Upgrade",     icon:"🏨", color:"#7c3aed", pitch:"For just ₹3,000 more per night, I can upgrade you to a sea-view room. For a 5-night trip, that's ₹600/day extra — absolutely worth it for the experience." },
-  { title:"Visa Assistance",   icon:"🛂", color:"#f97316", pitch:"Our visa assistance service at ₹1,500 handles all documentation, appointment booking, and follow-up. Saves you 4–5 hours of paperwork and reduces rejection risk. Shall I include it?" },
-  { title:"Meal Plan Add-on",  icon:"🍽️", color:"#dc2626", pitch:"Adding breakfast to your package is only ₹800 per person per day. It removes the morning stress of finding food in an unfamiliar city. Highly recommended for families." },
-  { title:"City Tour Package", icon:"🎡", color:"#0ea5e9", pitch:"I can add a guided city tour package — all entry tickets + guide for ₹4,000 per person. You save 30% vs booking individually, and it's all pre-arranged for you." },
-];
-
-function renderSalesScripts() {
-  const el = document.getElementById('objection-content');
-  if(!el) return;
-  el.innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div>
-        <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">💬 Objection Handler</div>
-        <div style="font-size:12px;color:#64748b;margin-bottom:12px">Proven responses for common client objections</div>
-        ${Object.entries(SALES_SCRIPTS).map(([obj,data])=>`
-          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px;cursor:pointer" onclick="toggleObjScripts('${obj.replace(/'/g,'').replace(/ /g,'-')}')"
-            onmouseover="this.style.borderColor='${data.color}'" onmouseout="this.style.borderColor='#e2e8f0'">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="font-size:16px;font-weight:700;color:#0f172a">${data.icon} ${obj}</div>
-              <span style="font-size:10px;color:${data.color};font-weight:700">▼ Show Scripts</span>
-            </div>
-            <div id="obj-${obj.replace(/'/g,'').replace(/ /g,'-')}" style="display:none;margin-top:10px">
-              ${data.scripts.map(s=>`
-                <div style="background:#f8fafc;border-left:3px solid ${data.color};border-radius:0 8px 8px 0;padding:10px 12px;margin-bottom:6px">
-                  <div style="font-size:11px;font-weight:800;color:${data.color};margin-bottom:4px">${s.title}</div>
-                  <div style="font-size:12px;color:#374151;line-height:1.6">"${s.text}"</div>
-                </div>`).join('')}
-            </div>
-          </div>`).join('')}
-      </div>
-      <div>
-        <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">💰 Upsell Scripts</div>
-        <div style="font-size:12px;color:#64748b;margin-bottom:12px">Use these to increase booking value</div>
-        ${UPSELL_SCRIPTS.map(u=>`
-          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <span style="font-size:20px">${u.icon}</span>
-              <div style="font-size:14px;font-weight:700;color:#0f172a">${u.title}</div>
-              <span style="background:${u.color}15;color:${u.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;margin-left:auto">Use This</span>
-            </div>
-            <div style="background:#f8fafc;border-left:3px solid ${u.color};border-radius:0 8px 8px 0;padding:10px 12px;font-size:12px;color:#374151;line-height:1.6">"${u.pitch}"</div>
-          </div>`).join('')}
-      </div>
-    </div>`;
-}
-
-function toggleObjScripts(key) {
-  const el = document.getElementById('obj-'+key);
-  if(el) el.style.display = el.style.display==='none' ? '' : 'none';
-}
-
-// ── AI QUESTION GENERATOR (Feature 1) ────────────────────────────
-let _aiGenQuestions = [];
-
-function renderAIQuestionGen() {
-  const el = document.getElementById('aigen-content');
-  if(!el) return;
-  const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
-  el.innerHTML = `
-    <div style="background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;padding:20px;margin-bottom:16px">
-      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">🤖 AI Question Generator</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:16px">Type any topic and AI generates 5 quiz questions instantly. ${isOwner?'Owner can add them to the question bank.':'Questions are for practice only.'}</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input id="aigen-topic" placeholder="e.g. Singapore visa, cruise packages, Bali hotels..."
-          style="flex:1;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none"/>
-        <button onclick="generateAIQuestions()" style="padding:12px 20px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🤖 Generate</button>
-      </div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-        ${['Dubai visa','Cruise packages','European tours','Travel insurance','Maldives resorts','Thailand activities','Hotel meal plans'].map(t=>
-          `<button onclick="document.getElementById('aigen-topic').value='${t}';generateAIQuestions()"
-            style="padding:4px 12px;background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">${t}</button>`).join('')}
-      </div>
-      <div id="aigen-result"></div>
-    </div>`;
-}
-
-async function generateAIQuestions() {
-  const topic = document.getElementById('aigen-topic')?.value.trim();
-  if(!topic) return alert('Please enter a topic');
-  const el = document.getElementById('aigen-result');
-  if(!el) return;
-  el.innerHTML = `<div style="text-align:center;padding:30px;color:#64748b"><div style="font-size:32px;margin-bottom:8px">🤖</div><div>Generating questions about "${topic}"...</div></div>`;
-  
-  const prompt = `You are a travel industry trainer for an Indian travel agency. Generate exactly 5 multiple-choice quiz questions about: "${topic}".
-Each question must be relevant to Indian travellers and travel agents.
-Respond ONLY with a valid JSON array. No preamble, no markdown.
-Format: [{"q":"question text","opts":["A","B","C","D"],"ans":0,"exp":"explanation","cat":"category"}]
-ans is the index (0-3) of the correct option. Keep explanations practical and concise.`;
-
-  try {
-    const text = await callGeminiAI(prompt);
-    const clean = text.replace(/```json|```/g,'').trim();
-    const start = clean.indexOf('['); const end = clean.lastIndexOf(']');
-    const questions = JSON.parse(clean.slice(start, end+1));
-    _aiGenQuestions = questions;
-
-    el.innerHTML = `
-      <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">Generated ${questions.length} questions about "${topic}":</div>
-      ${questions.map((q,i)=>`
-        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:8px">
-          <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:6px">${i+1}. ${q.q}</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px">
-            ${q.opts.map((o,j)=>`<div style="font-size:11px;padding:4px 8px;border-radius:6px;background:${j===q.ans?'#dcfce7':'#f1f5f9'};color:${j===q.ans?'#166534':'#374151'}">${j===q.ans?'✅ ':''}${String.fromCharCode(65+j)}. ${o}</div>`).join('')}
-          </div>
-          <div style="font-size:11px;color:#64748b;font-style:italic">${q.exp}</div>
-        </div>`).join('')}
-      ${CURRENT_USER&&CURRENT_USER.id===1 ? `<button onclick="addAIQuestionsToBank()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669,#047857);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px">✅ Add All to Question Bank</button>` : '<div style="font-size:11px;color:#94a3b8;text-align:center;margin-top:8px">These are for practice. Ask the owner to add them to the bank.</div>'}`;
-  } catch(e) {
-    el.innerHTML = `<div style="color:#dc2626;padding:16px;background:#fee2e2;border-radius:10px;">⚠️ Failed to generate: ${e.message}</div>`;
-  }
-}
-
-function addAIQuestionsToBank() {
-  if(!_aiGenQuestions.length) return;
-  _aiGenQuestions.forEach(q => {
-    if(!QUIZ_BANK.find(x=>x.q===q.q)) QUIZ_BANK.push(q);
-  });
-  alert(`✅ Added ${_aiGenQuestions.length} questions to the bank! Total: ${QUIZ_BANK.length} questions.`);
-  _aiGenQuestions = [];
-}
-
-// ── STAFF CHALLENGE (Feature 7) ───────────────────────────────────
-let _challengeState = null;
-
-function renderStaffChallenge() {
-  const el = document.getElementById('challenge-content');
-  if(!el) return;
-  const myId = CURRENT_USER ? CURRENT_USER.id : 0;
-  const others = STAFF.filter(s => s.id !== myId);
-
-  el.innerHTML = `
-    <div style="background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;padding:20px;margin-bottom:16px">
-      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-bottom:4px">⚔️ Staff vs Staff Challenge</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:16px">Challenge a teammate to the same 5 questions. Highest score wins!</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-bottom:16px">
-        ${others.map(s => {
-          const sData = quizScores[String(s.id)] || {};
-          const sTotal = sData.totalPoints || 0;
-          const sLevel = getXPLevel(sTotal);
-          return `<div onclick="startChallenge(${s.id},'${s.name}')"
-            style="background:#fff;border:2px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:.15s"
-            onmouseover="this.style.borderColor='#8b5cf6';this.style.background='#faf5ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
-            <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;margin:0 auto 8px">${s.initials}</div>
-            <div style="font-size:13px;font-weight:700;color:#0f172a">${s.name.split(' ').slice(-1)[0]}</div>
-            <div style="font-size:11px;color:#8b5cf6;margin-top:2px">${sLevel.name}</div>
-            <div style="font-size:10px;color:#94a3b8;margin-top:2px">${sTotal} XP</div>
-            <div style="margin-top:8px;padding:5px 12px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border-radius:99px;font-size:11px;font-weight:700">⚔️ Challenge</div>
-          </div>`;}).join('')}
-      </div>
-      <div id="challenge-quiz-wrap"></div>
-    </div>`;
-}
-
-function startChallenge(opponentId, opponentName) {
-  const challengeQs = [...QUIZ_BANK].sort(()=>Math.random()-.5).slice(0,5);
-  _challengeState = { questions:challengeQs, current:0, answers:[], opponentId, opponentName, done:false };
-  renderChallengeQuestion();
-}
-
-function renderChallengeQuestion() {
-  const cs = _challengeState;
-  if(!cs) return;
-  const el = document.getElementById('challenge-quiz-wrap');
-  if(!el) return;
-  if(cs.current >= cs.questions.length) { finishChallenge(); return; }
-  const q = cs.questions[cs.current];
-  el.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:12px;padding:14px 18px;margin-bottom:14px;color:#fff;display:flex;justify-content:space-between;align-items:center">
-      <div style="font-size:13px;font-weight:700">⚔️ vs ${cs.opponentName.split(' ').slice(-1)[0]}</div>
-      <div style="font-size:12px;color:#a5b4fc">Q${cs.current+1}/5</div>
-    </div>
-    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px">
-      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:16px">${q.q}</div>
-      <div style="display:grid;gap:8px" id="challenge-opts">
-        ${q.opts.map((o,i)=>`<button onclick="selectChallengeAnswer(${i})" id="co-${i}"
-          style="text-align:left;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;background:#fafafa;font-size:13px;font-weight:600;color:#374151;cursor:pointer;width:100%">
-          <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#f1f5f9;color:#64748b;font-size:10px;font-weight:700;margin-right:8px">${String.fromCharCode(65+i)}</span>${o}
-        </button>`).join('')}
-      </div>
-    </div>`;
-}
-
-function selectChallengeAnswer(idx) {
-  const cs = _challengeState;
-  if(!cs) return;
-  const q = cs.questions[cs.current];
-  cs.answers.push(idx);
-  q.opts.forEach((_,i) => {
-    const btn = document.getElementById('co-'+i);
-    if(!btn) return;
-    btn.onclick=null; btn.style.cursor='default';
-    if(i===q.ans) { btn.style.background='#dcfce7'; btn.style.border='2px solid #16a34a'; }
-    else if(i===idx&&idx!==q.ans) { btn.style.background='#fee2e2'; btn.style.border='2px solid #dc2626'; }
-  });
-  const opts = document.getElementById('challenge-opts');
-  if(opts) opts.insertAdjacentHTML('afterend',`
-    <div style="margin-top:12px;background:${idx===q.ans?'#f0fdf4':'#fff7ed'};border-radius:10px;padding:10px 14px;font-size:12px;color:#374151">${q.exp}</div>
-    <button onclick="_challengeState.current++;renderChallengeQuestion()"
-      style="width:100%;margin-top:10px;padding:11px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
-      ${cs.current+1<cs.questions.length?'Next →':'See Result 🎉'}
-    </button>`);
-}
-
-async function finishChallenge() {
-  const cs = _challengeState;
-  if(!cs) return;
-  const myScore = cs.answers.filter((a,i)=>a===cs.questions[i].ans).length;
-  // Simulate opponent score (opponent doesn't actually play — could be extended)
-  const oppData = quizScores[String(cs.opponentId)] || {};
-  const oppAvgRaw = Object.entries(oppData).filter(([k])=>k.startsWith('day_')).map(([,v])=>v);
-  const oppAvg = oppAvgRaw.length ? oppAvgRaw.reduce((s,v)=>s+v,0)/oppAvgRaw.length/8*5 : Math.floor(Math.random()*4)+1;
-  const oppScore = Math.round(oppAvg);
-  const won = myScore > oppScore;
-  const el = document.getElementById('challenge-quiz-wrap');
-  if(el) el.innerHTML = `
-    <div style="background:#fff;border:2px solid ${won?'#8b5cf6':'#e2e8f0'};border-radius:16px;padding:24px;text-align:center">
-      <div style="font-size:48px;margin-bottom:10px">${won?'🏆':'📚'}</div>
-      <div style="font-size:20px;font-weight:900;color:#0f172a;margin-bottom:6px">${won?'You Won!':'Good Effort!'}</div>
-      <div style="display:flex;justify-content:center;gap:40px;margin:16px 0">
-        <div><div style="font-size:28px;font-weight:900;color:#8b5cf6">${myScore}</div><div style="font-size:12px;color:#64748b">Your Score</div></div>
-        <div style="font-size:28px;color:#e2e8f0;font-weight:900">vs</div>
-        <div><div style="font-size:28px;font-weight:900;color:#64748b">${oppScore}</div><div style="font-size:12px;color:#64748b">${cs.opponentName.split(' ').slice(-1)[0]}</div></div>
-      </div>
-      ${won?`<div style="font-size:13px;color:#059669;font-weight:600">+5 bonus XP for winning! 🎉</div>`:''}
-      <button onclick="renderStaffChallenge();document.getElementById('challenge-quiz-wrap').innerHTML=''"
-        style="margin-top:16px;padding:10px 24px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Challenge Again</button>
-    </div>`;
-  if(won && CURRENT_USER) {
-    try {
-      const ref = db.collection('quizscores').doc(String(CURRENT_USER.id));
-      const snap = await ref.get();
-      const data = snap.exists ? snap.data() : {};
-      await ref.set({ totalPoints:(data.totalPoints||0)+5, pvpWins:(data.pvpWins||0)+1 }, {merge:true});
-    } catch(e) { console.error(e); }
-  }
-}
-
-// ── OWNER ACADEMY DASHBOARD (Feature 9) ──────────────────────────
-function renderOwnerAcademy() {
-  const el = document.getElementById('owner-academy-content');
-  if(!el || !CURRENT_USER || CURRENT_USER.id !== 1) return;
-  const month = monthStr();
-  const today = todayStr();
-  const monthKey = 'mon_'+month.replace(/-/g,'');
-  const weekKey = getWeekKey();
-  const STAFF_LIST = [{id:'1',name:'Ms. Rehana Ansari',initials:'RA'},{id:'2',name:'Mr. Paresh Gajera',initials:'PG'},{id:'3',name:'Ms. Nusaiba Puthawala',initials:'NP'},{id:'4',name:'Mr. Ahyan Shaikh',initials:'AS'},{id:'5',name:'Mr. Taha Rangwala',initials:'TR'}];
-
-  // Last activity: find most recent day_ key
-  function lastActive(data) {
-    const dayKeys = Object.keys(data).filter(k=>k.startsWith('day_')).sort().reverse();
-    if(!dayKeys.length) return null;
-    const dk = dayKeys[0].replace('day_','');
-    return `${dk.slice(0,4)}-${dk.slice(4,6)}-${dk.slice(6,8)}`;
-  }
-  function daysSince(dateStr) {
-    if(!dateStr) return 999;
-    return Math.floor((new Date(today)-new Date(dateStr))/86400000);
-  }
-
-  // Category analysis
-  const catTotals = {}; const catCounts = {};
-  QUIZ_BANK.forEach(q=>{ catTotals[q.cat]=0; catCounts[q.cat]=0; });
-  Object.values(quizScores).forEach(d=>{
-    (d.catWrong||{}) && Object.entries(d.catWrong||{}).forEach(([cat,wrong])=>{
-      catTotals[cat] = (catTotals[cat]||0) + wrong;
-    });
-  });
-
-  el.innerHTML = `
-    <div style="font-size:18px;font-weight:900;color:#0f172a;margin-bottom:4px">📊 Academy Dashboard</div>
-    <div style="font-size:12px;color:#64748b;margin-bottom:18px">Staff engagement, performance, and knowledge gaps</div>
-    
-    <!-- Staff Status Grid -->
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px">
-      ${STAFF_LIST.map(s=>{
-        const d = quizScores[s.id] || {};
-        const la = lastActive(d);
-        const ds = daysSince(la);
-        const monthPts = d[monthKey]||0;
-        const weekDone = d[weekKey]!==undefined;
-        const total = d.totalPoints||0;
-        const level = getXPLevel(total);
-        const streak = d.streak||0;
-        const atRisk = ds > 14;
-        return `<div style="background:#fff;border:1.5px solid ${atRisk?'#fca5a5':'#e2e8f0'};border-radius:12px;padding:14px">
-          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <div style="width:36px;height:36px;border-radius:50%;background:${atRisk?'#fee2e2':'linear-gradient(135deg,#8b5cf6,#6d28d9)'};color:${atRisk?'#dc2626':'#fff'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800">${s.initials}</div>
-            <div><div style="font-size:13px;font-weight:700;color:#0f172a">${s.name.split(' ').slice(-1)[0]}</div>
-            <div style="font-size:11px;color:#8b5cf6">${level.name}</div></div>
-            ${atRisk?`<span style="margin-left:auto;background:#fee2e2;color:#dc2626;font-size:9px;padding:2px 7px;border-radius:99px;font-weight:700">⚠️ At Risk</span>`:''}
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">
-            <div style="text-align:center;background:#f8fafc;border-radius:7px;padding:7px">
-              <div style="font-weight:800;color:#8b5cf6">${monthPts}</div><div style="color:#94a3b8">Month XP</div>
-            </div>
-            <div style="text-align:center;background:#f8fafc;border-radius:7px;padding:7px">
-              <div style="font-weight:800;color:#f97316">${streak>0?'🔥'+streak:'—'}</div><div style="color:#94a3b8">Streak</div>
-            </div>
-            <div style="text-align:center;background:${weekDone?'#f0fdf4':'#fff7ed'};border-radius:7px;padding:7px">
-              <div style="font-weight:800;color:${weekDone?'#059669':'#d97706'}">${weekDone?'✅':'⏳'}</div><div style="color:#94a3b8">Weekly</div>
-            </div>
-          </div>
-          <div style="font-size:10px;color:${ds>14?'#dc2626':ds>7?'#d97706':'#059669'};margin-top:8px;font-weight:600">
-            ${la?`Last active: ${ds===0?'Today':ds===1?'Yesterday':ds+' days ago'}`:'Never used Academy'}
-          </div>
-        </div>`;}).join('')}
-    </div>
-
-    <!-- Knowledge Gaps -->
-    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px">
-      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:12px">🎯 Team Knowledge Gaps</div>
-      <div style="font-size:12px;color:#64748b;margin-bottom:12px">Categories your team struggles with most:</div>
-      ${Object.entries(catTotals).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([cat,wrong])=>`
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <div style="min-width:100px;font-size:12px;font-weight:600;color:#374151">${cat}</div>
-          <div style="flex:1;height:8px;background:#f1f5f9;border-radius:99px;overflow:hidden">
-            <div style="height:100%;width:${Math.min(100,wrong*10)}%;background:linear-gradient(90deg,#f97316,#dc2626);border-radius:99px"></div>
-          </div>
-          <div style="font-size:12px;color:#dc2626;font-weight:700;min-width:40px">${wrong} err</div>
-        </div>`).join('')||`<div style="color:#94a3b8;font-size:12px">Not enough data yet. Staff need to complete more quizzes.</div>`}
-    </div>`;
-}
-
-// ── "BEFORE YOU CALL" PRE-BRIEF (Feature 4) ──────────────────────
-async function showPreCallBrief(destination, category) {
-  if(!destination && !category) return;
-  const dest = destination || category;
-  const existing = document.getElementById('pre-call-brief-bar');
-  if(existing) existing.remove();
-
-  const bar = document.createElement('div');
-  bar.id = 'pre-call-brief-bar';
-  bar.style.cssText = 'background:linear-gradient(135deg,#fffbeb,#fef9c3);border:1.5px solid #fde68a;border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:flex-start;gap:10px;font-size:12px;color:#92400e';
-  bar.innerHTML = `<span style="font-size:16px;flex-shrink:0">🎓</span><div style="flex:1"><strong>Pre-Call Brief:</strong> Loading tips for <em>${dest}</em>...</div><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#92400e;font-size:14px;flex-shrink:0">✕</button>`;
-
-  const modal = document.getElementById('modal-body');
-  if(modal) modal.prepend(bar);
-
-  try {
-    const prompt = `You are a travel expert for an Indian travel agency. In 2–3 bullet points (max 200 chars total), give quick tips a travel agent should know before calling a client about: "${dest}". Be practical, specific to Indian travellers. No fluff.`;
-    const text = await callGeminiAI(prompt);
-    bar.innerHTML = `<span style="font-size:16px;flex-shrink:0">🎓</span><div style="flex:1"><strong style="color:#92400e">Before You Call — ${dest}:</strong><div style="margin-top:4px;line-height:1.7">${text.replace(/\n/g,'<br>')}</div></div><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#92400e;font-size:14px;flex-shrink:0">✕</button>`;
-  } catch(e) {
-    bar.remove();
-  }
-}
-
-// Hook into enquiry form opening — show pre-call brief for edit mode
-const _origOpenModal = openModal;
-function openModal(type) {
-  _origOpenModal(type);
-  if(type === 'editEnquiry') {
-    const eid = window._editEnqId;
-    const enq = eid ? enquiries.find(x=>x.id===eid) : null;
-    if(enq && (enq.destination || enq.category)) {
-      setTimeout(() => showPreCallBrief(enq.destination, enq.category), 300);
-    }
-  }
-}
-
-// ── UPDATE updateQuizStats to include XP + badges ──────────────────
-const _origUpdateQuizStats = updateQuizStats;
-function updateQuizStats() {
-  _origUpdateQuizStats();
-  renderXPBadge();
-  renderBadges();
-}
 
 
 // ═══════════════════════════════════════════════════════
