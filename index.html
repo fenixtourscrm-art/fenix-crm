@@ -49,6 +49,10 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .fmkt-mgr-tab.active{background:#3b82f6;color:#fff}
 #fmkt-visit-map{height:320px;border-radius:12px;border:1.5px solid #e2e8f0;margin-bottom:16px}
 .fmkt-status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px}
+.fmkt-leaflet-popup .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);border:1.5px solid #e2e8f0;padding:0}
+.fmkt-leaflet-popup .leaflet-popup-content{margin:14px 16px;font-size:13px}
+.fmkt-leaflet-popup .leaflet-popup-tip-container{margin-top:-1px}
+.leaflet-popup-close-button{font-size:16px!important;color:#64748b!important;right:8px!important;top:8px!important}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#e2e8f0}::-webkit-scrollbar-thumb{background:#f97316;border-radius:4px}
 .sidebar{width:225px;background:#fff;border-right:1px solid #e2e8f0;box-shadow:2px 0 8px rgba(0,0,0,0.06);display:flex;flex-direction:column;flex-shrink:0;height:100vh}
 .logo-wrap{padding:16px 12px 12px;border-bottom:1px solid #e2e8f0;text-align:center}
@@ -8711,15 +8715,24 @@ function _fmktGetGPS(onSuccess, onError) {
     pos => {
       const lat = pos.coords.latitude;
       const lng = pos.coords.longitude;
-      // Reverse geocode via nominatim (free, no key)
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+      // Reverse geocode via nominatim — zoom=18 gives street-level detail
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=18&addressdetails=1`, {
+        headers: { "Accept-Language": "en" }
+      })
         .then(r=>r.json())
         .then(data => {
-          const addr = data.address;
-          const short = [addr.suburb||addr.neighbourhood||addr.road, addr.city||addr.town].filter(Boolean).join(", ");
-          onSuccess({ lat, lng, address: short||`${lat.toFixed(4)},${lng.toFixed(4)}` });
+          const a = data.address || {};
+          // Build structured address parts
+          const area = a.suburb || a.neighbourhood || a.residential || a.quarter || a.village || "";
+          const road = a.road || a.pedestrian || a.footway || a.street || a.path || "";
+          const city = a.city || a.town || a.municipality || a.county || a.state_district || a.state || "";
+          const pin  = a.postcode || "";
+          // Short display string for check-in bar
+          const shortParts = [area, road, city].filter(Boolean);
+          const short = shortParts.length ? shortParts.slice(0,2).join(", ") : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+          onSuccess({ lat, lng, address: short, area, road, city, pin, fullAddress: data.display_name || short });
         })
-        .catch(() => onSuccess({ lat, lng, address:`${lat.toFixed(4)}, ${lng.toFixed(4)}` }));
+        .catch(() => onSuccess({ lat, lng, address:`${lat.toFixed(4)}, ${lng.toFixed(4)}`, area:"", road:"", city:"", pin:"" }));
     },
     err => onError("Could not get location: " + err.message),
     { enableHighAccuracy:true, timeout:15000 }
@@ -9364,28 +9377,126 @@ function _fmktInitMap(visits) {
   if(!mapEl || !window.L) return;
 
   const center = [visits[0].location.lat, visits[0].location.lng];
-  const map = L.map("fmkt-visit-map").setView(center, 13);
+  const map = L.map("fmkt-visit-map", {
+    closePopupOnClick: true  // clicking map background closes all popups
+  }).setView(center, 14);
   _fmktMapInstance = map;
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+  }).addTo(map);
 
   // Route line
-  const latlngs = visits.map(v=>[v.location.lat,v.location.lng]);
-  if(latlngs.length > 1) L.polyline(latlngs, {color:"#3b82f6",weight:3,opacity:.7,dashArray:"8,4"}).addTo(map);
+  const latlngs = visits.map(v=>[v.location.lat, v.location.lng]);
+  if(latlngs.length > 1) {
+    L.polyline(latlngs, {color:"#3b82f6", weight:3, opacity:.6, dashArray:"8,4"}).addTo(map);
+  }
 
-  // Visit pins
-  visits.forEach((v,i) => {
-    const o = FMKT_OUTCOMES.find(x=>x.id===v.outcome)||FMKT_OUTCOMES[0];
+  // Visit pins — one popup open at a time, with proper reverse geocoded address
+  visits.forEach((v, i) => {
+    const o = FMKT_OUTCOMES.find(x=>x.id===v.outcome) || FMKT_OUTCOMES[0];
+    const loc = v.location || {};
+
+    // Build popup HTML — show stored address fields if available, else coords
+    const area = loc.area || "";
+    const road = loc.road || "";
+    const city = loc.city || "";
+    const pin  = loc.pin  || "";
+    const addrLine1 = [road, area].filter(Boolean).join(", ") || loc.address || "";
+    const addrLine2 = [city, pin].filter(Boolean).join(" – ") || "";
+
+    const popupHTML = `
+      <div style="font-family:Inter,sans-serif;min-width:180px;padding:4px 2px">
+        <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:6px">
+          ${FMKT_STAFF_NAME}
+        </div>
+        <div style="display:inline-block;background:${o.color}18;color:${o.color};
+          border:1px solid ${o.color}40;padding:2px 8px;border-radius:99px;
+          font-size:11px;font-weight:700;margin-bottom:8px">${o.label}</div>
+        <div style="font-size:12px;color:#374151;line-height:1.8">
+          <div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">CLIENT</span>
+            <strong>${v.clientName}</strong>
+          </div>
+          ${addrLine1 ? `<div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">AREA</span>
+            <span>${addrLine1}</span>
+          </div>` : ""}
+          ${addrLine2 ? `<div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">CITY</span>
+            <span>${addrLine2}</span>
+          </div>` : ""}
+          <div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">TIME</span>
+            <span>${_fmktFmtTime(v.visitTime)}</span>
+          </div>
+          <div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">GPS</span>
+            <span style="font-size:10px;color:#94a3b8">${(loc.lat||0).toFixed(5)}, ${(loc.lng||0).toFixed(5)}</span>
+          </div>
+        </div>
+      </div>`;
+
     const icon = L.divIcon({
-      html:`<div style="background:${o.color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${i+1}</div>`,
-      className:"",iconSize:[28,28],iconAnchor:[14,14]
+      html: `<div style="background:${o.color};color:#fff;width:30px;height:30px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;
+        border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.35);cursor:pointer">${i+1}</div>`,
+      className: "", iconSize:[30,30], iconAnchor:[15,15]
     });
-    L.marker([v.location.lat,v.location.lng],{icon})
+
+    const marker = L.marker([loc.lat, loc.lng], {icon})
       .addTo(map)
-      .bindPopup(`<b>${v.clientName}</b><br>${o.label}<br>${_fmktFmtTime(v.visitTime)}`);
+      .bindPopup(popupHTML, {
+        autoClose:    true,   // close when another popup opens
+        closeOnClick: false,  // don't close when clicking the popup itself
+        maxWidth:     240,
+        className:    "fmkt-leaflet-popup"
+      });
+
+    // If this visit doesn't have detailed address yet, fetch it now and update popup
+    if(!loc.road && !loc.area && loc.lat && loc.lng) {
+      _fmktReverseGeocode(loc.lat, loc.lng).then(addr => {
+        const a1 = [addr.road, addr.area].filter(Boolean).join(", ");
+        const a2 = [addr.city, addr.pin].filter(Boolean).join(" – ");
+        const updatedHTML = popupHTML
+          .replace(addrLine1 || "PLACEHOLDER_NONE_A1", a1)
+          .replace(addrLine2 || "PLACEHOLDER_NONE_A2", a2);
+        marker.setPopupContent(popupHTML
+          .replace(`${addrLine1 ? `<div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">AREA</span>
+            <span>${addrLine1}</span>
+          </div>` : ""}`, a1 ? `<div style="display:flex;gap:5px;align-items:baseline">
+            <span style="color:#94a3b8;font-size:10px">AREA</span>
+            <span>${a1}</span>
+          </div>` : "")
+        );
+      }).catch(()=>{});
+    }
   });
 
-  map.fitBounds(latlngs.map(ll=>ll), {padding:[20,20]});
+  // Close all popups when clicking the map background
+  map.on("click", () => { map.closePopup(); });
+
+  map.fitBounds(latlngs, {padding:[30,30]});
+}
+
+// ── Dedicated reverse geocoding helper (returns promise) ──────────────
+function _fmktReverseGeocode(lat, lng) {
+  return fetch(
+    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=18&addressdetails=1`,
+    { headers: { "Accept-Language": "en" } }
+  )
+  .then(r => r.json())
+  .then(data => {
+    const a = data.address || {};
+    return {
+      area: a.suburb || a.neighbourhood || a.residential || a.quarter || a.village || "",
+      road: a.road   || a.pedestrian    || a.footway     || a.street  || a.path    || "",
+      city: a.city   || a.town          || a.municipality || a.county || a.state_district || a.state || "",
+      pin:  a.postcode || "",
+      display: data.display_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`
+    };
+  });
 }
 
 function _fmktShowLiveMap() {
@@ -9406,10 +9517,49 @@ function _fmktShowLiveMap() {
     document.body.appendChild(overlay);
     setTimeout(() => {
       if(!window.L) return;
-      const liveMap = L.map("fmkt-live-map").setView([data.lat, data.lng], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(liveMap);
-      const icon = L.divIcon({html:`<div style="background:#10b981;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px #10b98140"></div>`,className:"",iconSize:[16,16],iconAnchor:[8,8]});
-      L.marker([data.lat,data.lng],{icon}).addTo(liveMap).bindPopup(`${FMKT_STAFF_NAME}<br>Live location`).openPopup();
+      const liveMap = L.map("fmkt-live-map", { closePopupOnClick: true }).setView([data.lat, data.lng], 16);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors"
+      }).addTo(liveMap);
+
+      const icon = L.divIcon({
+        html:`<div style="background:#10b981;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 4px #10b98150;animation:pulse 2s infinite"></div>`,
+        className:"", iconSize:[18,18], iconAnchor:[9,9]
+      });
+
+      const marker = L.marker([data.lat, data.lng], {icon}).addTo(liveMap);
+
+      // Close popup when clicking map background
+      liveMap.on("click", () => liveMap.closePopup());
+
+      // Build initial popup with stored address
+      const buildLivePopup = (area, road, city, pin) => {
+        const addrLine = [road, area].filter(Boolean).join(", ");
+        const cityLine = [city, pin].filter(Boolean).join(" – ");
+        return `<div style="font-family:Inter,sans-serif;min-width:170px;padding:3px 2px">
+          <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:5px">🟢 ${FMKT_STAFF_NAME}</div>
+          <div style="font-size:12px;color:#374151;line-height:1.9">
+            ${addrLine ? `<div><span style="color:#94a3b8;font-size:10px">AREA &nbsp;</span>${addrLine}</div>` : ""}
+            ${cityLine ? `<div><span style="color:#94a3b8;font-size:10px">CITY &nbsp;</span>${cityLine}</div>` : ""}
+            <div><span style="color:#94a3b8;font-size:10px">GPS &nbsp;&nbsp;</span><span style="font-size:10px;color:#94a3b8">${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}</span></div>
+            <div style="font-size:10px;color:#10b981;margin-top:4px">Updated ${new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</div>
+          </div>
+        </div>`;
+      };
+
+      // Show popup with stored data first, then enrich with fresh geocode
+      marker.bindPopup(buildLivePopup(data.area||"", data.road||"", data.city||data.address||"", data.pin||""), {
+        autoClose: true, closeOnClick: false, maxWidth: 220
+      }).openPopup();
+
+      // Fetch fresh reverse geocode for accuracy
+      _fmktReverseGeocode(data.lat, data.lng)
+        .then(addr => {
+          marker.setPopupContent(buildLivePopup(addr.area, addr.road, addr.city, addr.pin));
+          if(marker.isPopupOpen()) marker.openPopup();
+        })
+        .catch(()=>{});
+
     }, 100);
   });
 }
