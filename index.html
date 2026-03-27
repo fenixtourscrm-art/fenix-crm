@@ -9069,26 +9069,79 @@ function _fmktSelectOutcome(outcome) {
   if(fw) fw.style.display = outcome==="Follow-up" ? "" : "none";
 }
 
-function _fmktHandlePhoto(input) {
+async function _fmktHandlePhoto(input) {
   const file = input.files[0];
   if(!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    _fmktPhoto = e.target.result;
-    // Re-render visit screen to show preview
-    _fmktRenderVisitScreen();
-    // After render, set photo via JS (not via src attr in template)
-    setTimeout(() => {
-      const thumb = document.getElementById('fmkt-photo-thumb');
-      if(thumb && _fmktPhoto) {
-        const img = document.createElement('img');
-        img.style.cssText = 'width:100%;max-height:200px;object-fit:cover;border-radius:10px';
-        img.src = _fmktPhoto;
-        thumb.appendChild(img);
-      }
-    }, 50);
-  };
-  reader.readAsDataURL(file);
+
+  // Show compressing indicator
+  const photoBox = document.querySelector('.fmkt-photo-box');
+  if(photoBox) photoBox.innerHTML = '<div style="padding:16px;text-align:center;font-size:14px;color:#64748b">⏳ Compressing photo...</div>';
+
+  try {
+    // Use existing compressor — max 800px wide, quality starts at 0.75
+    // Firestore limit is 1MB per doc; we target <700KB to leave room for other fields
+    const result = await _fmktCompressPhoto(file, 0.75, 800);
+    _fmktPhoto = 'data:image/jpeg;base64,' + result.base64;
+    const kb = Math.round(result.sizeBytes / 1024);
+    console.log(`Photo compressed: ${kb}KB`);
+  } catch(e) {
+    alert('Photo processing failed. Please try again.');
+    return;
+  }
+
+  // Re-render visit screen to show preview
+  _fmktRenderVisitScreen();
+  // Set photo via JS after render
+  setTimeout(() => {
+    const thumb = document.getElementById('fmkt-photo-thumb');
+    if(thumb && _fmktPhoto) {
+      const img = document.createElement('img');
+      img.style.cssText = 'width:100%;max-height:220px;object-fit:cover;border-radius:10px;display:block';
+      img.src = _fmktPhoto;
+      thumb.appendChild(img);
+    }
+  }, 50);
+}
+
+// Photo compressor for field visits — targets <700KB for Firestore
+function _fmktCompressPhoto(file, quality, maxDim) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        // Scale down to maxDim
+        if(w > maxDim || h > maxDim) {
+          if(w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+          else       { w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // Keep compressing until under 700KB
+        const tryQ = (q) => {
+          const dataUrl = canvas.toDataURL('image/jpeg', q);
+          const b64 = dataUrl.split(',')[1];
+          const bytes = Math.round(b64.length * 0.75);
+          if(bytes > 700000 && q > 0.2) {
+            tryQ(Math.max(0.2, q - 0.1));
+          } else {
+            resolve({ base64: b64, sizeBytes: bytes });
+          }
+        };
+        tryQ(quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 async function _fmktSaveVisit() {
