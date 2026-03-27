@@ -9503,13 +9503,18 @@ function _fmktShowLiveMap() {
   db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).get().then(snap => {
     if(!snap.exists) return alert("No live location available yet");
     const data = snap.data();
+    // Remove any existing live map overlay first
+    document.getElementById("fmkt-live-overlay")?.remove();
     const overlay = document.createElement("div");
+    overlay.id = "fmkt-live-overlay";
     overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px";
+    // Close when clicking backdrop
+    overlay.addEventListener("click", e => { if(e.target === overlay) overlay.remove(); });
     overlay.innerHTML = `
       <div style="background:#fff;border-radius:16px;width:100%;max-width:500px;overflow:hidden">
         <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;background:#0f172a;color:#fff">
           <div><div style="font-weight:800">🟢 Live Location</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">Updated ${new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</div></div>
-          <button onclick="this.closest('div[style]').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;color:#fff;cursor:pointer">✕</button>
+          <button onclick="document.getElementById('fmkt-live-overlay').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
         </div>
         <div id="fmkt-live-map" style="height:300px"></div>
         <div style="padding:12px 16px;font-size:13px;color:#374151">📍 ${data.address||"Location captured"}</div>
