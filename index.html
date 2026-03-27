@@ -8,6 +8,47 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100vh;overflow:hidden;display:flex}
+
+/* ── FIELD MARKETING ─────────────────────────────── */
+.fmkt-screen{display:none;flex-direction:column;min-height:100%}
+.fmkt-screen.fmkt-active{display:flex}
+.fmkt-header{background:linear-gradient(135deg,#0f172a,#1e3a5f);color:#fff;padding:16px 18px;border-radius:14px;margin-bottom:14px;position:relative;overflow:hidden}
+.fmkt-header::after{content:"📍";position:absolute;right:-10px;top:-10px;font-size:80px;opacity:.08}
+.fmkt-big-btn{width:100%;padding:18px;border:none;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;transition:.15s;min-height:58px}
+.fmkt-big-btn:active{transform:scale(.98)}
+.fmkt-big-btn.green{background:linear-gradient(135deg,#10b981,#059669);color:#fff}
+.fmkt-big-btn.red{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
+.fmkt-big-btn.blue{background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff}
+.fmkt-big-btn.orange{background:linear-gradient(135deg,#f97316,#ea580c);color:#fff}
+.fmkt-big-btn.gray{background:#f1f5f9;color:#64748b;border:2px solid #e2e8f0}
+.fmkt-big-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.fmkt-stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.fmkt-stat{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;text-align:center}
+.fmkt-stat-val{font-size:26px;font-weight:900;color:#0f172a}
+.fmkt-stat-lbl{font-size:11px;color:#94a3b8;font-weight:600;margin-top:2px}
+.fmkt-field{margin-bottom:14px}
+.fmkt-field label{display:block;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.fmkt-field input,.fmkt-field select,.fmkt-field textarea{width:100%;padding:13px 14px;border:2px solid #e2e8f0;border-radius:11px;font-size:15px;font-family:Inter,sans-serif;outline:none;box-sizing:border-box;background:#fff;color:#0f172a;-webkit-appearance:none}
+.fmkt-field input:focus,.fmkt-field select:focus,.fmkt-field textarea:focus{border-color:#3b82f6}
+.fmkt-field textarea{resize:vertical;min-height:90px}
+.fmkt-outcome-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.fmkt-outcome-btn{padding:14px 10px;border:2px solid #e2e8f0;border-radius:11px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;background:#fff;transition:.15s}
+.fmkt-outcome-btn.selected{border-color:currentColor;background:currentColor;color:#fff!important}
+.fmkt-outcome-btn.selected span{filter:invert(1) brightness(10)}
+.fmkt-visit-card{background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:10px}
+.fmkt-visit-card .outcome-pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+.fmkt-gps-box{background:#f0fdf4;border:1.5px solid #86efac;border-radius:11px;padding:12px 14px;font-size:13px;font-weight:600;color:#166534;display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.fmkt-gps-box.detecting{background:#fffbeb;border-color:#fde68a;color:#92400e}
+.fmkt-gps-box.error{background:#fef2f2;border-color:#fca5a5;color:#dc2626}
+.fmkt-photo-box{border:2px dashed #e2e8f0;border-radius:11px;padding:20px;text-align:center;cursor:pointer;margin-bottom:14px;transition:.15s}
+.fmkt-photo-box:hover{border-color:#3b82f6;background:#eff6ff}
+.fmkt-photo-preview{width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-top:10px}
+.fmkt-section-title{font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #f1f5f9}
+.fmkt-back-btn{display:flex;align-items:center;gap:6px;background:none;border:none;font-size:13px;font-weight:700;color:#64748b;cursor:pointer;padding:0;margin-bottom:14px}
+.fmkt-mgr-tab{padding:8px 16px;border:none;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer;background:#f1f5f9;color:#64748b;transition:.15s}
+.fmkt-mgr-tab.active{background:#3b82f6;color:#fff}
+#fmkt-visit-map{height:320px;border-radius:12px;border:1.5px solid #e2e8f0;margin-bottom:16px}
+.fmkt-status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px}
 ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:#e2e8f0}::-webkit-scrollbar-thumb{background:#f97316;border-radius:4px}
 .sidebar{width:225px;background:#fff;border-right:1px solid #e2e8f0;box-shadow:2px 0 8px rgba(0,0,0,0.06);display:flex;flex-direction:column;flex-shrink:0;height:100vh}
 .logo-wrap{padding:16px 12px 12px;border-bottom:1px solid #e2e8f0;text-align:center}
@@ -347,6 +388,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('ai',this)"><span class="nav-icon">🤖</span>AI Assistant</div>
     <div class="nav-item" onclick="showTab('destinations',this)"><span class="nav-icon">🗺️</span>Destination Map</div>
     <div class="nav-item" onclick="showTab('trash',this)"><span class="nav-icon">🗑️</span>Trash<span class="nav-badge" id="trash-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
+    <div class="nav-item" id="nav-fieldmkt" onclick="showTab('fieldmkt',this)" style="display:none"><span class="nav-icon">📍</span>Field Marketing<span class="nav-badge" id="fieldmkt-badge" style="display:none;background:#10b981;color:#fff">●</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -915,6 +957,11 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
     </div>
 
+    <!-- FIELD MARKETING TAB -->
+    <div class="tab" id="tab-fieldmkt">
+      <div id="fmkt-root"></div>
+    </div>
+
     <!-- BUG REPORTS TAB -->
     <div class="tab" id="tab-bugreports">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
@@ -1064,7 +1111,7 @@ const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes"};
+const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -1082,6 +1129,7 @@ function showTab(tab,el){
   }
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
+  if(tab==="fieldmkt"){initFieldMkt();}
   if(tab==="destinations"){initDestinations();}
   if(tab==="trash"){initTrash();}
 }
@@ -1092,6 +1140,9 @@ function renderAll(){
   if(bfBtn) bfBtn.style.display = (CURRENT_USER && CURRENT_USER.id===1) ? "" : "none";
   const famBfBtn = document.getElementById("family-backfill-btn");
   if(famBfBtn) famBfBtn.style.display = (CURRENT_USER && CURRENT_USER.id===1) ? "" : "none";
+  // Show field marketing nav only to Paresh (id=2) and owner (id=1)
+  const fmktNav = document.getElementById("nav-fieldmkt");
+  if(fmktNav) fmktNav.style.display = (CURRENT_USER && (CURRENT_USER.id===1||CURRENT_USER.id===2)) ? "" : "none";
   try{renderDashboard();}catch(e){console.error('renderDashboard:',e);}
   try{renderClients();}catch(e){console.error('renderClients:',e);}
   try{renderEnquiries();}catch(e){console.error('renderEnquiries:',e);}
@@ -8554,6 +8605,969 @@ function renderBugReports() {
       }
     </div>`;
   }).join("");
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  FIELD MARKETING TRACKING MODULE
+//  Isolated — zero overlap with existing CRM data/functions
+// ════════════════════════════════════════════════════════════════════
+
+// ── Constants ──────────────────────────────────────────────────────
+const FMKT_STAFF_ID  = 2;           // Mr. Paresh Gajera
+const FMKT_STAFF_NAME = "Mr. Paresh Gajera";
+const FMKT_OWNER_IDS  = [1];        // Only owner sees manager view
+
+const FMKT_OUTCOMES = [
+  { id:"Interested",     label:"🟢 Interested",     color:"#059669" },
+  { id:"Not Interested", label:"🔴 Not Interested",  color:"#dc2626" },
+  { id:"Follow-up",      label:"📅 Follow-up",       color:"#d97706" },
+  { id:"Closed",         label:"✅ Closed",           color:"#7c3aed" },
+];
+
+// ── State ───────────────────────────────────────────────────────────
+let _fmktScreen      = "home";   // home | checkin | visit | checkout | manager
+let _fmktCheckin     = null;     // active checkin doc
+let _fmktVisits      = [];       // today's visits
+let _fmktCheckins    = [];       // all checkins loaded
+let _fmktAllVisits   = [];       // all visits for manager
+let _fmktGPS         = null;     // { lat, lng, address }
+let _fmktPhoto       = null;     // base64 photo
+let _fmktSelectedOutcome = null;
+let _fmktPingInterval = null;
+let _fmktMapInstance  = null;
+let _fmktUnsub1 = null;
+let _fmktUnsub2 = null;
+
+// ── Init ────────────────────────────────────────────────────────────
+function initFieldMkt() {
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  const isMktStaff = CURRENT_USER && CURRENT_USER.id === FMKT_STAFF_ID;
+
+  if(!isOwner && !isMktStaff) {
+    document.getElementById("fmkt-root").innerHTML =
+      `<div style="text-align:center;padding:60px 20px;color:#94a3b8">
+        <div style="font-size:40px;margin-bottom:12px">🔒</div>
+        <div style="font-weight:700;font-size:16px;color:#374151">Access Restricted</div>
+        <div style="font-size:13px;margin-top:6px">Field Marketing is only accessible to the marketing employee and owner.</div>
+      </div>`;
+    return;
+  }
+
+  // Load today's data
+  _fmktLoadToday();
+  if(isOwner) {
+    _fmktLoadAllForManager();
+  }
+  _fmktRender();
+}
+
+// ── Firestore Loaders ───────────────────────────────────────────────
+function _fmktLoadToday() {
+  const today = new Date().toISOString().slice(0,10);
+  if(_fmktUnsub1) _fmktUnsub1();
+  _fmktUnsub1 = db.collection("fieldCheckins")
+    .where("date","==",today)
+    .where("employeeId","==",FMKT_STAFF_ID)
+    .onSnapshot(snap => {
+      const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
+      // Active checkin = one without checkoutTime
+      _fmktCheckin = docs.find(d=>!d.checkoutTime) || null;
+      _fmktRender();
+    });
+
+  if(_fmktUnsub2) _fmktUnsub2();
+  _fmktUnsub2 = db.collection("fieldVisits")
+    .where("date","==",today)
+    .where("employeeId","==",FMKT_STAFF_ID)
+    .orderBy("visitTime","desc")
+    .onSnapshot(snap => {
+      _fmktVisits = snap.docs.map(d=>({id:d.id,...d.data()}));
+      _fmktRender();
+    });
+}
+
+function _fmktLoadAllForManager() {
+  const today = new Date().toISOString().slice(0,10);
+  db.collection("fieldVisits")
+    .where("date","==",today)
+    .orderBy("visitTime","desc")
+    .onSnapshot(snap => {
+      _fmktAllVisits = snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(_fmktScreen === "manager") _fmktRenderManager();
+    });
+  db.collection("fieldCheckins")
+    .where("date","==",today)
+    .onSnapshot(snap => {
+      _fmktCheckins = snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(_fmktScreen === "manager") _fmktRenderManager();
+    });
+}
+
+// ── GPS Helper ──────────────────────────────────────────────────────
+function _fmktGetGPS(onSuccess, onError) {
+  if(!navigator.geolocation) { onError("GPS not supported on this device"); return; }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      // Reverse geocode via nominatim (free, no key)
+      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`)
+        .then(r=>r.json())
+        .then(data => {
+          const addr = data.address;
+          const short = [addr.suburb||addr.neighbourhood||addr.road, addr.city||addr.town].filter(Boolean).join(", ");
+          onSuccess({ lat, lng, address: short||`${lat.toFixed(4)},${lng.toFixed(4)}` });
+        })
+        .catch(() => onSuccess({ lat, lng, address:`${lat.toFixed(4)}, ${lng.toFixed(4)}` }));
+    },
+    err => onError("Could not get location: " + err.message),
+    { enableHighAccuracy:true, timeout:15000 }
+  );
+}
+
+// ── Time Helpers ────────────────────────────────────────────────────
+function _fmktFmtTime(iso) {
+  if(!iso) return "—";
+  return new Date(iso).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true});
+}
+function _fmktFmtDuration(startIso, endIso) {
+  if(!startIso) return "—";
+  const end = endIso ? new Date(endIso) : new Date();
+  const ms = end - new Date(startIso);
+  if(ms < 0) return "—";
+  const h = Math.floor(ms/3600000);
+  const m = Math.floor((ms%3600000)/60000);
+  return h>0 ? `${h}h ${m}m` : `${m}m`;
+}
+function _fmktToday() { return new Date().toISOString().slice(0,10); }
+function _fmktNow()   { return new Date().toISOString(); }
+
+// ── Master Renderer ─────────────────────────────────────────────────
+function _fmktRender() {
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  if(_fmktScreen === "manager" && isOwner) { _fmktRenderManager(); return; }
+  if(_fmktScreen === "checkin")  { _fmktRenderCheckinScreen();  return; }
+  if(_fmktScreen === "visit")    { _fmktRenderVisitScreen();    return; }
+  if(_fmktScreen === "checkout") { _fmktRenderCheckoutScreen(); return; }
+  _fmktRenderHome();
+}
+
+// ── SCREEN: HOME ────────────────────────────────────────────────────
+function _fmktRenderHome() {
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  const checkedIn = !!_fmktCheckin;
+  const totalVisits = _fmktVisits.length;
+  const fieldTime = checkedIn ? _fmktFmtDuration(_fmktCheckin.checkinTime, null) : "—";
+  const interested = _fmktVisits.filter(v=>v.outcome==="Interested").length;
+  const followups  = _fmktVisits.filter(v=>v.outcome==="Follow-up").length;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+
+  document.getElementById("fmkt-root").innerHTML = `
+    <div style="max-width:480px;margin:0 auto;padding:0 2px">
+
+      <!-- Header -->
+      <div class="fmkt-header">
+        <div style="font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:4px">${dateStr}</div>
+        <div style="font-size:20px;font-weight:900">📍 Field Marketing</div>
+        ${checkedIn
+          ? `<div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#86efac">
+              <span style="width:8px;height:8px;background:#10b981;border-radius:50%;display:inline-block;animation:pulse 2s infinite"></span>
+              Checked in ${_fmktFmtTime(_fmktCheckin.checkinTime)} · ${_fmktCheckin.checkinLocation?.address||"Location captured"}
+            </div>`
+          : `<div style="margin-top:8px;font-size:12px;color:#fca5a5">⚪ Not checked in today</div>`
+        }
+      </div>
+
+      <!-- Stats -->
+      <div class="fmkt-stat-row">
+        <div class="fmkt-stat">
+          <div class="fmkt-stat-val">${totalVisits}</div>
+          <div class="fmkt-stat-lbl">Visits Today</div>
+        </div>
+        <div class="fmkt-stat">
+          <div class="fmkt-stat-val">${fieldTime}</div>
+          <div class="fmkt-stat-lbl">Field Time</div>
+        </div>
+      </div>
+      <div class="fmkt-stat-row">
+        <div class="fmkt-stat">
+          <div class="fmkt-stat-val" style="color:#059669">${interested}</div>
+          <div class="fmkt-stat-lbl">🟢 Interested</div>
+        </div>
+        <div class="fmkt-stat">
+          <div class="fmkt-stat-val" style="color:#d97706">${followups}</div>
+          <div class="fmkt-stat-lbl">📅 Follow-ups</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      ${!checkedIn
+        ? `<button class="fmkt-big-btn green" onclick="_fmktGoCheckin()">✅ CHECK IN</button>`
+        : `<button class="fmkt-big-btn blue" onclick="_fmktScreen='visit';_fmktPhoto=null;_fmktSelectedOutcome=null;_fmktRender()">📝 LOG NEW VISIT</button>
+           <button class="fmkt-big-btn red" onclick="_fmktGoCheckout()">🔴 CHECK OUT</button>`
+      }
+
+      ${isOwner ? `<button class="fmkt-big-btn gray" onclick="_fmktScreen='manager';_fmktRender()">📊 Manager Dashboard</button>` : ""}
+
+      <!-- Today's visits -->
+      ${totalVisits > 0 ? `
+        <div class="fmkt-section-title" style="margin-top:16px">Today's Visits</div>
+        ${_fmktVisits.map(v => `
+          <div class="fmkt-visit-card" onclick="_fmktOpenVisitDetail('${v.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <div style="font-size:14px;font-weight:800;color:#0f172a">${v.clientName}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px">${v.clientPhone} · ${_fmktFmtTime(v.visitTime)}</div>
+              </div>
+              ${_fmktOutcomePill(v.outcome)}
+            </div>
+            ${v.notes ? `<div style="font-size:12px;color:#64748b;margin-top:6px;line-height:1.5">${v.notes}</div>` : ""}
+            ${v.followUpDate ? `<div style="font-size:11px;color:#d97706;margin-top:4px;font-weight:600">📅 Follow-up: ${v.followUpDate}</div>` : ""}
+          </div>`).join("")}
+      ` : `<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">
+        ${checkedIn ? "No visits logged yet.<br>Tap Log New Visit to start." : "Check in first to start logging visits."}
+      </div>`}
+    </div>`;
+}
+
+function _fmktOutcomePill(outcome) {
+  const o = FMKT_OUTCOMES.find(x=>x.id===outcome)||FMKT_OUTCOMES[0];
+  return `<span style="background:${o.color}18;color:${o.color};border:1px solid ${o.color}40;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap">${o.label}</span>`;
+}
+
+// ── SCREEN: CHECK-IN ────────────────────────────────────────────────
+function _fmktGoCheckin() {
+  _fmktScreen = "checkin";
+  _fmktGPS = null;
+  _fmktRender();
+  // Start GPS detection automatically
+  setTimeout(_fmktDetectGPS, 200);
+}
+
+function _fmktRenderCheckinScreen() {
+  const timeStr = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true});
+  const dateStr = new Date().toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+
+  document.getElementById("fmkt-root").innerHTML = `
+    <div style="max-width:480px;margin:0 auto">
+      <button class="fmkt-back-btn" onclick="_fmktScreen='home';_fmktRender()">← Back</button>
+      <div class="fmkt-header">
+        <div style="font-size:18px;font-weight:900">✅ Check In</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px">Start your field day</div>
+      </div>
+
+      <div class="fmkt-field">
+        <label>Employee</label>
+        <div style="padding:14px;background:#f8fafc;border:2px solid #e2e8f0;border-radius:11px;font-size:15px;font-weight:700;color:#0f172a">${FMKT_STAFF_NAME}</div>
+      </div>
+
+      <div id="fmkt-gps-status">
+        <div class="fmkt-gps-box detecting">
+          <span style="font-size:18px">📡</span>
+          <span>Detecting GPS location...</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px">
+        <div style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:11px;padding:14px">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Check-in Time</div>
+          <div style="font-size:18px;font-weight:800;color:#0f172a;margin-top:4px">${timeStr}</div>
+        </div>
+        <div style="background:#f8fafc;border:2px solid #e2e8f0;border-radius:11px;padding:14px">
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Date</div>
+          <div style="font-size:15px;font-weight:800;color:#0f172a;margin-top:4px">${dateStr}</div>
+        </div>
+      </div>
+
+      <button id="fmkt-checkin-confirm-btn" class="fmkt-big-btn green" onclick="_fmktConfirmCheckin()" disabled>
+        ⏳ Waiting for GPS...
+      </button>
+      <button class="fmkt-big-btn gray" onclick="_fmktScreen='home';_fmktRender()">Cancel</button>
+    </div>`;
+}
+
+function _fmktDetectGPS() {
+  _fmktGetGPS(
+    gps => {
+      _fmktGPS = gps;
+      const statusEl = document.getElementById("fmkt-gps-status");
+      if(statusEl) statusEl.innerHTML = `
+        <div class="fmkt-gps-box">
+          <span style="font-size:18px">📍</span>
+          <div><div style="font-weight:700">${gps.address}</div>
+          <div style="font-size:11px;opacity:.7">${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}</div></div>
+        </div>`;
+      const btn = document.getElementById("fmkt-checkin-confirm-btn");
+      if(btn) { btn.disabled=false; btn.textContent="✅ CONFIRM CHECK-IN"; }
+    },
+    err => {
+      const statusEl = document.getElementById("fmkt-gps-status");
+      if(statusEl) statusEl.innerHTML = `<div class="fmkt-gps-box error">⚠️ ${err} — <button onclick="_fmktDetectGPS()" style="background:none;border:none;color:#dc2626;cursor:pointer;font-weight:700;text-decoration:underline">Retry</button></div>`;
+      // Still allow check-in without GPS
+      const btn = document.getElementById("fmkt-checkin-confirm-btn");
+      if(btn) { btn.disabled=false; btn.textContent="✅ CHECK IN (No GPS)"; }
+    }
+  );
+}
+
+async function _fmktConfirmCheckin() {
+  const btn = document.getElementById("fmkt-checkin-confirm-btn");
+  if(btn) btn.disabled = true;
+  try {
+    const data = {
+      employeeId:       FMKT_STAFF_ID,
+      employeeName:     FMKT_STAFF_NAME,
+      checkinTime:      _fmktNow(),
+      checkinLocation:  _fmktGPS || null,
+      date:             _fmktToday(),
+      checkoutTime:     null,
+      checkoutLocation: null,
+    };
+    await db.collection("fieldCheckins").add(data);
+    // Start live location pings
+    _fmktStartPings();
+    _fmktScreen = "home";
+    _fmktRender();
+  } catch(e) {
+    alert("Check-in failed: " + e.message);
+    if(btn) btn.disabled = false;
+  }
+}
+
+// ── SCREEN: LOG VISIT ────────────────────────────────────────────────
+function _fmktRenderVisitScreen() {
+  const clientOpts = clients.map(c=>`<option value="${c.firstName} ${c.lastName}">${c.firstName} ${c.lastName} — ${c.mobile}</option>`).join("");
+
+  document.getElementById("fmkt-root").innerHTML = `
+    <div style="max-width:480px;margin:0 auto">
+      <button class="fmkt-back-btn" onclick="_fmktScreen='home';_fmktRender()">← Back</button>
+      <div class="fmkt-header">
+        <div style="font-size:18px;font-weight:900">📝 Log Visit</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px">${new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</div>
+      </div>
+
+      <div class="fmkt-field">
+        <label>Client Name *</label>
+        <input id="fv-name" list="fv-clients-list" placeholder="Type or select client..." autocomplete="off"/>
+        <datalist id="fv-clients-list">${clientOpts}</datalist>
+      </div>
+
+      <div class="fmkt-field">
+        <label>Client Phone *</label>
+        <input id="fv-phone" type="tel" inputmode="numeric" placeholder="9876543210"/>
+      </div>
+
+      <!-- Auto-fill phone when client selected -->
+      <script>
+        document.getElementById('fv-name').addEventListener('change', function() {
+          const val = this.value;
+          const c = clients.find(x => (x.firstName+' '+x.lastName) === val);
+          if(c) { const ph = document.getElementById('fv-phone'); if(ph) ph.value = c.mobile||''; }
+        });
+      </script>
+
+      <div class="fmkt-field">
+        <label>Visit Outcome *</label>
+        <div class="fmkt-outcome-grid">
+          ${FMKT_OUTCOMES.map(o=>`
+            <button class="fmkt-outcome-btn" id="fvo-${o.id.replace(/ /g,'-')}"
+              style="color:${o.color}"
+              onclick="_fmktSelectOutcome('${o.id}')">
+              <span>${o.label}</span>
+            </button>`).join("")}
+        </div>
+      </div>
+
+      <div class="fmkt-field">
+        <label>Meeting Notes</label>
+        <textarea id="fv-notes" placeholder="What was discussed? Key points from the meeting..."></textarea>
+      </div>
+
+      <div class="fmkt-field" id="fv-followup-wrap" style="display:none">
+        <label>Next Follow-up Date</label>
+        <input id="fv-followup" type="date" min="${_fmktToday()}"/>
+      </div>
+
+      <div class="fmkt-field">
+        <label>📷 Photo Proof * <span style="font-weight:400;color:#94a3b8">(office / shop / visiting card)</span></label>
+        <div class="fmkt-photo-box" onclick="document.getElementById('fv-photo-input').click()">
+          ${_fmktPhoto
+            ? `<img src="${_fmktPhoto}" class="fmkt-photo-preview"/><div style="font-size:12px;color:#059669;margin-top:8px;font-weight:700">✅ Photo added — tap to change</div>`
+            : `<div style="font-size:32px;margin-bottom:8px">📷</div>
+               <div style="font-size:14px;font-weight:700;color:#374151">Take Photo or Upload</div>
+               <div style="font-size:12px;color:#94a3b8;margin-top:4px">Camera · Gallery · Any image</div>`
+          }
+        </div>
+        <input id="fv-photo-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="_fmktHandlePhoto(this)"/>
+      </div>
+
+      <button class="fmkt-big-btn blue" onclick="_fmktSaveVisit()">💾 SAVE VISIT</button>
+      <button class="fmkt-big-btn gray" onclick="_fmktScreen='home';_fmktRender()">Cancel</button>
+    </div>`;
+}
+
+function _fmktSelectOutcome(outcome) {
+  _fmktSelectedOutcome = outcome;
+  FMKT_OUTCOMES.forEach(o => {
+    const btn = document.getElementById("fvo-"+o.id.replace(/ /g,"-"));
+    if(!btn) return;
+    if(o.id === outcome) {
+      btn.style.background = o.color;
+      btn.style.color = "#fff";
+      btn.style.borderColor = o.color;
+    } else {
+      btn.style.background = "#fff";
+      btn.style.color = o.color;
+      btn.style.borderColor = "#e2e8f0";
+    }
+  });
+  // Show follow-up date if Follow-up selected
+  const fw = document.getElementById("fv-followup-wrap");
+  if(fw) fw.style.display = outcome==="Follow-up" ? "" : "none";
+}
+
+function _fmktHandlePhoto(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    _fmktPhoto = e.target.result;
+    // Re-render visit screen to show preview
+    _fmktRenderVisitScreen();
+  };
+  reader.readAsDataURL(file);
+}
+
+async function _fmktSaveVisit() {
+  const name  = document.getElementById("fv-name")?.value.trim();
+  const phone = document.getElementById("fv-phone")?.value.trim();
+  const notes = document.getElementById("fv-notes")?.value.trim();
+  const fuDate= document.getElementById("fv-followup")?.value;
+
+  if(!name)  return alert("⚠️ Client name is required");
+  if(!phone) return alert("⚠️ Client phone is required");
+  if(!_fmktSelectedOutcome) return alert("⚠️ Please select a visit outcome");
+  if(!_fmktPhoto) return alert("⚠️ Photo proof is required");
+
+  const btn = document.querySelector(".fmkt-big-btn.blue");
+  if(btn) { btn.disabled=true; btn.textContent="Saving..."; }
+
+  // Capture current GPS for visit location
+  try {
+    const gps = await new Promise((res,rej) => _fmktGetGPS(res, rej));
+    const data = {
+      employeeId:    FMKT_STAFF_ID,
+      employeeName:  FMKT_STAFF_NAME,
+      clientName:    name,
+      clientPhone:   phone,
+      outcome:       _fmktSelectedOutcome,
+      notes:         notes || "",
+      followUpDate:  fuDate || "",
+      photo:         _fmktPhoto,
+      location:      gps,
+      visitTime:     _fmktNow(),
+      date:          _fmktToday(),
+      checkinId:     _fmktCheckin?.id || "",
+    };
+    await db.collection("fieldVisits").add(data);
+    _fmktPhoto = null;
+    _fmktSelectedOutcome = null;
+    _fmktScreen = "home";
+    _fmktRender();
+  } catch(e) {
+    // If GPS fails, still save without location
+    try {
+      const data = {
+        employeeId:    FMKT_STAFF_ID,
+        employeeName:  FMKT_STAFF_NAME,
+        clientName:    name,
+        clientPhone:   phone,
+        outcome:       _fmktSelectedOutcome,
+        notes:         notes || "",
+        followUpDate:  fuDate || "",
+        photo:         _fmktPhoto,
+        location:      null,
+        visitTime:     _fmktNow(),
+        date:          _fmktToday(),
+        checkinId:     _fmktCheckin?.id || "",
+      };
+      await db.collection("fieldVisits").add(data);
+      _fmktPhoto = null;
+      _fmktSelectedOutcome = null;
+      _fmktScreen = "home";
+      _fmktRender();
+    } catch(e2) {
+      alert("Save failed: " + e2.message);
+      if(btn) { btn.disabled=false; btn.textContent="💾 SAVE VISIT"; }
+    }
+  }
+}
+
+// ── SCREEN: CHECK-OUT ────────────────────────────────────────────────
+function _fmktGoCheckout() {
+  _fmktScreen = "checkout";
+  _fmktGPS = null;
+  _fmktRender();
+  setTimeout(_fmktDetectCheckoutGPS, 200);
+}
+
+function _fmktRenderCheckoutScreen() {
+  const totalVisits = _fmktVisits.length;
+  const fieldTime   = _fmktFmtDuration(_fmktCheckin?.checkinTime);
+  const timeStr     = new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true});
+
+  document.getElementById("fmkt-root").innerHTML = `
+    <div style="max-width:480px;margin:0 auto">
+      <button class="fmkt-back-btn" onclick="_fmktScreen='home';_fmktRender()">← Back</button>
+      <div class="fmkt-header">
+        <div style="font-size:18px;font-weight:900">🔴 Check Out</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px">End your field day</div>
+      </div>
+
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:18px;margin-bottom:14px">
+        <div class="fmkt-section-title">Day Summary</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="fmkt-stat"><div class="fmkt-stat-val">${totalVisits}</div><div class="fmkt-stat-lbl">Visits Done</div></div>
+          <div class="fmkt-stat"><div class="fmkt-stat-val">${fieldTime}</div><div class="fmkt-stat-lbl">In Field</div></div>
+        </div>
+        <div style="font-size:13px;color:#64748b;line-height:2">
+          <div>🟢 Check-in:  <strong>${_fmktFmtTime(_fmktCheckin?.checkinTime)}</strong></div>
+          <div>📍 Check-in Location: <strong>${_fmktCheckin?.checkinLocation?.address||"—"}</strong></div>
+          <div>🔴 Check-out: <strong>${timeStr}</strong></div>
+        </div>
+      </div>
+
+      <div id="fmkt-checkout-gps">
+        <div class="fmkt-gps-box detecting"><span style="font-size:18px">📡</span><span>Capturing checkout location...</span></div>
+      </div>
+
+      <button id="fmkt-checkout-confirm-btn" class="fmkt-big-btn red" onclick="_fmktConfirmCheckout()" style="margin-top:12px" disabled>
+        ⏳ Capturing location...
+      </button>
+      <button class="fmkt-big-btn gray" onclick="_fmktScreen='home';_fmktRender()">Cancel</button>
+    </div>`;
+}
+
+function _fmktDetectCheckoutGPS() {
+  _fmktGetGPS(
+    gps => {
+      _fmktGPS = gps;
+      const el = document.getElementById("fmkt-checkout-gps");
+      if(el) el.innerHTML = `<div class="fmkt-gps-box"><span style="font-size:18px">📍</span><div><div style="font-weight:700">${gps.address}</div><div style="font-size:11px;opacity:.7">${gps.lat.toFixed(5)}, ${gps.lng.toFixed(5)}</div></div></div>`;
+      const btn = document.getElementById("fmkt-checkout-confirm-btn");
+      if(btn) { btn.disabled=false; btn.textContent="🔴 CONFIRM CHECK-OUT"; }
+    },
+    err => {
+      const btn = document.getElementById("fmkt-checkout-confirm-btn");
+      if(btn) { btn.disabled=false; btn.textContent="🔴 CHECK OUT (No GPS)"; }
+    }
+  );
+}
+
+async function _fmktConfirmCheckout() {
+  if(!_fmktCheckin) return alert("No active check-in found");
+  const btn = document.getElementById("fmkt-checkout-confirm-btn");
+  if(btn) btn.disabled = true;
+  try {
+    const checkoutTime = _fmktNow();
+    await db.collection("fieldCheckins").doc(_fmktCheckin.id).update({
+      checkoutTime:     checkoutTime,
+      checkoutLocation: _fmktGPS || null,
+      totalVisits:      _fmktVisits.length,
+      fieldDuration:    _fmktFmtDuration(_fmktCheckin.checkinTime, checkoutTime),
+    });
+    _fmktStopPings();
+    // Auto-generate WhatsApp report
+    _fmktShareWhatsApp();
+    _fmktScreen = "home";
+    _fmktRender();
+  } catch(e) {
+    alert("Check-out failed: " + e.message);
+    if(btn) btn.disabled = false;
+  }
+}
+
+// ── VISIT DETAIL MODAL ───────────────────────────────────────────────
+function _fmktOpenVisitDetail(visitId) {
+  const v = _fmktVisits.find(x=>x.id===visitId) || _fmktAllVisits.find(x=>x.id===visitId);
+  if(!v) return;
+  document.getElementById("fmkt-root").insertAdjacentHTML("beforeend", `
+    <div id="fmkt-detail-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;padding:16px">
+      <div style="background:#fff;border-radius:20px 20px 14px 14px;width:100%;max-width:480px;margin:0 auto;padding:22px;max-height:85vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <div style="font-size:16px;font-weight:900;color:#0f172a">Visit Details</div>
+          <button onclick="document.getElementById('fmkt-detail-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:14px">✕</button>
+        </div>
+        ${_fmktOutcomePill(v.outcome)}
+        <div style="margin-top:12px;line-height:2;font-size:13px;color:#374151">
+          <div>👤 <strong>${v.clientName}</strong></div>
+          <div>📱 ${v.clientPhone}</div>
+          <div>🕐 ${_fmktFmtTime(v.visitTime)}</div>
+          ${v.location ? `<div>📍 ${v.location.address||"Location captured"}</div>` : ""}
+          ${v.followUpDate ? `<div>📅 Follow-up: <strong>${v.followUpDate}</strong></div>` : ""}
+          ${v.notes ? `<div style="margin-top:8px;background:#f8fafc;border-radius:10px;padding:12px;font-size:13px;color:#374151;line-height:1.6"><strong>Notes:</strong><br>${v.notes}</div>` : ""}
+        </div>
+        ${v.photo ? `<img src="${v.photo}" style="width:100%;border-radius:12px;margin-top:12px;max-height:260px;object-fit:cover"/>` : ""}
+      </div>
+    </div>`);
+}
+
+// ── LIVE LOCATION PINGS ──────────────────────────────────────────────
+function _fmktStartPings() {
+  _fmktSendPing();
+  _fmktPingInterval = setInterval(_fmktSendPing, 10 * 60 * 1000); // every 10 min
+}
+
+function _fmktStopPings() {
+  if(_fmktPingInterval) { clearInterval(_fmktPingInterval); _fmktPingInterval = null; }
+}
+
+function _fmktSendPing() {
+  _fmktGetGPS(gps => {
+    db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).set({
+      lat: gps.lat, lng: gps.lng,
+      address: gps.address,
+      updatedAt: _fmktNow(),
+      employeeName: FMKT_STAFF_NAME,
+      employeeId: FMKT_STAFF_ID,
+    });
+  }, ()=>{});
+}
+
+// ── SCREEN: MANAGER DASHBOARD ────────────────────────────────────────
+let _fmktMgrTab = "overview"; // overview | map | followups | history
+
+function _fmktRenderManager() {
+  const today = _fmktToday();
+  const todayCheckin = _fmktCheckins.find(c=>c.date===today&&c.employeeId===FMKT_STAFF_ID);
+  const isCheckedIn  = todayCheckin && !todayCheckin.checkoutTime;
+  const visits       = _fmktAllVisits;
+  const interested   = visits.filter(v=>v.outcome==="Interested").length;
+  const followups    = visits.filter(v=>v.outcome==="Follow-up").length;
+  const closed       = visits.filter(v=>v.outcome==="Closed").length;
+
+  document.getElementById("fmkt-root").innerHTML = `
+    <div style="max-width:800px;margin:0 auto">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div style="font-size:20px;font-weight:900;color:#0f172a">📍 Field Marketing Dashboard</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px">${new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+        </div>
+        <button class="fmkt-big-btn gray" style="width:auto;padding:10px 18px;font-size:13px" onclick="_fmktScreen='home';_fmktRender()">← Back</button>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:${isCheckedIn?'#059669':'#94a3b8'}">${isCheckedIn?"🟢 In":"⚪ Off"}</div><div class="fmkt-stat-lbl">Paresh Status</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val">${visits.length}</div><div class="fmkt-stat-lbl">Total Visits</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#059669">${interested}</div><div class="fmkt-stat-lbl">🟢 Interested</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#d97706">${followups}</div><div class="fmkt-stat-lbl">📅 Follow-up</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#7c3aed">${closed}</div><div class="fmkt-stat-lbl">✅ Closed</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val">${todayCheckin?_fmktFmtDuration(todayCheckin.checkinTime,todayCheckin.checkoutTime):"—"}</div><div class="fmkt-stat-lbl">Field Time</div></div>
+      </div>
+
+      <!-- Employee status card -->
+      <div style="background:#fff;border:1.5px solid ${isCheckedIn?'#86efac':'#e2e8f0'};border-radius:12px;padding:14px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800">PG</div>
+          <div style="flex:1">
+            <div style="font-size:14px;font-weight:800;color:#0f172a">${FMKT_STAFF_NAME}</div>
+            <div style="font-size:12px;color:#64748b">
+              ${isCheckedIn
+                ? `🟢 In Field since ${_fmktFmtTime(todayCheckin.checkinTime)} · ${todayCheckin.checkinLocation?.address||""}`
+                : todayCheckin
+                ? `⚪ Checked out ${_fmktFmtTime(todayCheckin.checkoutTime)}`
+                : "⚪ Not checked in today"
+              }
+            </div>
+          </div>
+          ${isCheckedIn ? `<button onclick="_fmktShowLiveMap()" style="padding:8px 14px;background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗺️ Live Map</button>` : ""}
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='overview'?'active':''}" onclick="_fmktMgrTab='overview';_fmktRenderManager()">📋 Visits</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='map'?'active':''}" onclick="_fmktMgrTab='map';_fmktRenderManager()">🗺️ Visit Map</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='followups'?'active':''}" onclick="_fmktMgrTab='followups';_fmktRenderManager()">📅 Follow-ups</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='history'?'active':''}" onclick="_fmktMgrTab='history';_fmktRenderManager()">📊 History</button>
+      </div>
+
+      <div id="fmkt-mgr-content"></div>
+    </div>`;
+
+  // Render active tab content
+  if(_fmktMgrTab==="overview") _fmktRenderMgrVisits();
+  else if(_fmktMgrTab==="map") _fmktRenderMgrMap();
+  else if(_fmktMgrTab==="followups") _fmktRenderMgrFollowups();
+  else if(_fmktMgrTab==="history") _fmktRenderMgrHistory();
+}
+
+function _fmktRenderMgrVisits() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  const visits = _fmktAllVisits;
+  if(!visits.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8">No visits logged today.</div>`; return; }
+  el.innerHTML = `
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
+      <div style="display:grid;grid-template-columns:80px 1fr 1fr 120px;padding:10px 16px;background:#f8fafc;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;gap:8px">
+        <div>Time</div><div>Client</div><div>Notes</div><div>Outcome</div>
+      </div>
+      ${visits.map(v=>`
+        <div style="display:grid;grid-template-columns:80px 1fr 1fr 120px;padding:12px 16px;border-top:1px solid #f1f5f9;align-items:center;gap:8px;cursor:pointer" onclick="_fmktOpenVisitDetail('${v.id}')"
+          onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+          <div style="font-size:12px;font-weight:700;color:#0f172a">${_fmktFmtTime(v.visitTime)}</div>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#0f172a">${v.clientName}</div>
+            <div style="font-size:11px;color:#94a3b8">${v.clientPhone}</div>
+          </div>
+          <div style="font-size:11px;color:#64748b;line-height:1.5">${v.notes?v.notes.slice(0,60)+(v.notes.length>60?'...':''):'—'}</div>
+          <div>${_fmktOutcomePill(v.outcome)}</div>
+        </div>`).join("")}
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="_fmktShareWhatsApp()" style="padding:10px 18px;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">📱 Share WhatsApp</button>
+      <button onclick="_fmktGeneratePDF()" style="padding:10px 18px;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">📄 Download PDF Report</button>
+    </div>`;
+}
+
+function _fmktRenderMgrMap() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  const visits = _fmktAllVisits.filter(v=>v.location);
+  el.innerHTML = `
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;padding:14px">
+      <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px">📍 Today's Visit Locations (${visits.length} with GPS)</div>
+      <div id="fmkt-visit-map"></div>
+      ${!visits.length ? `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">No GPS data captured for today's visits.</div>` : ""}
+    </div>`;
+
+  if(visits.length) {
+    setTimeout(() => _fmktInitMap(visits), 100);
+  }
+}
+
+function _fmktInitMap(visits) {
+  if(_fmktMapInstance) { _fmktMapInstance.remove(); _fmktMapInstance=null; }
+  const mapEl = document.getElementById("fmkt-visit-map");
+  if(!mapEl || !window.L) return;
+
+  const center = [visits[0].location.lat, visits[0].location.lng];
+  const map = L.map("fmkt-visit-map").setView(center, 13);
+  _fmktMapInstance = map;
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"© OpenStreetMap"}).addTo(map);
+
+  // Route line
+  const latlngs = visits.map(v=>[v.location.lat,v.location.lng]);
+  if(latlngs.length > 1) L.polyline(latlngs, {color:"#3b82f6",weight:3,opacity:.7,dashArray:"8,4"}).addTo(map);
+
+  // Visit pins
+  visits.forEach((v,i) => {
+    const o = FMKT_OUTCOMES.find(x=>x.id===v.outcome)||FMKT_OUTCOMES[0];
+    const icon = L.divIcon({
+      html:`<div style="background:${o.color};color:#fff;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)">${i+1}</div>`,
+      className:"",iconSize:[28,28],iconAnchor:[14,14]
+    });
+    L.marker([v.location.lat,v.location.lng],{icon})
+      .addTo(map)
+      .bindPopup(`<b>${v.clientName}</b><br>${o.label}<br>${_fmktFmtTime(v.visitTime)}`);
+  });
+
+  map.fitBounds(latlngs.map(ll=>ll), {padding:[20,20]});
+}
+
+function _fmktShowLiveMap() {
+  db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).get().then(snap => {
+    if(!snap.exists) return alert("No live location available yet");
+    const data = snap.data();
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:16px;width:100%;max-width:500px;overflow:hidden">
+        <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;background:#0f172a;color:#fff">
+          <div><div style="font-weight:800">🟢 Live Location</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">Updated ${new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</div></div>
+          <button onclick="this.closest('div[style]').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;color:#fff;cursor:pointer">✕</button>
+        </div>
+        <div id="fmkt-live-map" style="height:300px"></div>
+        <div style="padding:12px 16px;font-size:13px;color:#374151">📍 ${data.address||"Location captured"}</div>
+      </div>`;
+    document.body.appendChild(overlay);
+    setTimeout(() => {
+      if(!window.L) return;
+      const liveMap = L.map("fmkt-live-map").setView([data.lat, data.lng], 15);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(liveMap);
+      const icon = L.divIcon({html:`<div style="background:#10b981;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px #10b98140"></div>`,className:"",iconSize:[16,16],iconAnchor:[8,8]});
+      L.marker([data.lat,data.lng],{icon}).addTo(liveMap).bindPopup(`${FMKT_STAFF_NAME}<br>Live location`).openPopup();
+    }, 100);
+  });
+}
+
+function _fmktRenderMgrFollowups() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  // Load all visits with follow-up dates from last 30 days
+  db.collection("fieldVisits")
+    .where("employeeId","==",FMKT_STAFF_ID)
+    .where("outcome","==","Follow-up")
+    .orderBy("followUpDate","asc")
+    .get()
+    .then(snap => {
+      const list = snap.docs.map(d=>({id:d.id,...d.data()})).filter(v=>v.followUpDate && v.followUpDate >= _fmktToday());
+      if(!list.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8">No upcoming follow-ups.</div>`; return; }
+      el.innerHTML = `
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📅 Upcoming Follow-ups (${list.length})</div>
+        ${list.map(v=>`
+          <div class="fmkt-visit-card">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+              <div>
+                <div style="font-size:14px;font-weight:800;color:#0f172a">${v.clientName}</div>
+                <div style="font-size:12px;color:#64748b">${v.clientPhone}</div>
+                ${v.notes?`<div style="font-size:12px;color:#64748b;margin-top:4px">${v.notes}</div>`:""}
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:13px;font-weight:800;color:#d97706">📅 ${v.followUpDate}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:2px">Visited ${v.date}</div>
+              </div>
+            </div>
+          </div>`).join("")}`;
+    }).catch(()=>{ el.innerHTML=`<div style="color:#94a3b8;padding:20px">Could not load follow-ups.</div>`; });
+}
+
+function _fmktRenderMgrHistory() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  el.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8">Loading history...</div>`;
+  db.collection("fieldCheckins")
+    .where("employeeId","==",FMKT_STAFF_ID)
+    .orderBy("checkinTime","desc")
+    .limit(30)
+    .get()
+    .then(snap => {
+      const checkins = snap.docs.map(d=>({id:d.id,...d.data()}));
+      if(!checkins.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8">No history found.</div>`; return; }
+      el.innerHTML = `
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📊 Last 30 Days</div>
+        ${checkins.map(c=>`
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-size:14px;font-weight:800;color:#0f172a">${new Date(c.date).toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short"})}</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px">In: ${_fmktFmtTime(c.checkinTime)} · Out: ${c.checkoutTime?_fmktFmtTime(c.checkoutTime):"—"}</div>
+                <div style="font-size:11px;color:#94a3b8;margin-top:1px">📍 ${c.checkinLocation?.address||"—"}</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:20px;font-weight:900;color:#0f172a">${c.totalVisits||0}</div>
+                <div style="font-size:11px;color:#94a3b8">visits</div>
+                <div style="font-size:12px;color:#64748b;margin-top:2px">${c.fieldDuration||_fmktFmtDuration(c.checkinTime,c.checkoutTime)}</div>
+              </div>
+            </div>
+          </div>`).join("")}`;
+    });
+}
+
+// ── REPORTS ──────────────────────────────────────────────────────────
+function _fmktShareWhatsApp() {
+  const today = _fmktToday();
+  const visits = _fmktAllVisits.length ? _fmktAllVisits : _fmktVisits;
+  const todayCheckin = _fmktCheckins.find(c=>c.date===today) || _fmktCheckin;
+  const interested = visits.filter(v=>v.outcome==="Interested");
+  const followups  = visits.filter(v=>v.outcome==="Follow-up");
+  const closed     = visits.filter(v=>v.outcome==="Closed");
+  const notInt     = visits.filter(v=>v.outcome==="Not Interested");
+
+  const dateStr = new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  let msg = `*📍 Field Marketing Report*\n`;
+  msg += `*${dateStr}*\n`;
+  msg += `*Employee:* ${FMKT_STAFF_NAME}\n\n`;
+  msg += `*Check-in:* ${_fmktFmtTime(todayCheckin?.checkinTime)} — ${todayCheckin?.checkinLocation?.address||"—"}\n`;
+  if(todayCheckin?.checkoutTime) msg += `*Check-out:* ${_fmktFmtTime(todayCheckin.checkoutTime)}\n`;
+  msg += `*Total Field Time:* ${todayCheckin?_fmktFmtDuration(todayCheckin.checkinTime,todayCheckin.checkoutTime):"—"}\n\n`;
+  msg += `*📊 Summary*\n`;
+  msg += `Total Visits: ${visits.length}\n`;
+  msg += `🟢 Interested: ${interested.length}\n`;
+  msg += `📅 Follow-up: ${followups.length}\n`;
+  msg += `✅ Closed: ${closed.length}\n`;
+  msg += `🔴 Not Interested: ${notInt.length}\n\n`;
+  if(interested.length) {
+    msg += `*🟢 Interested Clients*\n`;
+    interested.forEach((v,i) => { msg += `${i+1}. ${v.clientName} (${v.clientPhone})\n`; });
+    msg += "\n";
+  }
+  if(followups.length) {
+    msg += `*📅 Follow-up Clients*\n`;
+    followups.forEach((v,i) => { msg += `${i+1}. ${v.clientName} — ${v.followUpDate||"Date TBD"}\n`; });
+    msg += "\n";
+  }
+  msg += `_Report generated by Fenix CRM_`;
+
+  const url = "https://wa.me/?text=" + encodeURIComponent(msg);
+  window.open(url, "_blank");
+}
+
+function _fmktGeneratePDF() {
+  const today = _fmktToday();
+  const visits = _fmktAllVisits.length ? _fmktAllVisits : _fmktVisits;
+  const todayCheckin = _fmktCheckins.find(c=>c.date===today) || _fmktCheckin;
+  const dateStr = new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+  const interested = visits.filter(v=>v.outcome==="Interested").length;
+  const followups  = visits.filter(v=>v.outcome==="Follow-up").length;
+  const closed     = visits.filter(v=>v.outcome==="Closed").length;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+  <title>Field Marketing Report — ${today}</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:32px;color:#1e293b;line-height:1.5}
+    h1{color:#0f172a;border-bottom:3px solid #f97316;padding-bottom:10px}
+    h2{color:#374151;margin-top:24px;font-size:14px;text-transform:uppercase;letter-spacing:.05em}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th{background:#f8fafc;padding:10px 12px;text-align:left;font-size:12px;color:#64748b;text-transform:uppercase;border-bottom:2px solid #e2e8f0}
+    td{padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:13px}
+    .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+    .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0}
+    .stat{background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center}
+    .stat-val{font-size:26px;font-weight:900;color:#0f172a}
+    .stat-lbl{font-size:11px;color:#94a3b8;margin-top:4px}
+    footer{margin-top:40px;font-size:11px;color:#94a3b8;border-top:1px solid #e2e8f0;padding-top:10px}
+    @media print{body{margin:16px}}
+  </style></head><body>
+  <h1>📍 Field Marketing Report</h1>
+  <p><strong>Employee:</strong> ${FMKT_STAFF_NAME}</p>
+  <p><strong>Date:</strong> ${dateStr}</p>
+  <p><strong>Check-in:</strong> ${_fmktFmtTime(todayCheckin?.checkinTime)||"—"} &nbsp;·&nbsp; ${todayCheckin?.checkinLocation?.address||"—"}</p>
+  ${todayCheckin?.checkoutTime?`<p><strong>Check-out:</strong> ${_fmktFmtTime(todayCheckin.checkoutTime)}</p>`:""}
+  <p><strong>Total Field Time:</strong> ${todayCheckin?_fmktFmtDuration(todayCheckin.checkinTime,todayCheckin.checkoutTime):"—"}</p>
+  <div class="summary-grid">
+    <div class="stat"><div class="stat-val">${visits.length}</div><div class="stat-lbl">Total Visits</div></div>
+    <div class="stat"><div class="stat-val" style="color:#059669">${interested}</div><div class="stat-lbl">Interested</div></div>
+    <div class="stat"><div class="stat-val" style="color:#d97706">${followups}</div><div class="stat-lbl">Follow-up</div></div>
+    <div class="stat"><div class="stat-val" style="color:#7c3aed">${closed}</div><div class="stat-lbl">Closed</div></div>
+  </div>
+  <h2>Visit Details</h2>
+  <table>
+    <tr><th>#</th><th>Time</th><th>Client</th><th>Phone</th><th>Outcome</th><th>Notes</th><th>Follow-up</th></tr>
+    ${visits.map((v,i)=>`<tr>
+      <td>${i+1}</td>
+      <td>${_fmktFmtTime(v.visitTime)}</td>
+      <td><strong>${v.clientName}</strong></td>
+      <td>${v.clientPhone}</td>
+      <td>${v.outcome}</td>
+      <td>${v.notes||"—"}</td>
+      <td>${v.followUpDate||"—"}</td>
+    </tr>`).join("")}
+  </table>
+  <footer>Generated by Fenix Tours & Travels CRM · ${new Date().toLocaleString("en-IN")}</footer>
+  </body></html>`;
+
+  const win = window.open("","_blank");
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(), 600);
 }
 
 </script>
