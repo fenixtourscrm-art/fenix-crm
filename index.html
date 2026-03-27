@@ -8684,20 +8684,30 @@ function _fmktLoadToday() {
   _fmktUnsub2 = db.collection("fieldVisits")
     .where("date","==",today)
     .where("employeeId","==",FMKT_STAFF_ID)
-    .orderBy("visitTime","desc")
     .onSnapshot(snap => {
-      _fmktVisits = snap.docs.map(d=>({id:d.id,...d.data()}));
+      _fmktVisits = snap.docs
+        .map(d=>({id:d.id,...d.data()}))
+        .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
       _fmktRender();
+    }, err => {
+      console.error("fieldVisits today error:", err.message);
     });
 }
 
 function _fmktLoadAllForManager() {
   const today = new Date().toISOString().slice(0,10);
+  // No orderBy — sort client-side to avoid requiring a Firestore composite index
   db.collection("fieldVisits")
     .where("date","==",today)
-    .orderBy("visitTime","desc")
     .onSnapshot(snap => {
-      _fmktAllVisits = snap.docs.map(d=>({id:d.id,...d.data()}));
+      _fmktAllVisits = snap.docs
+        .map(d=>({id:d.id,...d.data()}))
+        .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
+      if(_fmktScreen === "manager") _fmktRenderManager();
+    }, err => {
+      console.error("fieldVisits load error:", err.message);
+      // Fallback: use Paresh's own visits array
+      _fmktAllVisits = [..._fmktVisits];
       if(_fmktScreen === "manager") _fmktRenderManager();
     });
   db.collection("fieldCheckins")
@@ -8705,6 +8715,8 @@ function _fmktLoadAllForManager() {
     .onSnapshot(snap => {
       _fmktCheckins = snap.docs.map(d=>({id:d.id,...d.data()}));
       if(_fmktScreen === "manager") _fmktRenderManager();
+    }, err => {
+      console.error("fieldCheckins load error:", err.message);
     });
 }
 
@@ -9264,7 +9276,9 @@ function _fmktRenderManager() {
   const today = _fmktToday();
   const todayCheckin = _fmktCheckins.find(c=>c.date===today&&c.employeeId===FMKT_STAFF_ID);
   const isCheckedIn  = todayCheckin && !todayCheckin.checkoutTime;
-  const visits       = _fmktAllVisits;
+  const _seenKpi = new Set();
+  const visits = [..._fmktAllVisits, ..._fmktVisits]
+    .filter(v=>{ if(_seenKpi.has(v.id)) return false; _seenKpi.add(v.id); return true; });
   const interested   = visits.filter(v=>v.outcome==="Interested").length;
   const followups    = visits.filter(v=>v.outcome==="Follow-up").length;
   const closed       = visits.filter(v=>v.outcome==="Closed").length;
@@ -9330,7 +9344,11 @@ function _fmktRenderManager() {
 function _fmktRenderMgrVisits() {
   const el = document.getElementById("fmkt-mgr-content");
   if(!el) return;
-  const visits = _fmktAllVisits;
+  // Merge both arrays — _fmktAllVisits (owner query) + _fmktVisits (live stream for Paresh)
+  const seen = new Set();
+  const visits = [..._fmktAllVisits, ..._fmktVisits]
+    .filter(v => { if(seen.has(v.id)) return false; seen.add(v.id); return true; })
+    .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
   if(!visits.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8">No visits logged today.</div>`; return; }
   el.innerHTML = `
     <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
@@ -9358,7 +9376,11 @@ function _fmktRenderMgrVisits() {
 function _fmktRenderMgrMap() {
   const el = document.getElementById("fmkt-mgr-content");
   if(!el) return;
-  const visits = _fmktAllVisits.filter(v=>v.location);
+  const seen2 = new Set();
+  const visits = [..._fmktAllVisits, ..._fmktVisits]
+    .filter(v=>{ if(seen2.has(v.id)) return false; seen2.add(v.id); return true; })
+    .filter(v=>v.location)
+    .sort((a,b)=>(a.visitTime||"").localeCompare(b.visitTime||""));
   el.innerHTML = `
     <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden;padding:14px">
       <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:10px">📍 Today's Visit Locations (${visits.length} with GPS)</div>
