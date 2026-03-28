@@ -7,7 +7,7 @@
 const SW_VERSION = 'fenix-crm-v1';
 const FIREBASE_PROJECT = 'fenix-tours-crm';
 const FIREBASE_API_KEY = 'AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k';
-const PING_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+const PING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // ── Install ──────────────────────────────────────────────────────
 self.addEventListener('install', event => {
