@@ -4507,16 +4507,75 @@ function openFollowUpPopup(enqId, clientId) {
   const inputStyle = "width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;box-sizing:border-box";
   const labelStyle = "font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:4px";
 
+  // ── Build follow-up history from tasks collection ──
+  // Match by clientId AND (enqId if available), isFollowUp=true, sorted newest first
+  const historyAll = tasks
+    .filter(t => t.isFollowUp && (enqId ? (t.enqId===enqId || t.clientId===(cl?.id)) : t.clientId===(cl?.id)))
+    .sort((a,b) => {
+      const da = (a.dueDate||"") + "T" + (a.dueTime||"00:00");
+      const db2 = (b.dueDate||"") + "T" + (b.dueTime||"00:00");
+      return db2.localeCompare(da); // newest first
+    });
+
+  const statusColors = {
+    "New Enquiry":       { bg:"#f0fdf4", color:"#059669", border:"#86efac" },
+    "Follow-up Pending": { bg:"#fffbeb", color:"#d97706", border:"#fde68a" },
+    "Quotation Sent":    { bg:"#eff6ff", color:"#2563eb", border:"#bfdbfe" },
+    "Confirmed Booking": { bg:"#faf5ff", color:"#7c3aed", border:"#d8b4fe" },
+    "Lost":              { bg:"#fef2f2", color:"#dc2626", border:"#fca5a5" },
+  };
+
+  const historyHTML = historyAll.length === 0
+    ? `<div style="text-align:center;padding:16px;color:#94a3b8;font-size:12px">
+        <div style="font-size:20px;margin-bottom:4px">📭</div>
+        No previous follow-ups found for this enquiry.
+       </div>`
+    : historyAll.map((t, i) => {
+        const sc = statusColors[t.followUpStatus] || { bg:"#f8fafc", color:"#64748b", border:"#e2e8f0" };
+        const staffEntry = STAFF.find(s => s.id === t.assignedTo);
+        const staffLabel = staffEntry ? staffEntry.name.replace("Mr. ","").replace("Ms. ","") : "—";
+        const fmtDate = t.dueDate ? new Date(t.dueDate+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "—";
+        const fmtTime = t.dueTime ? new Date("2000-01-01T"+t.dueTime).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : "";
+        const isLatest = i === 0;
+        return `
+          <div style="display:flex;gap:10px;margin-bottom:${i<historyAll.length-1?'0':'0'}">
+            <!-- Timeline dot + line -->
+            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+              <div style="width:10px;height:10px;border-radius:50%;background:${isLatest?'#f97316':'#cbd5e1'};border:2px solid ${isLatest?'#fed7aa':'#e2e8f0'};flex-shrink:0;margin-top:4px"></div>
+              ${i<historyAll.length-1?`<div style="width:2px;flex:1;background:#e2e8f0;min-height:12px;margin:3px 0"></div>`:""}
+            </div>
+            <!-- Card -->
+            <div style="flex:1;background:${isLatest?'#fffbeb':'#f8fafc'};border:1.5px solid ${isLatest?'#fde68a':'#e2e8f0'};border-radius:10px;padding:10px 12px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                  <span style="font-size:11px;font-weight:800;color:#374151">📅 ${fmtDate}${fmtTime?` · 🕐 ${fmtTime}`:""}</span>
+                  ${isLatest?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 7px;border-radius:99px;font-weight:700">Latest</span>`:""}
+                </div>
+                <span style="background:${sc.bg};color:${sc.color};border:1px solid ${sc.border};font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;white-space:nowrap">${t.followUpStatus||"—"}</span>
+              </div>
+              ${t.followUpNotes
+                ? `<div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:6px;background:#fff;border-radius:7px;padding:8px 10px;border:1px solid #f1f5f9">"${t.followUpNotes}"</div>`
+                : `<div style="font-size:11px;color:#94a3b8;font-style:italic;margin-bottom:6px">No remarks added</div>`
+              }
+              <div style="font-size:10px;color:#94a3b8;font-weight:600">👤 ${staffLabel}</div>
+            </div>
+          </div>`;
+      }).join("");
+
   document.body.insertAdjacentHTML("beforeend", `
     <div id="fu-popup-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
-      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:460px;box-shadow:0 20px 60px rgba(0,0,0,0.25);margin:auto">
+      <div style="background:#fff;border-radius:16px;padding:24px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.25);margin:auto">
+
+        <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:2px solid #f8fafc">
           <div>
             <div style="font-weight:800;font-size:16px;color:#0f172a">📅 Add Follow-Up</div>
-            ${e ? `<div style="font-size:12px;color:#64748b;margin-top:3px">Enquiry: ${e.destination||""} · ${e.category||""}</div>` : ""}
+            ${e ? `<div style="font-size:12px;color:#64748b;margin-top:3px">${e.destination||""} ${e.category?`· ${e.category}`:""}</div>` : ""}
           </div>
           <button onclick="document.getElementById('fu-popup-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:18px;color:#64748b;line-height:1">✕</button>
         </div>
+
+        <!-- Form -->
         <div style="display:grid;gap:14px">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div>
@@ -4552,12 +4611,25 @@ function openFollowUpPopup(enqId, clientId) {
           </div>
           <div>
             <label style="${labelStyle}">Remarks / Notes <span style="color:#dc2626">*</span></label>
-            <textarea id="fu-popup-notes" rows="3" placeholder="What was discussed? Next steps..." style="${inputStyle};resize:vertical">${e?.notes||""}</textarea>
+            <textarea id="fu-popup-notes" rows="3" placeholder="What was discussed? Next steps..." style="${inputStyle};resize:vertical"></textarea>
           </div>
         </div>
+
         <button onclick="saveFollowUpPopup()" style="width:100%;margin-top:18px;padding:12px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.02em">
           💾 Save Follow-Up
         </button>
+
+        <!-- ── Previous Follow-up History ── -->
+        <div style="margin-top:22px;padding-top:18px;border-top:2px solid #f1f5f9">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:13px;font-weight:800;color:#0f172a">🕐 Previous Follow-up History</div>
+            <span style="background:#f1f5f9;color:#64748b;font-size:11px;font-weight:700;padding:2px 10px;border-radius:99px">${historyAll.length} record${historyAll.length!==1?"s":""}</span>
+          </div>
+          <div style="max-height:280px;overflow-y:auto;padding-right:2px">
+            ${historyHTML}
+          </div>
+        </div>
+
       </div>
     </div>
   `);
@@ -4590,6 +4662,7 @@ async function saveFollowUpPopup() {
       assignedTo: staffId,
       assignedBy: CURRENT_USER?.id || staffId,
       clientId: clientId || 0,
+      enqId: enqId || null,
       dueDate: date,
       dueTime: time,
       followUpStatus: status,
@@ -4597,6 +4670,7 @@ async function saveFollowUpPopup() {
       isFollowUp: true,
       priority: "High",
       done: false,
+      savedAt: new Date().toISOString(),
     });
 
     document.getElementById("fu-popup-overlay").remove();
