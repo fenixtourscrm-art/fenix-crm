@@ -144,6 +144,7 @@ tr:hover td{background:#fafafa}
 .b-lost{background:rgba(239,68,68,.12);color:#dc2626}
 .b-booked{background:rgba(139,92,246,.12);color:#7c3aed}
 .b-junk{background:#f1f5f9;color:#94a3b8}
+.b-cancelled{background:#e2e8f0;color:#64748b;text-decoration:line-through}
 .b-new{background:rgba(16,185,129,.12);color:#059669}
 .b-old{background:rgba(249,115,22,.12);color:#ea580c}
 .b-repeated{background:rgba(139,92,246,.12);color:#7c3aed}
@@ -568,6 +569,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Lost',this)">Lost</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Booked',this)">Booked</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Junk',this)">Junk</button>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('Cancelled',this)" style="background:#f1f5f9;color:#64748b">🚫 Cancelled</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('New',this)">🟢 New</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Old',this)">🟠 Old</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Repeated',this)">🟣 Repeated</button>
@@ -1139,7 +1141,7 @@ const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
 const thisMonth=()=>today().slice(0,7);
 const rBadge=r=>{const m={"A+":"b-aplus","A":"b-a","B+":"b-bplus","B":"b-b","C":"b-c"};return `<span class="badge ${m[r]||'b-c'}">${r}</span>`;};
-const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked","Junk":"b-junk","Pending":"b-pending","Approved":"b-approved","Rejected":"b-rejected","Submitted":"b-submitted"};return `<span class="badge ${m[s]||'b-c'}">${s}</span>`;};
+const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked","Junk":"b-junk","Cancelled":"b-cancelled","Pending":"b-pending","Approved":"b-approved","Rejected":"b-rejected","Submitted":"b-submitted"};return `<span class="badge ${m[s]||'b-c'}">${s}</span>`;};
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
@@ -1521,7 +1523,7 @@ document.addEventListener("click", e => {
 function renderEnquiries(){
   const _isOwner = CURRENT_USER && CURRENT_USER.id===1;
   let list = _isOwner ? enquiries : enquiries.filter(e=>e.staffId===CURRENT_USER?.id||e.createdBy===CURRENT_USER?.id);
-  if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk") list=list.filter(e=>e.status===enqFilter);
+  if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk"||enqFilter==="Cancelled") list=list.filter(e=>e.status===enqFilter);
   else if(enqFilter==="New"||enqFilter==="Old"||enqFilter==="Repeated") list=list.filter(e=>e.type===enqFilter);
   else if(["A+","A","B+","B","C"].includes(enqFilter)) list=list.filter(e=>e.rating===enqFilter);
   if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||(Array.isArray(e.intentions)&&e.intentions.includes(catFilter)));
@@ -1568,7 +1570,8 @@ function renderEnquiries(){
           ? (e.numApplicants||e.adults||e.pax||1)
           : ((e.adults||0)+(e.childBed||0)+(e.childNoBed||0)+(e.infant||0))||e.pax||1;
         const enqTime=e.createdAt?new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}):'';
-        rows+=`<tr style="border-left:3px solid ${fuColor}">
+        const isCancelled = e.status==="Cancelled";
+        rows+=`<tr style="border-left:3px solid ${isCancelled?'#94a3b8':fuColor};${isCancelled?'background:#f8fafc;opacity:0.7':''}">
     <td><div style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap">${e.enquiryNo||'—'}</div></td>
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
     <td>
@@ -1595,7 +1598,8 @@ function renderEnquiries(){
         <button class="btn" style="font-size:9px;padding:3px 7px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;white-space:nowrap" onclick="openFollowUpPopup('${e.id}','${e.clientId}')">📅 Follow Up</button>
         ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked('${e.id}')">Book</button>
         <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="markLost('${e.id}')">Lost</button>
-        <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk('${e.id}')">Junk</button>`:""}
+        <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk('${e.id}')">Junk</button>
+        <button class="btn" style="font-size:9px;padding:3px 7px;background:#e2e8f0;color:#64748b;border:1px solid #cbd5e1" onclick="markCancelled('${e.id}')">🚫 Cancel</button>`:""}
         <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="del('enquiries','${e.id}')">✕</button>
       </div>
     </td>
@@ -1625,6 +1629,15 @@ async function markJunk(id){
     e.status="Junk"; e.lostReason=reason||"Not specified"; renderAll();
   } catch(err){ alert("Failed: "+err.message); }
 }
+async function markCancelled(id){
+  const e=enquiries.find(x=>x.id===id);if(!e)return;
+  if(!confirm("Are you sure you want to cancel this enquiry?\n\nClient: "+cName(e.clientId)+"\nDestination: "+(e.destination||"—")+"\n\nThe enquiry will be marked as Cancelled but will remain in the system.")) return;
+  try {
+    await fbUpdate("enquiries",id,{status:"Cancelled"});
+    e.status="Cancelled"; renderAll();
+  } catch(err){ alert("Failed: "+err.message); }
+}
+
 async function markBooked(id){
   const e = enquiries.find(x => x.id === id);
   if(!e) return;
@@ -2320,7 +2333,7 @@ function openModal(type){
     <div id="enq-dynamic-fields"></div>
     <div class="form-grid">
       <div class="fg"><label>Lead Rating</label><select id="e-rating">${RATINGS.map(r=>`<option ${ex&&ex.rating===r?"selected":""}>${r}</option>`).join("")}</select></div>
-      <div class="fg"><label>Enquiry Status</label><select id="e-status">${["Active","Lost","Booked","Junk"].map(s=>`<option ${ex&&ex.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="fg"><label>Enquiry Status</label><select id="e-status">${["Active","Lost","Booked","Junk","Cancelled"].map(s=>`<option ${ex&&ex.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
     </div>
     <div class="form-grid">
       <div class="fg"><label>Enquiry Type</label><select id="e-type">${ENQ_TYPES.map(t=>`<option ${ex&&ex.type===t?"selected":""}>${t}</option>`).join("")}</select></div>
