@@ -1,0 +1,26 @@
+{
+  "name": "Fenix Tours CRM",
+  "short_name": "Fenix CRM",
+  "description": "Fenix Tours & Travels — Travel CRM",
+  "start_url": "/fenix-crm/",
+  "scope": "/fenix-crm/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#f97316",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "https://fenixtours.co.in/wp-content/uploads/2023/01/cropped-fenix-logo-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://fenixtours.co.in/wp-content/uploads/2023/01/cropped-fenix-logo-192x192.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"]
+}
