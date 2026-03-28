@@ -8791,7 +8791,18 @@ function _fmktLoadToday() {
     .onSnapshot(snap => {
       const docs = snap.docs.map(d=>({id:d.id,...d.data()}));
       // Active checkin = one without checkoutTime
+      const prevCheckin = _fmktCheckin;
       _fmktCheckin = docs.find(d=>!d.checkoutTime) || null;
+      // If page was refreshed mid-session, restart pings automatically
+      if(_fmktCheckin && !_fmktPingInterval) {
+        console.log("[FMKT] Active check-in detected on load — restarting pings");
+        _fmktStartPings();
+      }
+      // If check-out just happened, stop pings
+      if(!_fmktCheckin && prevCheckin && _fmktPingInterval) {
+        console.log("[FMKT] Check-out detected — stopping pings");
+        _fmktStopPings();
+      }
       _fmktRender();
     });
 
@@ -9430,29 +9441,56 @@ function _fmktOpenVisitDetail(visitId) {
 
 // ── LIVE LOCATION PINGS ──────────────────────────────────────────────
 function _fmktStartPings() {
-  // Foreground pings (when screen is on)
+  // Send first ping immediately on check-in
   _fmktSendPing();
-  _fmktPingInterval = setInterval(_fmktSendPing, 10 * 60 * 1000);
-  // Background pings via Service Worker (when screen is off)
+  // Then every 5 minutes while screen is on
+  if(_fmktPingInterval) clearInterval(_fmktPingInterval);
+  _fmktPingInterval = setInterval(_fmktSendPing, 5 * 60 * 1000); // 5 minutes
+  // Background pings via Service Worker (screen off / minimized)
   _fmktSwStartPings();
+  console.log("[FMKT] Live tracking started — pinging every 5 minutes");
 }
 
 function _fmktStopPings() {
   if(_fmktPingInterval) { clearInterval(_fmktPingInterval); _fmktPingInterval = null; }
-  // Stop SW background pings too
   _fmktSwStopPings();
+  console.log("[FMKT] Live tracking stopped");
 }
 
 function _fmktSendPing() {
   _fmktGetGPS(gps => {
+    const now = _fmktNow();
+    // Overwrite the single "latest" doc — this is what Live Map reads
     db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).set({
-      lat: gps.lat, lng: gps.lng,
-      address: gps.address,
-      updatedAt: _fmktNow(),
+      lat:          gps.lat,
+      lng:          gps.lng,
+      address:      gps.address,
+      area:         gps.area  || "",
+      road:         gps.road  || "",
+      city:         gps.city  || "",
+      pin:          gps.pin   || "",
+      updatedAt:    now,
       employeeName: FMKT_STAFF_NAME,
-      employeeId: FMKT_STAFF_ID,
+      employeeId:   FMKT_STAFF_ID,
     });
-  }, ()=>{});
+    // Also append to location history subcollection (for trail / route)
+    db.collection("fieldPings")
+      .doc(String(FMKT_STAFF_ID))
+      .collection("history")
+      .add({
+        lat:       gps.lat,
+        lng:       gps.lng,
+        address:   gps.address,
+        area:      gps.area || "",
+        road:      gps.road || "",
+        city:      gps.city || "",
+        savedAt:   now,
+        date:      _fmktToday(),
+      });
+    console.log("[FMKT] Ping sent:", gps.address, "@", now);
+  }, err => {
+    console.warn("[FMKT] Ping failed:", err);
+  });
 }
 
 // ── SCREEN: MANAGER DASHBOARD ────────────────────────────────────────
@@ -9717,74 +9755,128 @@ function _fmktReverseGeocode(lat, lng) {
   });
 }
 
+// Live map state
+let _fmktLiveMap     = null;
+let _fmktLiveMarker  = null;
+let _fmktLiveRefresh = null;
+
 function _fmktShowLiveMap() {
-  db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).get().then(snap => {
-    if(!snap.exists) return alert("No live location available yet");
-    const data = snap.data();
-    // Remove any existing live map overlay first
-    document.getElementById("fmkt-live-overlay")?.remove();
-    const overlay = document.createElement("div");
-    overlay.id = "fmkt-live-overlay";
-    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px";
-    // Close when clicking backdrop
-    overlay.addEventListener("click", e => { if(e.target === overlay) overlay.remove(); });
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:16px;width:100%;max-width:500px;overflow:hidden">
-        <div style="padding:16px 18px;display:flex;justify-content:space-between;align-items:center;background:#0f172a;color:#fff">
-          <div><div style="font-weight:800">🟢 Live Location</div><div style="font-size:11px;color:#94a3b8;margin-top:2px">Updated ${new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</div></div>
-          <button onclick="document.getElementById('fmkt-live-overlay').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
+  document.getElementById("fmkt-live-overlay")?.remove();
+  if(_fmktLiveRefresh) { clearInterval(_fmktLiveRefresh); _fmktLiveRefresh = null; }
+
+  const overlay = document.createElement("div");
+  overlay.id = "fmkt-live-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px";
+  overlay.addEventListener("click", e => {
+    if(e.target === overlay) _fmktCloseLiveMap();
+  });
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:520px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;background:#0f172a;color:#fff">
+        <div>
+          <div style="font-weight:800;font-size:15px">🟢 Live Location — ${FMKT_STAFF_NAME}</div>
+          <div id="fmkt-live-updated" style="font-size:11px;color:#94a3b8;margin-top:2px">Loading...</div>
         </div>
-        <div id="fmkt-live-map" style="height:300px"></div>
-        <div style="padding:12px 16px;font-size:13px;color:#374151">📍 ${data.address||"Location captured"}</div>
-      </div>`;
-    document.body.appendChild(overlay);
-    setTimeout(() => {
-      if(!window.L) return;
-      const liveMap = L.map("fmkt-live-map", { closePopupOnClick: true }).setView([data.lat, data.lng], 16);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors"
-      }).addTo(liveMap);
+        <button onclick="_fmktCloseLiveMap()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 14px;color:#fff;cursor:pointer;font-size:18px;line-height:1">✕</button>
+      </div>
+      <div id="fmkt-live-map" style="height:320px"></div>
+      <div style="padding:10px 16px;display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-top:1px solid #e2e8f0">
+        <div id="fmkt-live-addr" style="font-size:12px;color:#374151;flex:1">📍 Loading location...</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+          <span style="width:7px;height:7px;background:#10b981;border-radius:50%;display:inline-block"></span>
+          <span style="font-size:11px;color:#64748b">Auto-refresh 30s</span>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 
-      const icon = L.divIcon({
-        html:`<div style="background:#10b981;width:18px;height:18px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 4px #10b98150;animation:pulse 2s infinite"></div>`,
-        className:"", iconSize:[18,18], iconAnchor:[9,9]
-      });
+  // Init map then load data
+  setTimeout(() => {
+    if(!window.L) return;
+    _fmktLiveMap = L.map("fmkt-live-map", { closePopupOnClick: true, zoomControl: true });
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap"
+    }).addTo(_fmktLiveMap);
+    _fmktLiveMap.on("click", () => _fmktLiveMap.closePopup());
 
-      const marker = L.marker([data.lat, data.lng], {icon}).addTo(liveMap);
+    // Load data immediately, then auto-refresh every 30 seconds
+    _fmktRefreshLiveLocation();
+    _fmktLiveRefresh = setInterval(_fmktRefreshLiveLocation, 30 * 1000);
+  }, 100);
+}
 
-      // Close popup when clicking map background
-      liveMap.on("click", () => liveMap.closePopup());
+function _fmktCloseLiveMap() {
+  if(_fmktLiveRefresh) { clearInterval(_fmktLiveRefresh); _fmktLiveRefresh = null; }
+  if(_fmktLiveMap)     { _fmktLiveMap.remove(); _fmktLiveMap = null; }
+  _fmktLiveMarker = null;
+  document.getElementById("fmkt-live-overlay")?.remove();
+}
 
-      // Build initial popup with stored address
-      const buildLivePopup = (area, road, city, pin) => {
-        const addrLine = [road, area].filter(Boolean).join(", ");
-        const cityLine = [city, pin].filter(Boolean).join(" – ");
-        return `<div style="font-family:Inter,sans-serif;min-width:170px;padding:3px 2px">
-          <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:5px">🟢 ${FMKT_STAFF_NAME}</div>
-          <div style="font-size:12px;color:#374151;line-height:1.9">
-            ${addrLine ? `<div><span style="color:#94a3b8;font-size:10px">AREA &nbsp;</span>${addrLine}</div>` : ""}
-            ${cityLine ? `<div><span style="color:#94a3b8;font-size:10px">CITY &nbsp;</span>${cityLine}</div>` : ""}
-            <div><span style="color:#94a3b8;font-size:10px">GPS &nbsp;&nbsp;</span><span style="font-size:10px;color:#94a3b8">${data.lat.toFixed(5)}, ${data.lng.toFixed(5)}</span></div>
-            <div style="font-size:10px;color:#10b981;margin-top:4px">Updated ${new Date(data.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true})}</div>
+function _fmktRefreshLiveLocation() {
+  db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).get()
+    .then(snap => {
+      if(!snap.exists) {
+        const updEl = document.getElementById("fmkt-live-updated");
+        const addrEl = document.getElementById("fmkt-live-addr");
+        if(updEl) updEl.textContent = "No location data yet";
+        if(addrEl) addrEl.textContent = "📍 Waiting for first ping...";
+        return;
+      }
+      const d = snap.data();
+      if(!d.lat || !d.lng) return;
+
+      const updatedTime = new Date(d.updatedAt).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true});
+      const secsAgo = Math.floor((Date.now() - new Date(d.updatedAt)) / 1000);
+      const agoStr  = secsAgo < 60 ? `${secsAgo}s ago`
+                    : secsAgo < 3600 ? `${Math.floor(secsAgo/60)}m ago`
+                    : `${Math.floor(secsAgo/3600)}h ago`;
+
+      // Update header timestamp
+      const updEl = document.getElementById("fmkt-live-updated");
+      if(updEl) updEl.textContent = `Last updated: ${updatedTime} (${agoStr})`;
+
+      // Update address bar
+      const addrLine = [d.road, d.area].filter(Boolean).join(", ") || d.address || "";
+      const cityLine = [d.city, d.pin].filter(Boolean).join(" – ");
+      const addrEl   = document.getElementById("fmkt-live-addr");
+      if(addrEl) addrEl.innerHTML = `📍 <strong>${addrLine}</strong>${cityLine?` · ${cityLine}`:""}`;
+
+      // Build popup content
+      const popupHTML = `
+        <div style="font-family:Inter,sans-serif;min-width:180px;padding:3px 2px">
+          <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:6px">🟢 ${FMKT_STAFF_NAME}</div>
+          <div style="font-size:12px;color:#374151;line-height:2">
+            ${addrLine?`<div><span style="font-size:10px;color:#94a3b8">AREA </span>${addrLine}</div>`:""}
+            ${cityLine?`<div><span style="font-size:10px;color:#94a3b8">CITY </span>${cityLine}</div>`:""}
+            <div><span style="font-size:10px;color:#94a3b8">GPS  </span><span style="font-size:10px;color:#94a3b8">${d.lat.toFixed(5)}, ${d.lng.toFixed(5)}</span></div>
+            <div style="font-size:10px;color:#10b981;margin-top:3px;font-weight:700">Updated ${updatedTime} · ${agoStr}</div>
           </div>
         </div>`;
-      };
 
-      // Show popup with stored data first, then enrich with fresh geocode
-      marker.bindPopup(buildLivePopup(data.area||"", data.road||"", data.city||data.address||"", data.pin||""), {
-        autoClose: true, closeOnClick: false, maxWidth: 220
-      }).openPopup();
+      if(!_fmktLiveMap) return;
+      const pos = [d.lat, d.lng];
 
-      // Fetch fresh reverse geocode for accuracy
-      _fmktReverseGeocode(data.lat, data.lng)
-        .then(addr => {
-          marker.setPopupContent(buildLivePopup(addr.area, addr.road, addr.city, addr.pin));
-          if(marker.isPopupOpen()) marker.openPopup();
-        })
-        .catch(()=>{});
-
-    }, 100);
-  });
+      if(!_fmktLiveMarker) {
+        // First load — create marker and set view
+        const icon = L.divIcon({
+          html:`<div style="width:18px;height:18px;background:#10b981;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 4px rgba(16,185,129,.35)"></div>`,
+          className:"", iconSize:[18,18], iconAnchor:[9,9]
+        });
+        _fmktLiveMarker = L.marker(pos, {icon}).addTo(_fmktLiveMap);
+        _fmktLiveMarker.bindPopup(popupHTML, { autoClose:true, closeOnClick:false, maxWidth:220 }).openPopup();
+        _fmktLiveMap.setView(pos, 16);
+      } else {
+        // Subsequent refreshes — smoothly move marker, don't reset map view
+        _fmktLiveMarker.setLatLng(pos);
+        _fmktLiveMarker.setPopupContent(popupHTML);
+        if(_fmktLiveMarker.isPopupOpen()) _fmktLiveMarker.openPopup();
+        // Gentle pan only if position changed significantly (>50m)
+        const prev = _fmktLiveMarker.getLatLng();
+        const dist = _fmktLiveMap.distance(prev, L.latLng(pos));
+        if(dist > 50) _fmktLiveMap.panTo(pos);
+      }
+    })
+    .catch(err => console.warn("[FMKT] Live location refresh failed:", err));
 }
 
 function _fmktRenderMgrFollowups() {
