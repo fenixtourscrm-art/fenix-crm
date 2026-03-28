@@ -9460,8 +9460,19 @@ let _fmktMgrTab = "overview"; // overview | map | followups | history
 
 function _fmktRenderManager() {
   const today = _fmktToday();
-  const todayCheckin = _fmktCheckins.find(c=>c.date===today&&c.employeeId===FMKT_STAFF_ID);
-  const isCheckedIn  = todayCheckin && !todayCheckin.checkoutTime;
+
+  // ── Status logic: use LATEST activity today, not first found ──
+  // Sort all today's checkins by checkinTime descending → latest first
+  const todayCheckins = _fmktCheckins
+    .filter(c => c.date === today && c.employeeId === FMKT_STAFF_ID)
+    .sort((a,b) => (b.checkinTime||"").localeCompare(a.checkinTime||""));
+
+  // Latest record = most recent checkin document
+  const todayCheckin = todayCheckins[0] || null;
+
+  // isCheckedIn = latest record exists AND has no checkoutTime yet
+  const isCheckedIn = todayCheckin ? !todayCheckin.checkoutTime : false;
+
   const _seenKpi = new Set();
   const visits = [..._fmktAllVisits, ..._fmktVisits]
     .filter(v=>{ if(_seenKpi.has(v.id)) return false; _seenKpi.add(v.id); return true; });
@@ -9481,7 +9492,7 @@ function _fmktRenderManager() {
 
       <!-- KPIs — 2 per row on mobile -->
       <div class="fmkt-kpi-grid">
-        <div class="fmkt-stat"><div class="fmkt-stat-val" style="font-size:18px;color:${isCheckedIn?'#059669':'#94a3b8'}">${isCheckedIn?"🟢 In":"⚪ Off"}</div><div class="fmkt-stat-lbl">Paresh</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="font-size:18px;color:${isCheckedIn?'#059669':todayCheckin?'#f97316':'#94a3b8'}">${isCheckedIn?"🟢 In Field":todayCheckin?"🟠 Checked Out":"⚪ Off"}</div><div class="fmkt-stat-lbl">Paresh</div></div>
         <div class="fmkt-stat"><div class="fmkt-stat-val">${visits.length}</div><div class="fmkt-stat-lbl">Visits</div></div>
         <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#059669">${interested}</div><div class="fmkt-stat-lbl">🟢 Interested</div></div>
         <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#d97706">${followups}</div><div class="fmkt-stat-lbl">📅 Follow-up</div></div>
@@ -9490,16 +9501,16 @@ function _fmktRenderManager() {
       </div>
 
       <!-- Employee status card -->
-      <div style="background:#fff;border:1.5px solid ${isCheckedIn?'#86efac':'#e2e8f0'};border-radius:13px;padding:14px;margin-bottom:14px">
+      <div style="background:#fff;border:1.5px solid ${isCheckedIn?'#86efac':todayCheckin?'#fed7aa':'#e2e8f0'};border-radius:13px;padding:14px;margin-bottom:14px">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0">PG</div>
           <div style="flex:1;min-width:160px">
             <div style="font-size:14px;font-weight:800;color:#0f172a">${FMKT_STAFF_NAME}</div>
             <div style="font-size:12px;color:#64748b;margin-top:2px;line-height:1.5">
               ${isCheckedIn
-                ? `🟢 In Field since ${_fmktFmtTime(todayCheckin.checkinTime)}<br>${todayCheckin.checkinLocation?.address||""}`
+                ? `🟢 In Field since ${_fmktFmtTime(todayCheckin.checkinTime)}<br><span style="font-size:11px">${todayCheckin.checkinLocation?.address||""}</span>`
                 : todayCheckin
-                ? `⚪ Checked out at ${_fmktFmtTime(todayCheckin.checkoutTime)}`
+                ? `🟠 Checked out at ${_fmktFmtTime(todayCheckin.checkoutTime)}<br><span style="font-size:11px">Was in field from ${_fmktFmtTime(todayCheckin.checkinTime)}</span>`
                 : "⚪ Not checked in today"
               }
             </div>
