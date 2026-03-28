@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="manifest" href="/fenix-crm/manifest.json"/>
+<meta name="theme-color" content="#f97316"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="Fenix CRM"/>
 <title>Fenix Tours & Travels – CRM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -8835,6 +8841,7 @@ function _fmktRenderHome() {
            <button class="fmkt-big-btn red" onclick="_fmktGoCheckout()">🔴 CHECK OUT</button>`
       }
       ${isOwner ? `<button class="fmkt-big-btn gray" onclick="_fmktScreen='manager';_fmktRender()">📊 Manager Dashboard</button>` : ""}
+      ${!isOwner ? `<button id="fmkt-install-btn" class="fmkt-big-btn gray" onclick="_fmktShowInstallPrompt()" style="display:none;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none">📲 Install App on Phone</button>` : ""}
 
       <!-- Today's Summary Stats -->
       <div style="margin-bottom:4px;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em">Today's Summary</div>
@@ -9336,12 +9343,17 @@ function _fmktOpenVisitDetail(visitId) {
 
 // ── LIVE LOCATION PINGS ──────────────────────────────────────────────
 function _fmktStartPings() {
+  // Foreground pings (when screen is on)
   _fmktSendPing();
-  _fmktPingInterval = setInterval(_fmktSendPing, 10 * 60 * 1000); // every 10 min
+  _fmktPingInterval = setInterval(_fmktSendPing, 10 * 60 * 1000);
+  // Background pings via Service Worker (when screen is off)
+  _fmktSwStartPings();
 }
 
 function _fmktStopPings() {
   if(_fmktPingInterval) { clearInterval(_fmktPingInterval); _fmktPingInterval = null; }
+  // Stop SW background pings too
+  _fmktSwStopPings();
 }
 
 function _fmktSendPing() {
@@ -9838,6 +9850,110 @@ function _fmktGeneratePDF() {
   win.document.close();
   win.focus();
   setTimeout(()=>win.print(), 600);
+}
+
+
+// ════════════════════════════════════════════════════════════════
+//  PWA — Service Worker Registration & Background GPS Bridge
+// ════════════════════════════════════════════════════════════════
+
+let _swRegistration = null;
+
+// Register Service Worker
+if('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/fenix-crm/sw.js')
+      .then(reg => {
+        _swRegistration = reg;
+        console.log('[PWA] Service Worker registered:', reg.scope);
+        // Request periodic background sync permission (Chrome Android)
+        _fmktRequestPeriodicSync(reg);
+      })
+      .catch(err => console.warn('[PWA] SW registration failed:', err));
+  });
+
+  // Listen for messages FROM service worker
+  navigator.serviceWorker.addEventListener('message', event => {
+    const { type, address, lat, lng, time } = event.data || {};
+
+    if(type === 'GET_GPS') {
+      // SW is asking for our GPS position — get it and send back
+      const port = event.ports[0];
+      if(!port) return;
+      navigator.geolocation.getCurrentPosition(
+        pos => port.postMessage({ type:'GPS_RESULT', lat:pos.coords.latitude, lng:pos.coords.longitude }),
+        err => port.postMessage({ type:'GPS_RESULT', error:err.message }),
+        { enableHighAccuracy:true, timeout:12000, maximumAge:60000 }
+      );
+    }
+
+    if(type === 'PING_SENT') {
+      // Update the live location badge in Field Marketing if open
+      const badge = document.getElementById('fieldmkt-badge');
+      if(badge) { badge.textContent='📍'; badge.style.display='flex'; }
+      console.log(`[PWA] Background ping received: ${address} at ${time}`);
+    }
+  });
+}
+
+// Request Periodic Background Sync — key for background GPS
+async function _fmktRequestPeriodicSync(reg) {
+  if(!('periodicSync' in reg)) return;
+  try {
+    const status = await navigator.permissions.query({ name:'periodic-background-sync' });
+    if(status.state === 'granted') {
+      await reg.periodicSync.register('fmkt-location-ping', {
+        minInterval: 10 * 60 * 1000 // 10 minutes
+      });
+      console.log('[PWA] Periodic background sync registered ✅');
+    }
+  } catch(e) {
+    console.warn('[PWA] Periodic sync not available:', e.message);
+  }
+}
+
+// Tell SW to start background pings (called on check-in)
+function _fmktSwStartPings() {
+  if(!navigator.serviceWorker?.controller) return;
+  navigator.serviceWorker.controller.postMessage({
+    type: 'START_PINGS',
+    employeeId:   FMKT_STAFF_ID,
+    employeeName: FMKT_STAFF_NAME,
+  });
+  console.log('[PWA] Sent START_PINGS to SW');
+}
+
+// Tell SW to stop background pings (called on check-out)
+function _fmktSwStopPings() {
+  if(!navigator.serviceWorker?.controller) return;
+  navigator.serviceWorker.controller.postMessage({ type: 'STOP_PINGS' });
+  console.log('[PWA] Sent STOP_PINGS to SW');
+}
+
+// Show install prompt for PWA
+let _pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  // Show install button in Field Marketing if Paresh is logged in
+  const btn = document.getElementById('fmkt-install-btn');
+  if(btn) btn.style.display = '';
+});
+
+function _fmktShowInstallPrompt() {
+  if(_pwaInstallPrompt) {
+    _pwaInstallPrompt.prompt();
+    _pwaInstallPrompt.userChoice.then(result => {
+      if(result.outcome === 'accepted') {
+        console.log('[PWA] User installed the app ✅');
+        const btn = document.getElementById('fmkt-install-btn');
+        if(btn) btn.style.display = 'none';
+      }
+      _pwaInstallPrompt = null;
+    });
+  } else {
+    alert('To install:\n1. Tap the ⋮ menu in Chrome\n2. Tap "Add to Home Screen"\n3. Done!');
+  }
 }
 
 </script>
