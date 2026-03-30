@@ -122,7 +122,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .topbar-right{display:flex;align-items:center;gap:10px}
 .topbar-date{font-size:11px;color:#94a3b8}
 .content{flex:1;overflow-y:auto;padding:20px 24px}
-.tab{display:none}.tab.active{display:block}
+.tab{display:none;overflow-x:hidden}.tab.active{display:block}
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px}
 .kpi{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px;transition:.2s;cursor:default;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
@@ -138,38 +138,36 @@ table{width:100%;border-collapse:collapse}
 th{background:#f8fafc;color:#64748b;font-size:9px;letter-spacing:.12em;font-weight:700;padding:9px 14px;text-align:left;border-bottom:1px solid #e2e8f0;white-space:nowrap}
 td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151;vertical-align:middle}
 /* ── Client table responsive fix ── */
-/* ── CLIENT TABLE — fully responsive, sticky first+last columns ── */
-.clients-table-scroll{
+/* ══ SHARED TABLE STYLES ══════════════════════════════════════════ */
+/* All three tables (Clients, Enquiries, Bookings) use same approach */
+.tbl-scroll{
   overflow-x:auto;
   overflow-y:visible;
-  -webkit-overflow-scrolling:touch;
   width:100%;
+  -webkit-overflow-scrolling:touch;
   scrollbar-width:thin;
   scrollbar-color:#cbd5e1 transparent;
-  position:relative;
-  border-radius:0 0 12px 12px;
 }
-.clients-table-scroll::-webkit-scrollbar{height:5px}
-.clients-table-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:99px}
-.clients-table-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
-.clients-table{
-  table-layout:fixed;      /* column widths come from colgroup, not content */
-  border-collapse:separate;/* required for sticky columns */
+.tbl-scroll::-webkit-scrollbar{height:5px}
+.tbl-scroll::-webkit-scrollbar-track{background:#f1f5f9}
+.tbl-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+/* Base table style */
+.tbl-base{
+  border-collapse:separate;
   border-spacing:0;
-  min-width:1160px;        /* sum of all col widths = never compress */
-  width:max-content;       /* on large screens: don't stretch beyond natural width */
+  table-layout:fixed;
+  width:100%;
 }
-/* All th/td get consistent padding and font */
-.clients-table th,.clients-table td{
+.tbl-base th,.tbl-base td{
   padding:10px 12px;
   font-size:12px;
   vertical-align:middle;
   border-bottom:1px solid #f1f5f9;
+  white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  white-space:nowrap;
 }
-.clients-table thead tr th{
+.tbl-base thead th{
   background:#f8fafc;
   font-size:10px;
   font-weight:700;
@@ -177,66 +175,90 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   text-transform:uppercase;
   letter-spacing:.04em;
   border-bottom:2px solid #e2e8f0;
-  position:relative;
+  position:sticky;
+  top:0;
+  z-index:1;
 }
-/* Explicit column widths — MUST match thead and tbody */
-.clients-table col.c-cat    {width:100px}
-.clients-table col.c-company{width:130px}
-.clients-table col.c-fname  {width:130px}
-.clients-table col.c-lname  {width:110px}
-.clients-table col.c-gender {width:70px}
-.clients-table col.c-mobile {width:140px}
-.clients-table col.c-email  {width:170px}
-.clients-table col.c-occ    {width:110px}
-.clients-table col.c-city   {width:100px}
-.clients-table col.c-state  {width:90px}
-.clients-table col.c-pin    {width:70px}
-.clients-table col.c-family {width:120px}
-.clients-table col.c-actions{width:180px}
-/* Sticky first column (Category) */
+.tbl-base tbody tr:hover td{background:#fafafa}
+.tbl-base tbody tr:last-child td{border-bottom:none}
+/* Sticky first col */
 .col-sticky-first{
   position:sticky;
   left:0;
-  z-index:3;
+  z-index:2;
   background:#fff;
 }
 .col-sticky-first::after{
-  content:"";
-  position:absolute;
-  top:0;right:-6px;bottom:0;
-  width:6px;
-  background:linear-gradient(to right,rgba(0,0,0,0.06),transparent);
+  content:"";position:absolute;top:0;right:-5px;bottom:0;width:5px;
+  background:linear-gradient(to right,rgba(0,0,0,0.05),transparent);
   pointer-events:none;
 }
-thead .col-sticky-first{
-  background:#f8fafc;
-  z-index:4;
-}
-tr:hover .col-sticky-first{background:#f8fafc}
-/* Sticky last column (Actions) */
+thead .col-sticky-first{background:#f8fafc;z-index:3}
+.tbl-base tbody tr:hover .col-sticky-first{background:#fafafa}
+/* Sticky last col */
 .col-sticky-last{
   position:sticky;
   right:0;
-  z-index:3;
+  z-index:2;
   background:#fff;
-  overflow:visible !important; /* needed for dropdown */
+  overflow:visible !important;
 }
 .col-sticky-last::before{
-  content:"";
-  position:absolute;
-  top:0;left:-6px;bottom:0;
-  width:6px;
-  background:linear-gradient(to left,rgba(0,0,0,0.06),transparent);
+  content:"";position:absolute;top:0;left:-5px;bottom:0;width:5px;
+  background:linear-gradient(to left,rgba(0,0,0,0.05),transparent);
   pointer-events:none;
 }
-thead .col-sticky-last{
-  background:#f8fafc;
-  z-index:4;
-}
-tr:hover .col-sticky-last{background:#f8fafc}
-tr:hover td{background:#f8fafc}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:#fafafa}
+thead .col-sticky-last{background:#f8fafc;z-index:3}
+.tbl-base tbody tr:hover .col-sticky-last{background:#fafafa}
+
+/* ══ CLIENTS TABLE — min-width 1420px (sum of all columns) ══ */
+.clients-table-scroll{} /* alias */
+.clients-table{min-width:1420px}
+/* colgroup widths */
+.clients-table col.c-cat    {width:110px}
+.clients-table col.c-company{width:130px}
+.clients-table col.c-fname  {width:130px}
+.clients-table col.c-lname  {width:110px}
+.clients-table col.c-gender {width:65px}
+.clients-table col.c-mobile {width:140px}
+.clients-table col.c-email  {width:165px}
+.clients-table col.c-occ    {width:110px}
+.clients-table col.c-city   {width:95px}
+.clients-table col.c-state  {width:85px}
+.clients-table col.c-pin    {width:70px}
+.clients-table col.c-family {width:120px}
+.clients-table col.c-actions{width:190px}
+
+/* ══ ENQUIRIES TABLE — min-width 1320px ══ */
+.enq-table{min-width:1320px}
+.enq-table col.ec-no    {width:100px}
+.enq-table col.ec-type  {width:70px}
+.enq-table col.ec-client{width:150px}
+.enq-table col.ec-src   {width:120px}
+.enq-table col.ec-cat   {width:110px}
+.enq-table col.ec-dest  {width:130px}
+.enq-table col.ec-pax   {width:60px}
+.enq-table col.ec-budget{width:100px}
+.enq-table col.ec-rating{width:70px}
+.enq-table col.ec-fu    {width:130px}
+.enq-table col.ec-status{width:90px}
+.enq-table col.ec-staff {width:100px}
+.enq-table col.ec-acts  {width:190px}
+
+/* ══ BOOKINGS TABLE — min-width 1300px ══ */
+.bk-table{min-width:1300px}
+.bk-table col.bc-cat    {width:100px}
+.bk-table col.bc-client {width:150px}
+.bk-table col.bc-dest   {width:180px}
+.bk-table col.bc-pax    {width:60px}
+.bk-table col.bc-date   {width:100px}
+.bk-table col.bc-amount {width:100px}
+.bk-table col.bc-paid   {width:100px}
+.bk-table col.bc-pending{width:100px}
+.bk-table col.bc-pstatus{width:100px}
+.bk-table col.bc-status {width:90px}
+.bk-table col.bc-staff  {width:90px}
+.bk-table col.bc-acts   {width:130px}
 /* BADGES */
 .badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap}
 .b-aplus{background:rgba(239,68,68,.12);color:#dc2626}
@@ -645,9 +667,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           </div>
         </div>
       </div>
-      <div class="card" style="padding:0;overflow:visible">
-        <div class="clients-table-scroll">
-          <table class="clients-table">
+      <div class="card" style="padding:0">
+        <div class="tbl-scroll clients-table-scroll">
+          <table class="tbl-base clients-table">
             <colgroup>
               <col class="c-cat"/>
               <col class="c-company"/>
@@ -727,9 +749,27 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-primary" onclick="openModal('enquiry')">+ Add Enquiry</button>
         <button id="enq-backfill-btn" class="btn" style="display:none;background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:11px" onclick="backfillEnquiryNumbers()" title="Assign ENQ numbers to old enquiries">🔢 Fix ENQ Nos</button>
       </div>
-      <div class="card"><table><thead><tr>
-        <th>ENQ NO</th><th>TYPE</th><th>CLIENT</th><th>SOURCE</th><th>CATEGORY</th><th>DESTINATION</th><th>PAX</th><th>BUDGET</th><th>RATING</th><th>FOLLOW-UP</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th>
-      </tr></thead><tbody id="enq-tbody"></tbody></table></div>
+      <div class="card" style="padding:0">
+        <div class="tbl-scroll">
+          <table class="tbl-base enq-table">
+            <colgroup>
+              <col class="ec-no"/><col class="ec-type"/><col class="ec-client"/>
+              <col class="ec-src"/><col class="ec-cat"/><col class="ec-dest"/>
+              <col class="ec-pax"/><col class="ec-budget"/><col class="ec-rating"/>
+              <col class="ec-fu"/><col class="ec-status"/><col class="ec-staff"/>
+              <col class="ec-acts"/>
+            </colgroup>
+            <thead><tr>
+              <th>ENQ NO</th><th>TYPE</th><th class="col-sticky-first">CLIENT</th>
+              <th>SOURCE</th><th>CATEGORY</th><th>DESTINATION</th>
+              <th>PAX</th><th>BUDGET</th><th>RATING</th>
+              <th>FOLLOW-UP</th><th>STATUS</th><th>STAFF</th>
+              <th class="col-sticky-last">ACTIONS</th>
+            </tr></thead>
+            <tbody id="enq-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- BOOKINGS (merged: Tours + Tickets + Hotels + Insurance + Cruise + Visa) -->
@@ -762,10 +802,25 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <!-- Booking list -->
       <div id="bk-list-wrap">
         <div class="section-title" id="bk-list-title">All Bookings</div>
-        <div class="card" style="overflow:hidden">
-          <table><thead><tr>
-            <th>CATEGORY</th><th>CLIENT</th><th>DESTINATION / DETAILS</th><th>PAX</th><th>DATE</th><th>AMOUNT</th><th>PAID</th><th>PENDING</th><th>PAY STATUS</th><th>STATUS</th><th>STAFF</th><th>ACTION</th>
-          </tr></thead><tbody id="book-tbody"></tbody></table>
+        <div class="card" style="padding:0">
+          <div class="tbl-scroll">
+            <table class="tbl-base bk-table">
+              <colgroup>
+                <col class="bc-cat"/><col class="bc-client"/><col class="bc-dest"/>
+                <col class="bc-pax"/><col class="bc-date"/><col class="bc-amount"/>
+                <col class="bc-paid"/><col class="bc-pending"/><col class="bc-pstatus"/>
+                <col class="bc-status"/><col class="bc-staff"/><col class="bc-acts"/>
+              </colgroup>
+              <thead><tr>
+                <th class="col-sticky-first">CATEGORY</th>
+                <th>CLIENT</th><th>DESTINATION / DETAILS</th><th>PAX</th>
+                <th>DATE</th><th>AMOUNT</th><th>PAID</th><th>PENDING</th>
+                <th>PAY STATUS</th><th>STATUS</th><th>STAFF</th>
+                <th class="col-sticky-last">ACTION</th>
+              </tr></thead>
+              <tbody id="book-tbody"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -1716,7 +1771,7 @@ function renderEnquiries(){
         rows+=`<tr style="border-left:3px solid ${isCancelled?'#94a3b8':fuColor};${isCancelled?'background:#f8fafc;opacity:0.7':''}">
     <td><div style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap">${e.enquiryNo||'—'}</div></td>
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
-    <td>
+    <td class="col-sticky-first">
       <strong>${cName(e.clientId)}</strong>
       ${e.primaryClientName ? `<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>` : ""}
     </td>
@@ -1734,8 +1789,8 @@ function renderEnquiries(){
     </td>
     <td>${sBadge(e.status)}${e.lostReason?`<br><span style="font-size:9px;color:#94a3b8">${e.lostReason}</span>`:""}</td>
     <td style="font-size:11px">${sName(e.staffId)}</td>
-    <td>
-      <div style="display:flex;gap:3px;flex-wrap:wrap">
+    <td class="col-sticky-last">
+      <div style="display:flex;gap:3px;flex-wrap:nowrap">
         <button class="btn" style="font-size:9px;padding:3px 7px;background:#f0fdf4;color:#166534;border:1px solid #86efac" onclick="openEnquiryDetail('${e.id}')">👁 View</button>
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq('${e.id}')">✏️</button>
         <button class="btn" style="font-size:9px;padding:3px 7px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;white-space:nowrap" onclick="openFollowUpPopup('${e.id}','${e.clientId}')">📅 Follow Up</button>
@@ -2016,7 +2071,7 @@ function renderBookingList(){
     const payBadgeColor = payStatus==="Fully Paid"?"#059669": payStatus==="Partially Paid"?"#d97706":"#dc2626";
     const payBadgeBg    = payStatus==="Fully Paid"?"#dcfce7": payStatus==="Partially Paid"?"#fef3c7":"#fee2e2";
     return `<tr>
-      <td><span class="cat-tag" style="background:${st.bg};color:${st.color}">${icon} ${b.category}</span></td>
+      <td class="col-sticky-first"><span class="cat-tag" style="background:${st.bg};color:${st.color}">${icon} ${b.category}</span></td>
       <td>
         <strong>${cName(b.clientId)}</strong>
         ${b.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${b.familyRelation||"Family"} of ${b.primaryClientName}</div>`:""}
@@ -2034,7 +2089,7 @@ function renderBookingList(){
       <td><span style="background:${payBadgeBg};color:${payBadgeColor};padding:3px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap">${payStatus}</span></td>
       <td>${sBadge(b.status||"Confirmed")}</td>
       <td style="font-size:11px">${sName(b.staffId)}</td>
-      <td><div style="display:flex;gap:3px;flex-wrap:wrap">
+      <td class="col-sticky-last"><div style="display:flex;gap:3px;flex-wrap:nowrap">
         <button class="btn" style="font-size:9px;padding:3px 6px;background:#dcfce7;color:#16a34a;border:1px solid #bbf7d0;white-space:nowrap" onclick="openAddPayment('${b.id}')">💰 Pay</button>
         <button class="btn" style="font-size:9px;padding:3px 6px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe" onclick="openFollowUpPopup(null,'${b.clientId}')">📅</button>
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 6px" onclick="editBk('${b.id}')">✏️</button>
