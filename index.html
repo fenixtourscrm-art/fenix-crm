@@ -1118,7 +1118,7 @@ const ENQ_TYPES=["New","Old","Repeated"];
 const INTENTIONS=["Domestic Tickets","Visa","Cruise","Car","Hotels","Travel Insurance","Passport","International Tour","Domestic Tour"];
 const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Inquired","Personal Visit","Social Media","Corporate"];
 const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa","Passport"];
-const SOURCES=["Social Media – Facebook","Social Media – Instagram","Social Media – LinkedIn","Social Media – Twitter/X","Social Media – YouTube","Social Media – WhatsApp","Family Reference","Friends Reference","Customer Reference","Newspaper","Radio Mirchi","Flyer Distribution – Events","Personal Visit – Office","Influencer Reference","Others"];
+const SOURCES=["Social Media – Facebook","Social Media – Instagram","Social Media – LinkedIn","Social Media – Twitter/X","Social Media – YouTube","Social Media – WhatsApp","Family Reference","Friends Reference","Customer Reference","Newspaper","Radio Mirchi","Flyer Distribution – Events","Personal Visit – Office","Field Marketing","Influencer Reference","Others"];
 const LOST_REASONS=["Budget issue","No response","Went to another agency","Trip cancelled","Other"];
 const VISA_STATUS=["Pending","Submitted","Approved","Rejected"];
 const INTL_DESTINATIONS=["Dubai","Singapore","Thailand","Bali","Maldives","Malaysia","Sri Lanka","Hong Kong","Japan","Europe","USA","Canada","Australia","New Zealand","Mauritius","Switzerland","Turkey","Egypt","Nepal","Bhutan","Vietnam","Cambodia","South Korea","Other International"];
@@ -8466,6 +8466,557 @@ function renderLeaderboard() {
 
 
 
+// ════════════════════════════════════════════════════════════════════
+//  FIELD MARKETING — DATE-WISE VIEW, HISTORY, MOVE TO CLIENT
+// ════════════════════════════════════════════════════════════════════
+
+// ── State for date selector ──────────────────────────────────────────
+let _fmktSelectedDate = new Date().toISOString().slice(0,10); // today
+let _fmktDateVisits   = [];   // visits for selected date
+let _fmktDateCheckins = [];   // checkins for selected date
+
+// ── Load data for any date (owner/staff) ────────────────────────────
+function _fmktLoadForDate(date, callback) {
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  let pending = 2;
+  const done = () => { if(--pending === 0 && callback) callback(); };
+
+  // Load visits
+  let vQ = db.collection("fieldVisits").where("date","==",date);
+  if(!isOwner) vQ = vQ.where("employeeId","==",FMKT_STAFF_ID);
+  vQ.get().then(snap => {
+    _fmktDateVisits = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
+    done();
+  }).catch(()=>{ _fmktDateVisits=[]; done(); });
+
+  // Load checkins
+  let cQ = db.collection("fieldCheckins").where("date","==",date);
+  if(!isOwner) cQ = cQ.where("employeeId","==",FMKT_STAFF_ID);
+  cQ.get().then(snap => {
+    _fmktDateCheckins = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.checkinTime||"").localeCompare(a.checkinTime||""));
+    done();
+  }).catch(()=>{ _fmktDateCheckins=[]; done(); });
+}
+
+// ── Date selector bar ────────────────────────────────────────────────
+function _fmktRenderDateBar(containerId, onchange) {
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const today = new Date().toISOString().slice(0,10);
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px">
+      <span style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">📅 Select Date:</span>
+      <input type="date" id="fmkt-date-picker" value="${_fmktSelectedDate}" max="${today}"
+        style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;font-weight:600;color:#0f172a;background:#fff;outline:none;flex:1;min-width:140px"
+        onchange="_fmktSelectedDate=this.value;${onchange}"/>
+      <button onclick="_fmktSelectedDate='${today}';document.getElementById('fmkt-date-picker').value='${today}';${onchange}"
+        style="padding:7px 14px;background:${_fmktSelectedDate===today?'#f97316':'#f1f5f9'};color:${_fmktSelectedDate===today?'#fff':'#64748b'};border:none;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+        Today
+      </button>
+    </div>`;
+}
+
+// ── Upgrade _fmktRenderManager — add date selector + new tabs ────────
+function _fmktRenderManager() {
+  const today = _fmktToday();
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+
+  // Status from latest checkin
+  const allSeen = new Set();
+  const mergedCheckins = [..._fmktCheckins, ...(_fmktCheckin ? [_fmktCheckin] : [])]
+    .filter(c => {
+      if(!c || !c.id) return false;
+      if(allSeen.has(c.id)) return false;
+      allSeen.add(c.id);
+      return (c.date||"").slice(0,10) === today && c.employeeId === FMKT_STAFF_ID;
+    })
+    .sort((a,b) => (b.checkinTime||"").localeCompare(a.checkinTime||""));
+
+  const todayCheckin = mergedCheckins[0] || null;
+  const isCheckedIn  = (_fmktCheckin && !_fmktCheckin.checkoutTime) ||
+                       (todayCheckin && !todayCheckin.checkoutTime && todayCheckin.id === (_fmktCheckin?.id));
+
+  const _seenKpi = new Set();
+  const todayVisits = [..._fmktAllVisits, ..._fmktVisits]
+    .filter(v=>{ if(_seenKpi.has(v.id)) return false; _seenKpi.add(v.id); return true; });
+  const interested = todayVisits.filter(v=>v.outcome==="Interested").length;
+  const followups  = todayVisits.filter(v=>v.outcome==="Follow-up").length;
+  const closed     = todayVisits.filter(v=>v.outcome==="Closed").length;
+
+  document.getElementById("fmkt-root").innerHTML = `
+    <div class="fmkt-wrap" style="max-width:800px">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:14px">
+        <div style="font-size:18px;font-weight:900;color:#0f172a;line-height:1.2">📍 Field Marketing
+          <br><span style="font-size:13px;color:#64748b;font-weight:500">${new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"})}</span>
+        </div>
+        <button class="fmkt-big-btn gray" style="width:auto;padding:10px 16px;font-size:13px;flex-shrink:0;margin-bottom:0" onclick="_fmktScreen='home';_fmktRender()">← Back</button>
+      </div>
+
+      <!-- KPIs -->
+      <div class="fmkt-kpi-grid">
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="font-size:16px;color:${isCheckedIn?'#059669':(todayCheckin&&todayCheckin.checkoutTime)?'#f97316':'#94a3b8'}">${isCheckedIn?"🟢 In Field":(todayCheckin&&todayCheckin.checkoutTime)?"🟠 Out":"⚪ Off"}</div><div class="fmkt-stat-lbl">Paresh</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val">${todayVisits.length}</div><div class="fmkt-stat-lbl">Visits</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#059669">${interested}</div><div class="fmkt-stat-lbl">🟢 Interested</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#d97706">${followups}</div><div class="fmkt-stat-lbl">📅 Follow-up</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#7c3aed">${closed}</div><div class="fmkt-stat-lbl">✅ Closed</div></div>
+        <div class="fmkt-stat"><div class="fmkt-stat-val">${todayCheckin?_fmktFmtDuration(todayCheckin.checkinTime,todayCheckin.checkoutTime):"—"}</div><div class="fmkt-stat-lbl">Field Time</div></div>
+      </div>
+
+      <!-- Employee card -->
+      <div style="background:#fff;border:1.5px solid ${isCheckedIn?'#86efac':(todayCheckin&&todayCheckin.checkoutTime)?'#fed7aa':'#e2e8f0'};border-radius:13px;padding:14px;margin-bottom:14px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0">PG</div>
+          <div style="flex:1;min-width:160px">
+            <div style="font-size:14px;font-weight:800;color:#0f172a">${FMKT_STAFF_NAME}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px;line-height:1.5">
+              ${isCheckedIn
+                ? `🟢 In Field since ${_fmktFmtTime((_fmktCheckin||todayCheckin).checkinTime)}<br><span style="font-size:11px">${(_fmktCheckin||todayCheckin).checkinLocation?.address||""}</span>`
+                : (todayCheckin&&todayCheckin.checkoutTime)
+                ? `🟠 Checked out ${_fmktFmtTime(todayCheckin.checkoutTime)} · Was in field from ${_fmktFmtTime(todayCheckin.checkinTime)}`
+                : "⚪ Not checked in today"}
+            </div>
+          </div>
+          ${isCheckedIn ? `<button onclick="_fmktShowLiveMap()" style="padding:10px 16px;background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap">🗺️ Live Map</button>` : ""}
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="fmkt-mgr-tabs">
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='overview'?'active':''}" onclick="_fmktMgrTab='overview';_fmktRenderManager()">📋 Visits</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='datewise'?'active':''}" onclick="_fmktMgrTab='datewise';_fmktRenderManager()">📅 Date View</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='map'?'active':''}" onclick="_fmktMgrTab='map';_fmktRenderManager()">🗺️ Map</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='followups'?'active':''}" onclick="_fmktMgrTab='followups';_fmktRenderManager()">📅 Follow-ups</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='history'?'active':''}" onclick="_fmktMgrTab='history';_fmktRenderManager()">📊 History</button>
+      </div>
+
+      <div id="fmkt-mgr-content"></div>
+    </div>`;
+
+  if(_fmktMgrTab==="overview")  _fmktRenderMgrVisits();
+  else if(_fmktMgrTab==="datewise") _fmktRenderDateView();
+  else if(_fmktMgrTab==="map")      _fmktRenderMgrMap();
+  else if(_fmktMgrTab==="followups") _fmktRenderMgrFollowups();
+  else if(_fmktMgrTab==="history")  _fmktRenderHistoryTab();
+}
+
+// ── DATE-WISE VIEW ────────────────────────────────────────────────────
+function _fmktRenderDateView() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  el.innerHTML = `
+    <div id="fmkt-datebar"></div>
+    <div id="fmkt-date-content"><div style="text-align:center;padding:30px;color:#94a3b8">Loading...</div></div>`;
+  _fmktRenderDateBar("fmkt-datebar", "_fmktLoadDateViewData()");
+  _fmktLoadDateViewData();
+}
+
+function _fmktLoadDateViewData() {
+  const el = document.getElementById("fmkt-date-content");
+  if(el) el.innerHTML = `<div style="text-align:center;padding:20px;color:#64748b;font-size:13px">⏳ Loading data for ${_fmktSelectedDate}...</div>`;
+  _fmktLoadForDate(_fmktSelectedDate, _fmktRenderDateViewContent);
+}
+
+function _fmktRenderDateViewContent() {
+  const el = document.getElementById("fmkt-date-content");
+  if(!el) return;
+
+  const visits   = _fmktDateVisits;
+  const checkins = _fmktDateCheckins;
+  const isToday  = _fmktSelectedDate === _fmktToday();
+
+  if(!visits.length && !checkins.length) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:48px 20px;color:#94a3b8">
+        <div style="font-size:36px;margin-bottom:10px">📭</div>
+        <div style="font-size:15px;font-weight:700;color:#374151">No activity on this date</div>
+        <div style="font-size:13px;margin-top:6px">${new Date(_fmktSelectedDate+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+      </div>`;
+    return;
+  }
+
+  // Compute CRM enquiries created on this date by Paresh
+  const dateEnquiries = enquiries.filter(e =>
+    (e.createdAt||"").slice(0,10) === _fmktSelectedDate &&
+    (e.staffId === FMKT_STAFF_ID || (CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id)))
+  );
+
+  // Field time across all sessions that day
+  const totalMs = checkins.reduce((sum,c) => {
+    if(!c.checkinTime) return sum;
+    const end = c.checkoutTime ? new Date(c.checkoutTime) : (isToday ? new Date() : new Date(c.checkinTime));
+    return sum + Math.max(0, end - new Date(c.checkinTime));
+  }, 0);
+  const totalFieldTime = totalMs > 0
+    ? `${Math.floor(totalMs/3600000)}h ${Math.floor((totalMs%3600000)/60000)}m`
+    : "—";
+
+  const interested = visits.filter(v=>v.outcome==="Interested").length;
+  const followup   = visits.filter(v=>v.outcome==="Follow-up").length;
+  const closed     = visits.filter(v=>v.outcome==="Closed").length;
+  const notInt     = visits.filter(v=>v.outcome==="Not Interested").length;
+
+  el.innerHTML = `
+    <!-- Day Summary -->
+    <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:13px;padding:16px;margin-bottom:14px;color:#fff">
+      <div style="font-size:13px;font-weight:700;color:#94a3b8;margin-bottom:8px">${new Date(_fmktSelectedDate+"T12:00:00").toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px">
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900">${visits.length}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Visits</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#86efac">${interested}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Interested</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#fde68a">${followup}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Follow-up</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#c4b5fd">${closed}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Closed</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900">${totalFieldTime}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Field Time</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:900;color:#7dd3fc">${dateEnquiries.length}</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">CRM Enquiries</div></div>
+      </div>
+    </div>
+
+    <!-- Check-in/out sessions -->
+    ${checkins.length ? `
+    <div class="fmkt-section-title">Check-in Sessions (${checkins.length})</div>
+    ${checkins.map(c=>`
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a">🟢 ${_fmktFmtTime(c.checkinTime)} ${c.checkoutTime?`→ 🔴 ${_fmktFmtTime(c.checkoutTime)}`:isToday?'→ <span style="color:#10b981;font-size:12px">Active</span>':''}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:3px">📍 ${c.checkinLocation?.address||"—"}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:13px;font-weight:700;color:#0f172a">${_fmktFmtDuration(c.checkinTime,c.checkoutTime)}</div>
+          <div style="font-size:11px;color:#94a3b8">${c.totalVisits||0} visits</div>
+        </div>
+      </div>`).join("")}` : ""}
+
+    <!-- Visits -->
+    ${visits.length ? `
+    <div class="fmkt-section-title" style="margin-top:14px">Visits (${visits.length})</div>
+    ${visits.map(v=>`
+      <div class="fmkt-visit-card" onclick="_fmktOpenVisitDetail('${v.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:5px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:15px;font-weight:800;color:#0f172a">${v.clientName}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:1px">${v.clientPhone} · ${_fmktFmtTime(v.visitTime)}</div>
+          </div>
+          ${_fmktOutcomePill(v.outcome)}
+        </div>
+        ${v.notes?`<div style="font-size:12px;color:#64748b;line-height:1.5;margin-top:5px">${v.notes.slice(0,80)+(v.notes.length>80?'…':'')}</div>`:''}
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="event.stopPropagation();_fmktMoveToClient('${v.id}')"
+            style="padding:5px 12px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">
+            👤 Move to Client
+          </button>
+        </div>
+      </div>`).join("")}` : ""}
+
+    <!-- CRM Enquiries created that day -->
+    ${dateEnquiries.length ? `
+    <div class="fmkt-section-title" style="margin-top:14px">CRM Enquiries Created (${dateEnquiries.length})</div>
+    ${dateEnquiries.map(e=>`
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0f172a">${cName(e.clientId)}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px">${e.destination||"—"} · ${e.category||""}</div>
+          </div>
+          ${sBadge(e.status)}
+        </div>
+      </div>`).join("")}` : ""}`;
+}
+
+// ── HISTORY TAB (replaces old _fmktRenderMgrHistory) ─────────────────
+function _fmktRenderHistoryTab() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  el.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8">Loading history...</div>`;
+
+  let q = db.collection("fieldCheckins").orderBy("checkinTime","desc").limit(60);
+  if(!isOwner) q = db.collection("fieldCheckins").where("employeeId","==",FMKT_STAFF_ID).orderBy("checkinTime","desc").limit(60);
+
+  q.get().then(async snap => {
+    const checkins = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!checkins.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8">No history found.</div>`; return; }
+
+    // Group by date
+    const byDate = {};
+    checkins.forEach(c => {
+      const d = (c.date||c.checkinTime||"").slice(0,10);
+      if(!byDate[d]) byDate[d] = [];
+      byDate[d].push(c);
+    });
+
+    // Load visit counts per date
+    const dates = Object.keys(byDate).sort().reverse();
+
+    // Fetch visit stats for each date (batch)
+    const visitStatsByDate = {};
+    await Promise.all(dates.map(async d => {
+      try {
+        let vQ = db.collection("fieldVisits").where("date","==",d);
+        if(!isOwner) vQ = vQ.where("employeeId","==",FMKT_STAFF_ID);
+        const vSnap = await vQ.get();
+        const vs = vSnap.docs.map(x=>x.data());
+        visitStatsByDate[d] = {
+          total:      vs.length,
+          interested: vs.filter(v=>v.outcome==="Interested").length,
+          followup:   vs.filter(v=>v.outcome==="Follow-up").length,
+          closed:     vs.filter(v=>v.outcome==="Closed").length,
+        };
+      } catch(e) {
+        visitStatsByDate[d] = { total:0, interested:0, followup:0, closed:0 };
+      }
+    }));
+
+    // Fetch CRM enquiry counts per date
+    const enqByDate = {};
+    dates.forEach(d => {
+      enqByDate[d] = enquiries.filter(e=>(e.createdAt||"").slice(0,10)===d&&
+        (!isOwner || e.staffId===FMKT_STAFF_ID)).length;
+    });
+
+    el.innerHTML = `
+      <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:12px">📊 Field Activity History (${dates.length} days)</div>
+      ${dates.map(d => {
+        const sessions = byDate[d];
+        const totalMs  = sessions.reduce((sum,c)=>{
+          if(!c.checkinTime) return sum;
+          const end = c.checkoutTime?new Date(c.checkoutTime):new Date(c.checkinTime);
+          return sum+Math.max(0,end-new Date(c.checkinTime));
+        },0);
+        const ft = totalMs>0?`${Math.floor(totalMs/3600000)}h ${Math.floor((totalMs%3600000)/60000)}m`:"—";
+        const vs = visitStatsByDate[d]||{total:0,interested:0,followup:0,closed:0};
+        const dLabel = new Date(d+"T12:00:00").toLocaleDateString("en-IN",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+        const staffName = sessions[0]?.employeeName||FMKT_STAFF_NAME;
+        return `
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:13px;padding:14px;margin-bottom:10px;cursor:pointer"
+            onclick="_fmktSelectedDate='${d}';_fmktMgrTab='datewise';_fmktRenderManager()">
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">
+              <div>
+                <div style="font-size:14px;font-weight:800;color:#0f172a">${dLabel}</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px">👤 ${staffName} · ${sessions.length} session${sessions.length!==1?'s':''}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span style="font-size:12px;color:#f97316;font-weight:700">⏱ ${ft}</span>
+                <span style="font-size:11px;color:#94a3b8;background:#f1f5f9;padding:3px 8px;border-radius:99px">View →</span>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px">
+              <div style="background:#f8fafc;border-radius:9px;padding:8px;text-align:center">
+                <div style="font-size:17px;font-weight:900;color:#0f172a">${vs.total}</div>
+                <div style="font-size:9px;color:#94a3b8;margin-top:2px">Visits</div>
+              </div>
+              <div style="background:#f0fdf4;border-radius:9px;padding:8px;text-align:center">
+                <div style="font-size:17px;font-weight:900;color:#059669">${vs.interested}</div>
+                <div style="font-size:9px;color:#94a3b8;margin-top:2px">Interested</div>
+              </div>
+              <div style="background:#fffbeb;border-radius:9px;padding:8px;text-align:center">
+                <div style="font-size:17px;font-weight:900;color:#d97706">${vs.followup}</div>
+                <div style="font-size:9px;color:#94a3b8;margin-top:2px">Follow-up</div>
+              </div>
+              <div style="background:#faf5ff;border-radius:9px;padding:8px;text-align:center">
+                <div style="font-size:17px;font-weight:900;color:#7c3aed">${vs.closed}</div>
+                <div style="font-size:9px;color:#94a3b8;margin-top:2px">Closed</div>
+              </div>
+              <div style="background:#eff6ff;border-radius:9px;padding:8px;text-align:center">
+                <div style="font-size:17px;font-weight:900;color:#2563eb">${enqByDate[d]||0}</div>
+                <div style="font-size:9px;color:#94a3b8;margin-top:2px">Enquiries</div>
+              </div>
+            </div>
+          </div>`;
+      }).join("")}`;
+  }).catch(err=>{
+    el.innerHTML=`<div style="color:#dc2626;padding:16px">Error loading history: ${err.message}</div>`;
+  });
+}
+
+// ── MOVE TO CLIENT ─────────────────────────────────────────────────────
+async function _fmktMoveToClient(visitId) {
+  // Find the visit from any loaded array
+  const v = _fmktVisits.find(x=>x.id===visitId)
+         || _fmktAllVisits.find(x=>x.id===visitId)
+         || _fmktDateVisits.find(x=>x.id===visitId);
+  if(!v) return alert("Visit not found");
+
+  if(v.convertedToClient) {
+    return alert("✅ This visit has already been moved to Client Data.");
+  }
+
+  if(!confirm(`Move this visit to Client Data?\n\nClient: ${v.clientName}\nPhone: ${v.clientPhone}\n\nThis will:\n• Create/link client in Client section\n• Mark visit as "Converted to Client"\n• Keep all visit data intact`)) return;
+
+  try {
+    // Check if client with same phone already exists
+    const phoneMatch = clients.find(c =>
+      (c.mobile || c.alternateMobile || "") === v.clientPhone
+    );
+
+    let clientId = null;
+
+    if(phoneMatch) {
+      // Link to existing client — no duplicate created
+      clientId = phoneMatch.id;
+      const note = `[Field Visit ${v.date}] ${v.notes||""}`.trim();
+      await fbUpdate("clients", clientId, {
+        fieldVisitNotes: note,
+        lastFieldVisit: v.date,
+        fieldVisitOutcome: v.outcome,
+      });
+      alert(`✅ Linked to existing client: ${phoneMatch.firstName} ${phoneMatch.lastName}`);
+    } else {
+      // Create new client
+      const nameParts = (v.clientName||"").trim().split(" ");
+      const firstName = nameParts[0] || v.clientName;
+      const lastName  = nameParts.slice(1).join(" ") || "";
+      const staffEntry = STAFF.find(s=>s.id===v.employeeId);
+
+      const newClient = {
+        firstName,
+        lastName,
+        mobile:     v.clientPhone || "",
+        source:     "Field Marketing",
+        notes:      v.notes || "",
+        fieldVisitDate:    v.date || "",
+        fieldVisitLocation: v.location?.address || "",
+        fieldVisitOutcome:  v.outcome || "",
+        assignedStaff:      v.employeeId || FMKT_STAFF_ID,
+        createdAt:  new Date().toISOString(),
+        createdBy:  CURRENT_USER?.id || FMKT_STAFF_ID,
+        type:       "New",
+        category:   "Individual",
+        familyId:   null,
+        isPrimary:  true,
+      };
+
+      const ref = await db.collection("clients").add(newClient);
+      clientId = ref.id;
+      clients.push({ id: clientId, ...newClient });
+      alert(`✅ New client created: ${firstName} ${lastName}`);
+    }
+
+    // Mark the field visit as converted
+    await db.collection("fieldVisits").doc(visitId).update({
+      convertedToClient: true,
+      convertedClientId: clientId,
+      convertedAt: new Date().toISOString(),
+      convertedBy: CURRENT_USER?.id || FMKT_STAFF_ID,
+    });
+
+    // Update local state
+    [_fmktVisits, _fmktAllVisits, _fmktDateVisits].forEach(arr => {
+      const local = arr.find(x=>x.id===visitId);
+      if(local) { local.convertedToClient=true; local.convertedClientId=clientId; }
+    });
+
+    // Re-render whichever screen is active
+    if(_fmktScreen === "manager") _fmktRenderManager();
+    else _fmktRenderHome();
+
+  } catch(err) {
+    alert("Failed: " + err.message);
+  }
+}
+
+// ── UPGRADE _fmktOpenVisitDetail — add Move to Client button ──────────
+function _fmktOpenVisitDetail(visitId) {
+  const v = _fmktVisits.find(x=>x.id===visitId)
+         || _fmktAllVisits.find(x=>x.id===visitId)
+         || _fmktDateVisits.find(x=>x.id===visitId);
+  if(!v) return;
+
+  document.getElementById("fmkt-detail-overlay")?.remove();
+  const _detailOverlay = document.createElement("div");
+  _detailOverlay.id = "fmkt-detail-overlay";
+  _detailOverlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center";
+  _detailOverlay.addEventListener("click", e => { if(e.target===_detailOverlay) _detailOverlay.remove(); });
+  _detailOverlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;padding:20px 18px 28px;max-height:88vh;overflow-y:auto;box-shadow:0 -8px 32px rgba(0,0,0,.2)">
+      <div style="width:40px;height:4px;background:#e2e8f0;border-radius:99px;margin:0 auto 16px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:17px;font-weight:900;color:#0f172a">Visit Details</div>
+        <button onclick="document.getElementById('fmkt-detail-overlay').remove()" style="background:#f1f5f9;border:none;border-radius:99px;width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+      </div>
+
+      ${_fmktOutcomePill(v.outcome)}
+      ${v.convertedToClient ? `<span style="margin-left:6px;background:#dcfce7;color:#166534;border:1px solid #86efac;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700">✅ Converted to Client</span>` : ""}
+
+      <div style="margin-top:14px;font-size:14px;color:#374151;line-height:2.2">
+        <div>👤 <strong style="font-size:15px">${v.clientName}</strong></div>
+        <div>📱 ${v.clientPhone}</div>
+        <div>🕐 ${_fmktFmtTime(v.visitTime)} · 📅 ${v.date||""}</div>
+        ${v.location ? `<div style="line-height:1.5">📍 ${v.location.road?v.location.road+", "+v.location.area+", "+v.location.city:v.location.address||"Location captured"}</div>` : ""}
+        ${v.followUpDate ? `<div>📅 <strong style="color:#d97706">Follow-up: ${v.followUpDate}</strong></div>` : ""}
+      </div>
+      ${v.notes ? `<div style="margin-top:12px;background:#f8fafc;border-radius:12px;padding:14px;font-size:14px;color:#374151;line-height:1.6"><div style="font-weight:700;margin-bottom:6px;color:#0f172a">📝 Notes</div>${v.notes}</div>` : ""}
+      ${v.photo ? `<div id="fmkt-detail-photo-wrap" style="margin-top:14px;border-radius:14px;overflow:hidden;max-height:280px"></div>` : ""}
+
+      <!-- Move to Client button -->
+      ${!v.convertedToClient ? `
+        <button onclick="document.getElementById('fmkt-detail-overlay').remove();_fmktMoveToClient('${v.id}')"
+          style="width:100%;margin-top:16px;padding:14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">
+          👤 Move to Client
+        </button>` : `
+        <div style="margin-top:16px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:12px 16px;text-align:center;font-size:13px;font-weight:700;color:#166534">
+          ✅ Already converted to Client
+        </div>`}
+    </div>`;
+
+  document.getElementById("fmkt-root").appendChild(_detailOverlay);
+  if(v.photo) {
+    setTimeout(()=>{
+      const pw = document.getElementById('fmkt-detail-photo-wrap');
+      if(pw){ const img=document.createElement('img'); img.style.cssText='width:100%;display:block;object-fit:cover'; img.src=v.photo; pw.appendChild(img); }
+    },50);
+  }
+}
+
+// ── UPGRADE _fmktRenderMgrVisits — add Move to Client button ─────────
+function _fmktRenderMgrVisits() {
+  const el = document.getElementById("fmkt-mgr-content");
+  if(!el) return;
+  const seen = new Set();
+  const visits = [..._fmktAllVisits, ..._fmktVisits]
+    .filter(v => { if(seen.has(v.id)) return false; seen.add(v.id); return true; })
+    .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
+  if(!visits.length) { el.innerHTML=`<div style="text-align:center;padding:40px;color:#94a3b8">No visits logged today.<br><span style="font-size:12px">Use the Date View tab to check other dates.</span></div>`; return; }
+  el.innerHTML = `
+    <div>
+      ${visits.map(v=>`
+        <div class="fmkt-visit-card">
+          <div onclick="_fmktOpenVisitDetail('${v.id}')" style="cursor:pointer">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:15px;font-weight:800;color:#0f172a">${v.clientName}</div>
+                <div style="font-size:13px;color:#64748b;margin-top:2px">${v.clientPhone}</div>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                ${_fmktOutcomePill(v.outcome)}
+                ${v.convertedToClient?`<span style="background:#dcfce7;color:#166534;font-size:9px;padding:1px 7px;border-radius:99px;font-weight:700">✅ Client</span>`:""}
+              </div>
+            </div>
+            <div style="font-size:12px;color:#94a3b8;margin-bottom:4px">🕐 ${_fmktFmtTime(v.visitTime)} ${v.location?.address?'· 📍 '+v.location.address:''}</div>
+            ${v.notes?`<div style="font-size:13px;color:#64748b;line-height:1.5;margin-top:4px">${v.notes.slice(0,80)+(v.notes.length>80?'…':'')}</div>`:''}
+          </div>
+          ${!v.convertedToClient?`
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+              <button onclick="_fmktMoveToClient('${v.id}')"
+                style="padding:6px 14px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">
+                👤 Move to Client
+              </button>
+            </div>`:''}
+        </div>`).join("")}
+    </div>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px">
+      <button onclick="_fmktShareWhatsApp()" class="fmkt-big-btn green" style="background:linear-gradient(135deg,#10b981,#059669)">📱 Share WhatsApp Report</button>
+      <button onclick="_fmktGeneratePDF()" class="fmkt-big-btn blue">📄 Download PDF Report</button>
+    </div>`;
+}
+
+// ── OVERRIDE old _fmktRenderMgrHistory with redirect ─────────────────
+// (new function is _fmktRenderHistoryTab — this prevents old one from running)
+function _fmktRenderMgrHistory() { _fmktRenderHistoryTab(); }
+
+
 // ═══════════════════════════════════════════════════════
 //  BUG REPORTS SYSTEM
 // ═══════════════════════════════════════════════════════
@@ -8962,7 +9513,10 @@ function _fmktRenderHome() {
                 <div style="font-size:15px;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.clientName}</div>
                 <div style="font-size:13px;color:#64748b;margin-top:3px">${v.clientPhone} · ${_fmktFmtTime(v.visitTime)}</div>
               </div>
-              ${_fmktOutcomePill(v.outcome)}
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                ${_fmktOutcomePill(v.outcome)}
+                ${v.convertedToClient?'<span style="background:#dcfce7;color:#166534;font-size:9px;padding:1px 7px;border-radius:99px;font-weight:700">✅ Client</span>':""}
+              </div>
             </div>
             ${v.notes ? `<div style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.5">${v.notes}</div>` : ""}
             ${v.followUpDate ? `<div style="font-size:12px;color:#d97706;margin-top:6px;font-weight:700">📅 Follow-up: ${v.followUpDate}</div>` : ""}
