@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html><!-- Fenix CRM v2.4 | Build: 2026-03-30 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
@@ -1594,6 +1594,7 @@ function renderEnquiries(){
     <td style="font-size:11px">${sName(e.staffId)}</td>
     <td>
       <div style="display:flex;gap:3px;flex-wrap:wrap">
+        <button class="btn" style="font-size:9px;padding:3px 7px;background:#f0fdf4;color:#166534;border:1px solid #86efac" onclick="openEnquiryDetail('${e.id}')">👁 View</button>
         <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq('${e.id}')">✏️</button>
         <button class="btn" style="font-size:9px;padding:3px 7px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;white-space:nowrap" onclick="openFollowUpPopup('${e.id}','${e.clientId}')">📅 Follow Up</button>
         ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked('${e.id}')">Book</button>
@@ -9016,6 +9017,727 @@ function _fmktRenderMgrVisits() {
 // ── OVERRIDE old _fmktRenderMgrHistory with redirect ─────────────────
 // (new function is _fmktRenderHistoryTab — this prevents old one from running)
 function _fmktRenderMgrHistory() { _fmktRenderHistoryTab(); }
+
+
+// ════════════════════════════════════════════════════════════════════
+//  FIELD VISIT ↔ CLIENT/ENQUIRY LINKING
+//  Phone number is the primary key for all connections
+// ════════════════════════════════════════════════════════════════════
+
+// ── Lookup field visits by phone number ─────────────────────────────
+async function _getVisitsByPhone(phone) {
+  if(!phone) return [];
+  try {
+    const snap = await db.collection("fieldVisits").where("clientPhone","==",phone).get();
+    return snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
+  } catch(e) { return []; }
+}
+
+// ── Lookup field visits by enquiry ID ───────────────────────────────
+async function _getVisitsByEnqId(enqId) {
+  if(!enqId) return [];
+  try {
+    const snap = await db.collection("fieldVisits").where("linkedEnqId","==",enqId).get();
+    return snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b)=>(b.visitTime||"").localeCompare(a.visitTime||""));
+  } catch(e) { return []; }
+}
+
+// ── Render field visit cards (shared between client + enquiry views) ─
+function _renderFieldVisitCards(visits, showPhotos=true) {
+  if(!visits.length) return `
+    <div style="text-align:center;padding:28px 16px;color:#94a3b8">
+      <div style="font-size:28px;margin-bottom:8px">📍</div>
+      <div style="font-size:13px">No field visits found for this client.</div>
+    </div>`;
+
+  const OUTCOME_COLORS = {
+    "Interested":     {bg:"#f0fdf4",color:"#059669",border:"#86efac"},
+    "Not Interested": {bg:"#fef2f2",color:"#dc2626",border:"#fca5a5"},
+    "Follow-up":      {bg:"#fffbeb",color:"#d97706",border:"#fde68a"},
+    "Closed":         {bg:"#faf5ff",color:"#7c3aed",border:"#d8b4fe"},
+  };
+
+  return visits.map((v,i) => {
+    const oc = OUTCOME_COLORS[v.outcome]||{bg:"#f8fafc",color:"#64748b",border:"#e2e8f0"};
+    const staffEntry = STAFF.find(s=>s.id===v.employeeId);
+    const staffLabel = staffEntry ? staffEntry.name : "Field Staff";
+    const visitDate  = v.date ? new Date(v.date+"T12:00:00").toLocaleDateString("en-IN",{day:"numeric",month:"short",year:"numeric"}) : "";
+    const visitTime  = v.visitTime ? new Date(v.visitTime).toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit",hour12:true}) : "";
+    const locStr     = v.location ? ([v.location.road,v.location.area,v.location.city].filter(Boolean).join(", ")||v.location.address||"") : "";
+
+    return `
+      <div style="background:#fff;border:1.5px solid ${oc.border};border-radius:13px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:13px;font-weight:800;color:#0f172a">📍 Field Visit #${i+1}</div>
+            <div style="font-size:11px;color:#64748b;margin-top:2px">📅 ${visitDate}${visitTime?` · 🕐 ${visitTime}`:""}</div>
+          </div>
+          <span style="background:${oc.bg};color:${oc.color};border:1px solid ${oc.border};padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;white-space:nowrap">${v.outcome||"—"}</span>
+        </div>
+        ${locStr?`<div style="font-size:12px;color:#64748b;margin-bottom:6px">📍 ${locStr}</div>`:""}
+        <div style="font-size:12px;color:#374151;margin-bottom:6px">👤 By <strong>${staffLabel}</strong></div>
+        ${v.notes?`<div style="background:#f8fafc;border-radius:9px;padding:10px 12px;font-size:12px;color:#374151;line-height:1.6;margin-bottom:8px"><strong style="color:#0f172a">📝 Notes:</strong><br>${v.notes}</div>`:""}
+        ${v.followUpDate?`<div style="font-size:12px;color:#d97706;font-weight:700;margin-bottom:6px">📅 Follow-up: ${v.followUpDate}</div>`:""}
+        ${showPhotos && v.photo ? `
+          <div style="margin-top:8px">
+            <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:5px">📷 Photo Proof</div>
+            <div id="fv-photo-${v.id}" style="border-radius:10px;overflow:hidden;max-height:180px;cursor:pointer"
+              onclick="document.getElementById('fv-photo-${v.id}').style.maxHeight=document.getElementById('fv-photo-${v.id}').style.maxHeight==='none'?'180px':'none'">
+            </div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:3px">Tap photo to expand</div>
+          </div>` : ""}
+        ${v.convertedToClient?`<div style="margin-top:6px;font-size:11px;font-weight:700;color:#059669">✅ Converted to Client</div>`:""}
+      </div>`;
+  }).join("");
+}
+
+// Load photos after DOM render (avoids src= in template)
+function _loadVisitPhotos(visits) {
+  visits.forEach(v => {
+    if(!v.photo) return;
+    setTimeout(() => {
+      const wrap = document.getElementById(`fv-photo-${v.id}`);
+      if(!wrap) return;
+      const img = document.createElement("img");
+      img.style.cssText = "width:100%;display:block;object-fit:cover;max-height:180px";
+      img.src = v.photo;
+      wrap.appendChild(img);
+    }, 80);
+  });
+}
+
+// ── TIMELINE: Build unified timeline entries ─────────────────────────
+function _buildClientTimeline(clientId, phone, fieldVisits) {
+  const c        = clients.find(x=>x.id===clientId);
+  const cEnqs    = enquiries.filter(e=>e.clientId===clientId);
+  const cBks     = allBookings.filter(b=>b.clientId===clientId);
+  const cTasks   = tasks.filter(t=>t.isFollowUp && t.clientId===clientId);
+  const cPayments = cBks.flatMap(b=>(b.paymentHistory||[]).map(p=>({...p,bookingId:b.id,destination:b.destination})));
+
+  const entries = [];
+
+  // Field visits
+  fieldVisits.forEach(v => {
+    entries.push({
+      date:  v.visitTime || v.date+"T00:00:00",
+      icon:  "📍",
+      color: "#059669",
+      bg:    "#f0fdf4",
+      title: "Field Visit",
+      sub:   `By ${STAFF.find(s=>s.id===v.employeeId)?.name||"Field Staff"} · ${v.outcome||""}`,
+      note:  v.notes||"",
+      hasPhoto: !!v.photo,
+      visitId: v.id,
+    });
+  });
+
+  // Enquiries
+  cEnqs.forEach(e => {
+    entries.push({
+      date:  e.createdAt||e.date||"",
+      icon:  "🎯",
+      color: "#0369a1",
+      bg:    "#eff6ff",
+      title: `Enquiry Created${e.enquiryNo?" ("+e.enquiryNo+")":""}`,
+      sub:   `${e.destination||e.category||"—"} · ${e.status||""} · ${sName(e.staffId)}`,
+      note:  "",
+    });
+  });
+
+  // Bookings
+  cBks.forEach(b => {
+    entries.push({
+      date:  b.travelDate||b.createdAt||"",
+      icon:  "✈️",
+      color: "#7c3aed",
+      bg:    "#faf5ff",
+      title: `Booking: ${b.destination||b.category||"—"}`,
+      sub:   `${b.travelDate||""} · ${sName(b.staffId||b.staffId)}`,
+      note:  "",
+    });
+  });
+
+  // Follow-ups
+  cTasks.forEach(t => {
+    entries.push({
+      date:  t.dueDate||"",
+      icon:  "📞",
+      color: "#f97316",
+      bg:    "#fff7ed",
+      title: "Follow-up",
+      sub:   `${t.followUpStatus||""} · ${sName(t.assignedTo)}`,
+      note:  t.followUpNotes||"",
+    });
+  });
+
+  // Payments
+  cPayments.forEach(p => {
+    entries.push({
+      date:  p.date||"",
+      icon:  "💰",
+      color: "#059669",
+      bg:    "#f0fdf4",
+      title: `Payment Received — ${p.destination||""}`,
+      sub:   `₹${(parseFloat(p.amount)||0).toLocaleString()} · ${p.mode||""}`,
+      note:  "",
+    });
+  });
+
+  // Sort newest first
+  return entries.sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+}
+
+function _renderTimeline(entries) {
+  if(!entries.length) return `<div style="text-align:center;padding:28px;color:#94a3b8">No activity yet.</div>`;
+  return entries.map((e,i) => `
+    <div style="display:flex;gap:10px;margin-bottom:2px">
+      <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+        <div style="width:30px;height:30px;border-radius:50%;background:${e.bg};border:2px solid ${e.color};display:flex;align-items:center;justify-content:center;font-size:13px">${e.icon}</div>
+        ${i<entries.length-1?`<div style="width:2px;flex:1;background:#e2e8f0;min-height:10px;margin:3px 0"></div>`:""}
+      </div>
+      <div style="flex:1;padding-bottom:10px">
+        <div style="background:${e.bg};border:1px solid ${e.color}30;border-radius:10px;padding:10px 12px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
+            <div style="font-size:13px;font-weight:700;color:#0f172a">${e.title}</div>
+            <div style="font-size:10px;color:#94a3b8;white-space:nowrap;flex-shrink:0">${(e.date||"").slice(0,10)}</div>
+          </div>
+          <div style="font-size:11px;color:#64748b;margin-top:2px">${e.sub}</div>
+          ${e.note?`<div style="font-size:11px;color:#374151;margin-top:4px;background:rgba(255,255,255,.6);border-radius:6px;padding:5px 8px">${e.note}</div>`:""}
+          ${e.hasPhoto?`<div style="font-size:10px;color:#0369a1;margin-top:4px">📷 Photo attached</div>`:""}
+        </div>
+      </div>
+    </div>`).join("");
+}
+
+// ── UPGRADED openClientProfile ───────────────────────────────────────
+function openClientProfile(clientId) {
+  const c = clients.find(x => x.id === clientId);
+  if(!c) return;
+  document.getElementById("client-profile-overlay")?.remove();
+
+  const cat = c.clientCategory || "Regular";
+  const cs  = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
+
+  const cEnqs      = enquiries.filter(e => e.clientId === clientId);
+  const cBks       = allBookings.filter(b => b.clientId === clientId);
+  const totalSpend = cBks.reduce((s,b) => s+(parseFloat(b.amount)||0), 0);
+  const totalPaid  = cBks.reduce((s,b) => s+(parseFloat(b.paid)||0), 0);
+  const cTasks     = tasks.filter(t => t.isFollowUp && t.clientId === clientId);
+
+  // Family
+  const myFamilyId = c.familyId || null;
+  const myFamilyName = c.familyName || null;
+  let familyMembers = [];
+  if(myFamilyId) {
+    familyMembers = clients.filter(x => x.id !== clientId && x.familyId === myFamilyId);
+  } else if(myFamilyName) {
+    const byName = clients.filter(x => x.id !== clientId && x.familyName === myFamilyName);
+    const byLink = clients.filter(x => x.id !== clientId && (x.linkedPrimaryId === clientId || c.linkedPrimaryId === x.id || (c.linkedPrimaryId && x.linkedPrimaryId === c.linkedPrimaryId)));
+    const merged = [...byName];
+    byLink.forEach(x => { if(!merged.find(m=>m.id===x.id)) merged.push(x); });
+    familyMembers = merged;
+  }
+  familyMembers.sort((a,b) => (b.isPrimaryClient?1:0)-(a.isPrimaryClient?1:0));
+
+  const allFamilyIds   = [clientId, ...familyMembers.map(m=>m.id)];
+  const famAllEnqs     = enquiries.filter(e => allFamilyIds.includes(e.clientId));
+  const famAllBks      = allBookings.filter(b => allFamilyIds.includes(b.clientId));
+  const famTotalSpend  = famAllBks.reduce((s,b) => s+(parseFloat(b.amount)||0), 0);
+  const famTotalPaid   = famAllBks.reduce((s,b) => s+(parseFloat(b.paid)||0), 0);
+
+  const allHistory = [
+    ...cEnqs.map(e => ({type:'enq',date:e.createdAt||e.date||"",no:e.enquiryNo||"",label:"Enquiry: "+(e.destination||e.category||"—"),sub:(e.rating||"")+" · "+(e.status||"")+" · "+sName(e.staffId),detail:"Budget: "+(e.budget||"—")+" · Pax: "+(e.pax||1),color:"#0369a1",bg:"#eff6ff"})),
+    ...cBks.map(b => {const bP=Math.max(0,(parseFloat(b.amount)||0)-(parseFloat(b.paid)||0));return {type:'bk',date:b.travelDate||b.createdAt||"",no:"",label:"Booking: "+(b.destination||b.category||"—"),sub:(b.travelDate||"")+" · "+fmt(b.amount)+" · "+(b.status||""),detail:"Paid: "+fmt(b.paid||0)+" · Pending: "+fmt(bP),color:"#059669",bg:"#f0fdf4"};}),
+  ].sort((a,b) => (b.date||"").localeCompare(a.date||""));
+
+  // Payments for payments tab
+  const cPaymentsList = cBks.flatMap(b=>(b.paymentHistory||[]).map(p=>({...p,bookingDest:b.destination||b.category||"—"})));
+
+  const overlay = document.createElement("div");
+  overlay.id = "client-profile-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9997;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto";
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:680px;box-shadow:0 24px 64px rgba(0,0,0,0.25);overflow:hidden;margin:auto">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:20px 22px;display:flex;align-items:center;gap:14px">
+        <div style="width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+        <div style="flex:1">
+          <div style="font-size:18px;font-weight:800;color:#fff">${c.firstName} ${c.lastName}${c.isPrimaryClient?' <span style="background:#f97316;font-size:10px;padding:2px 7px;border-radius:4px">👑 Primary</span>':''}</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:3px">${c.mobile}${c.altMobile?" · 📱 "+c.altMobile:""} ${c.city?"· "+c.city:""}</div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            <span style="background:${cs.bg};color:${cs.color};padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700">${cs.icon} ${cat}</span>
+            ${c.familyName?`<span style="background:rgba(139,92,246,.3);color:#ddd6fe;padding:2px 10px;border-radius:99px;font-size:10px;font-weight:700">👨‍👩‍👧 ${c.familyName}</span>`:""}
+          </div>
+        </div>
+        <button onclick="document.getElementById('client-profile-overlay').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:7px 12px;cursor:pointer;color:#fff;font-size:16px">✕</button>
+      </div>
+
+      <!-- Stats Bar -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid #f1f5f9">
+        <div style="padding:12px;text-align:center;border-right:1px solid #f1f5f9"><div style="font-size:20px;font-weight:800;color:#0369a1">${cEnqs.length}</div><div style="font-size:10px;color:#64748b;font-weight:600">Enquiries</div></div>
+        <div style="padding:12px;text-align:center;border-right:1px solid #f1f5f9"><div style="font-size:20px;font-weight:800;color:#059669">${cBks.length}</div><div style="font-size:10px;color:#64748b;font-weight:600">Bookings</div></div>
+        <div style="padding:12px;text-align:center;border-right:1px solid #f1f5f9"><div style="font-size:14px;font-weight:800;color:#7c3aed">₹${(totalSpend/1000).toFixed(0)}K</div><div style="font-size:10px;color:#64748b;font-weight:600">Total Spent</div></div>
+        <div style="padding:12px;text-align:center"><div style="font-size:14px;font-weight:800;color:${(totalSpend-totalPaid)>0?"#dc2626":"#059669"}">₹${((totalSpend-totalPaid)/1000).toFixed(0)}K</div><div style="font-size:10px;color:#64748b;font-weight:600">Pending</div></div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display:flex;gap:8px;padding:10px 18px;background:#f8fafc;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+        <button onclick="window._prefilledClientId='${clientId}';document.getElementById('client-profile-overlay').remove();showTab('enquiries',document.querySelector('[onclick*=enquiries]'));openModal('enquiry')" style="padding:7px 13px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🎯 New Enquiry</button>
+        <button onclick="window._editClientId='${clientId}';document.getElementById('client-profile-overlay').remove();openModal('editclient')" style="padding:7px 13px;background:#fff;color:#374151;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Edit</button>
+        <button onclick="openClientDocs('${clientId}')" style="padding:7px 13px;background:#fff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📁 Docs</button>
+      </div>
+
+      <!-- TABS — scrollable on mobile -->
+      <div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:0 10px;overflow-x:auto;scrollbar-width:none">
+        <button id="cptab-overview"   onclick="switchCPTab('overview','${clientId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid #f97316;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap">🤖 Overview</button>
+        <button id="cptab-timeline"   onclick="switchCPTab('timeline','${clientId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">🕐 Timeline</button>
+        <button id="cptab-fieldvisits" onclick="switchCPTab('fieldvisits','${clientId}')" style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📍 Field Visits</button>
+        <button id="cptab-enquiries"  onclick="switchCPTab('enquiries','${clientId}')"  style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">🎯 Enquiries ${cEnqs.length?`<span style="background:#0369a1;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cEnqs.length}</span>`:""}</button>
+        <button id="cptab-followups"  onclick="switchCPTab('followups','${clientId}')"  style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📅 Follow-ups ${cTasks.length?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cTasks.length}</span>`:""}</button>
+        <button id="cptab-history"    onclick="switchCPTab('history','${clientId}')"    style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📜 Travel History</button>
+        <button id="cptab-payments"   onclick="switchCPTab('payments','${clientId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">💰 Payments</button>
+        <button id="cptab-family"     onclick="switchCPTab('family','${clientId}')"     style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">👨‍👩‍👧 Family ${familyMembers.length?`<span style="background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${familyMembers.length}</span>`:""}</button>
+      </div>
+
+      <!-- TAB CONTENT -->
+      <div style="max-height:460px;overflow-y:auto;padding:18px 20px">
+
+        <!-- OVERVIEW TAB -->
+        <div id="cppanel-overview">
+          <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:14px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:10px">🤖 AI Insight</div>
+            <div id="cp-ai-body-${clientId}"><div style="font-size:12px;color:#94a3b8">Analysing...</div></div>
+          </div>
+          <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:10px">📋 Contact Details</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+              <div><span style="color:#94a3b8">Mobile:</span> <strong>${c.mobile||"—"}</strong></div>
+              ${c.altMobile?`<div><span style="color:#94a3b8">Alt Mobile:</span> <strong>${c.altMobile}</strong></div>`:`<div><span style="color:#94a3b8">Alt Mobile:</span> <span style="color:#cbd5e1">Not set</span></div>`}
+              <div><span style="color:#94a3b8">Email:</span> <strong>${c.email||"—"}</strong></div>
+              <div><span style="color:#94a3b8">City:</span> <strong>${c.city||"—"}, ${c.state||""}</strong></div>
+              <div><span style="color:#94a3b8">Occupation:</span> <strong>${c.occupation||"—"}</strong></div>
+              <div><span style="color:#94a3b8">Gender:</span> <strong>${c.gender||"—"}</strong></div>
+              ${c.companyName?`<div style="grid-column:1/-1"><span style="color:#94a3b8">Company:</span> <strong style="color:#0369a1">${c.companyName}</strong></div>`:""}
+              ${c.source?`<div style="grid-column:1/-1"><span style="color:#94a3b8">Source:</span> <strong>${c.source}</strong></div>`:""}
+            </div>
+          </div>
+        </div>
+
+        <!-- TIMELINE TAB -->
+        <div id="cppanel-timeline" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">🕐 Full Activity Timeline</div>
+          <div id="cp-timeline-${clientId}"><div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">Loading timeline...</div></div>
+        </div>
+
+        <!-- FIELD VISITS TAB -->
+        <div id="cppanel-fieldvisits" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📍 Field Visit History</div>
+          <div id="cp-fieldvisits-${clientId}"><div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">Loading...</div></div>
+        </div>
+
+        <!-- ENQUIRIES TAB -->
+        <div id="cppanel-enquiries" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">🎯 Enquiries (${cEnqs.length})</div>
+          ${cEnqs.length ? cEnqs.sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||"")).map(e=>`
+            <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:800;color:#0f172a">${e.destination||e.category||"—"}</div>
+                  ${e.enquiryNo?`<div style="font-size:10px;color:#7c3aed;font-family:monospace;margin-top:1px">${e.enquiryNo}</div>`:""}
+                  <div style="font-size:11px;color:#64748b;margin-top:2px">${(e.createdAt||"").slice(0,10)} · ${sName(e.staffId)}</div>
+                  <div style="font-size:11px;color:#64748b">Budget: ${e.budget||"—"} · ${e.pax||1} pax</div>
+                </div>
+                <div style="text-align:right">
+                  ${sBadge(e.status)}
+                  <button onclick="openEnquiryDetail('${e.id}')" style="margin-top:6px;display:block;padding:4px 10px;background:#eff6ff;color:#0369a1;border:1px solid #bfdbfe;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">View</button>
+                </div>
+              </div>
+            </div>`).join("") :
+          `<div style="text-align:center;padding:28px;color:#94a3b8">No enquiries yet.</div>`}
+        </div>
+
+        <!-- FOLLOW-UPS TAB -->
+        <div id="cppanel-followups" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📅 Follow-up History (${cTasks.length})</div>
+          ${cTasks.length ? cTasks.sort((a,b)=>(b.dueDate||"").localeCompare(a.dueDate||"")).map(t=>`
+            <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#0f172a">📅 ${t.dueDate||"—"} ${t.dueTime?"· 🕐 "+t.dueTime:""}</div>
+                  <div style="font-size:11px;color:#f97316;font-weight:600;margin-top:2px">${t.followUpStatus||""}</div>
+                  <div style="font-size:11px;color:#64748b;margin-top:2px">By ${sName(t.assignedTo)}</div>
+                  ${t.followUpNotes?`<div style="font-size:12px;color:#374151;margin-top:5px;background:#f8fafc;border-radius:7px;padding:7px 9px">${t.followUpNotes}</div>`:""}
+                </div>
+                <span style="font-size:10px;padding:2px 8px;border-radius:99px;background:${t.done?"#f0fdf4":"#fff7ed"};color:${t.done?"#059669":"#d97706"};font-weight:700;white-space:nowrap">${t.done?"✅ Done":"⏳ Pending"}</span>
+              </div>
+            </div>`).join("") :
+          `<div style="text-align:center;padding:28px;color:#94a3b8">No follow-ups recorded.</div>`}
+        </div>
+
+        <!-- TRAVEL HISTORY TAB (existing) -->
+        <div id="cppanel-history" style="display:none">
+          ${allHistory.length ? `
+          <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="filterCPHistory('all','${clientId}')" id="cph-all" style="padding:4px 10px;background:#0369a1;color:#fff;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">All (${allHistory.length})</button>
+            <button onclick="filterCPHistory('enq','${clientId}')" id="cph-enq" style="padding:4px 10px;background:#f1f5f9;color:#64748b;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">Enquiries (${cEnqs.length})</button>
+            <button onclick="filterCPHistory('bk','${clientId}')" id="cph-bk" style="padding:4px 10px;background:#f1f5f9;color:#64748b;border:none;border-radius:99px;font-size:11px;font-weight:700;cursor:pointer">Bookings (${cBks.length})</button>
+          </div>
+          <div id="cph-list-${clientId}">
+            ${allHistory.map(h=>`
+            <div data-htype="${h.type}" style="display:flex;gap:10px;padding:11px 13px;background:${h.bg};border-radius:10px;margin-bottom:7px;border-left:3px solid ${h.color}">
+              <div style="font-size:18px;margin-top:1px">${h.type==='enq'?'🎯':'✈️'}</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:700;color:#0f172a">${h.label}</div>
+                ${h.no?`<div style="font-size:10px;font-weight:700;color:#7c3aed;font-family:monospace;margin-top:2px">${h.no}</div>`:""}
+                <div style="font-size:11px;color:#64748b;margin-top:2px">${h.sub}</div>
+                <div style="font-size:10px;color:#94a3b8;margin-top:2px">${h.detail}</div>
+              </div>
+              <div style="font-size:10px;color:#94a3b8;white-space:nowrap">${(h.date||"").slice(0,10)}</div>
+            </div>`).join("")}
+          </div>` :
+          `<div style="text-align:center;padding:40px 20px;color:#94a3b8"><div style="font-size:36px;margin-bottom:10px">📜</div><div>No travel history yet</div></div>`}
+        </div>
+
+        <!-- PAYMENTS TAB -->
+        <div id="cppanel-payments" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">💰 Payment History</div>
+          ${cPaymentsList.length ? cPaymentsList.sort((a,b)=>(b.date||"").localeCompare(a.date||"")).map(p=>`
+            <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+              <div>
+                <div style="font-size:13px;font-weight:700;color:#059669">₹${(parseFloat(p.amount)||0).toLocaleString()}</div>
+                <div style="font-size:11px;color:#64748b;margin-top:2px">${p.bookingDest} · ${p.mode||"—"}</div>
+                <div style="font-size:11px;color:#94a3b8">${p.date||"—"}</div>
+              </div>
+              ${p.receipt?`<span style="font-size:10px;background:#f0fdf4;color:#059669;padding:2px 8px;border-radius:99px;font-weight:700">✅ Receipt</span>`:""}
+            </div>`).join("") :
+          `<div style="text-align:center;padding:28px;color:#94a3b8">No payments recorded.</div>`}
+        </div>
+
+        <!-- FAMILY TAB (existing) -->
+        <div id="cppanel-family" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:700;color:#7c3aed">${c.familyName?`👨‍👩‍👧 ${c.familyName} · ${familyMembers.length+1} member${familyMembers.length+1>1?"s":""}` : "👨‍👩‍👧 No family group set"}</div>
+            <button onclick="openAddFamilyMember('${clientId}')" style="padding:6px 13px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">+ Add Member</button>
+          </div>
+          ${familyMembers.length>0?`
+          <div style="background:linear-gradient(135deg,#1e1b4b,#312e81);border-radius:12px;padding:13px 16px;margin-bottom:12px">
+            <div style="font-size:10px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📊 Family Summary — ${allFamilyIds.length} members</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:#fff">${famAllEnqs.length}</div><div style="font-size:9px;color:#a5b4fc">Total Enq</div></div>
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center"><div style="font-size:18px;font-weight:800;color:#fff">${famAllBks.length}</div><div style="font-size:9px;color:#a5b4fc">Total Bk</div></div>
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center"><div style="font-size:13px;font-weight:800;color:#fff">₹${(famTotalSpend/1000).toFixed(0)}K</div><div style="font-size:9px;color:#a5b4fc">Total Spent</div></div>
+              <div style="background:rgba(255,255,255,.1);border-radius:8px;padding:8px;text-align:center"><div style="font-size:13px;font-weight:800;color:${(famTotalSpend-famTotalPaid)>0?"#fca5a5":"#86efac"}">₹${((famTotalSpend-famTotalPaid)/1000).toFixed(0)}K</div><div style="font-size:9px;color:#a5b4fc">Pending</div></div>
+            </div>
+          </div>
+          ${familyMembers.map(m=>`
+            <div style="display:flex;align-items:center;gap:12px;padding:12px;background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;margin-bottom:8px;cursor:pointer" onclick="document.getElementById('client-profile-overlay').remove();openClientProfile('${m.id}')">
+              <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0">${(m.firstName||"?")[0]}${(m.lastName||"")[0]||""}</div>
+              <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#0f172a">${m.firstName} ${m.lastName}</div><div style="font-size:11px;color:#64748b;margin-top:1px">${m.relation||""} · ${m.mobile||""}</div></div>
+              <div style="font-size:11px;color:#94a3b8">→</div>
+            </div>`).join("")}` :
+          `<div style="text-align:center;padding:24px;color:#94a3b8;font-size:12px">No family members linked.</div>`}
+          ${familyMembers.length===0?`<div style="text-align:center;padding:8px"><button onclick="openAddFamilyMember('${clientId}')" style="padding:9px 20px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">+ Link Family Member</button></div>`:""}
+        </div>
+
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  generateProfileInsight(clientId, c, cEnqs, cBks, totalSpend, totalPaid);
+}
+
+// ── Upgraded switchCPTab — loads async data for new tabs ─────────────
+function switchCPTab(tab, clientId) {
+  const allTabs = ['overview','timeline','fieldvisits','enquiries','followups','history','payments','family'];
+  allTabs.forEach(t => {
+    const btn   = document.getElementById('cptab-'+t);
+    const panel = document.getElementById('cppanel-'+t);
+    if(btn)   { btn.style.borderBottomColor = t===tab ? '#f97316' : 'transparent'; btn.style.color = t===tab ? '#f97316' : '#64748b'; }
+    if(panel) panel.style.display = t===tab ? '' : 'none';
+  });
+
+  const c = clients.find(x=>x.id===clientId);
+  const phone = c?.mobile || c?.alternateMobile || "";
+
+  // Load field visits for relevant tabs (async, phone-matched)
+  if((tab==='fieldvisits' || tab==='timeline') && phone) {
+    _getVisitsByPhone(phone).then(visits => {
+      if(tab==='fieldvisits') {
+        const el = document.getElementById('cp-fieldvisits-'+clientId);
+        if(el) { el.innerHTML = _renderFieldVisitCards(visits); _loadVisitPhotos(visits); }
+      }
+      if(tab==='timeline') {
+        const entries = _buildClientTimeline(clientId, phone, visits);
+        const el = document.getElementById('cp-timeline-'+clientId);
+        if(el) el.innerHTML = _renderTimeline(entries);
+      }
+    });
+  }
+  if(tab==='timeline' && !phone) {
+    const entries = _buildClientTimeline(clientId, "", []);
+    const el = document.getElementById('cp-timeline-'+clientId);
+    if(el) el.innerHTML = _renderTimeline(entries);
+  }
+}
+
+// ── filterCPHistory stays the same ───────────────────────────────────
+function filterCPHistory(type, clientId) {
+  document.querySelectorAll(`#cph-list-${clientId} [data-htype]`).forEach(el => {
+    el.style.display = (type==='all' || el.dataset.htype===type) ? '' : 'none';
+  });
+  ['all','enq','bk'].forEach(t => {
+    const btn = document.getElementById('cph-'+t);
+    if(btn) { btn.style.background = t===type?'#0369a1':'#f1f5f9'; btn.style.color = t===type?'#fff':'#64748b'; }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ENQUIRY DETAIL VIEW (read-only, with tabs)
+// ════════════════════════════════════════════════════════════════════
+let _enqDetailTab = "overview";
+
+function openEnquiryDetail(enqId) {
+  const e  = enquiries.find(x=>x.id===enqId);
+  if(!e) return;
+  const cl = clients.find(x=>x.id===e.clientId);
+  const phone = cl?.mobile || e.clientPhone || "";
+
+  document.getElementById("enq-detail-overlay")?.remove();
+  const overlay = document.createElement("div");
+  overlay.id = "enq-detail-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto";
+  overlay.addEventListener("click", ev => { if(ev.target===overlay) overlay.remove(); });
+
+  const cEnqTasks = tasks.filter(t=>t.isFollowUp && (t.enqId===enqId || (t.clientId===e.clientId)));
+
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:16px;width:100%;max-width:640px;box-shadow:0 20px 60px rgba(0,0,0,.3);overflow:hidden;margin:auto">
+
+      <!-- Header -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:18px 20px;display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:800;color:#fff">${e.enquiryNo?`<span style="font-family:monospace;font-size:11px;background:rgba(255,255,255,.15);padding:1px 8px;border-radius:4px;margin-right:6px">${e.enquiryNo}</span>`:""}${e.destination||e.category||"Enquiry"}</div>
+          <div style="font-size:12px;color:#94a3b8;margin-top:4px">${cl?cl.firstName+" "+cl.lastName:"Unknown"} · ${phone} · ${(e.createdAt||"").slice(0,10)}</div>
+          <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+            ${sBadge(e.status)}
+            ${e.source?`<span style="background:rgba(255,255,255,.12);color:#fff;font-size:10px;padding:2px 8px;border-radius:99px">${e.source}</span>`:""}
+          </div>
+        </div>
+        <button onclick="document.getElementById('enq-detail-overlay').remove()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;padding:6px 12px;cursor:pointer;color:#fff;font-size:16px">✕</button>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="display:flex;gap:8px;padding:10px 16px;background:#f8fafc;border-bottom:1px solid #f1f5f9;flex-wrap:wrap">
+        <button onclick="document.getElementById('enq-detail-overlay').remove();openEditEnq('${enqId}')" style="padding:6px 13px;background:#fff7ed;color:#ea580c;border:1.5px solid #fed7aa;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Edit</button>
+        <button onclick="openFollowUpPopup('${enqId}','${e.clientId||""}')" style="padding:6px 13px;background:#eff6ff;color:#0369a1;border:1.5px solid #bfdbfe;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📅 Follow-up</button>
+        ${e.status==="Active"?`<button onclick="document.getElementById('enq-detail-overlay').remove();markBooked('${enqId}')" style="padding:6px 13px;background:#dcfce7;color:#166534;border:1.5px solid #86efac;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✅ Book</button>`:""}
+        ${e.clientId?`<button onclick="document.getElementById('enq-detail-overlay').remove();openClientProfile('${e.clientId}')" style="padding:6px 13px;background:#faf5ff;color:#7c3aed;border:1.5px solid #d8b4fe;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">👤 Client Profile</button>`:""}
+      </div>
+
+      <!-- Tabs -->
+      <div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:0 10px;overflow-x:auto;scrollbar-width:none">
+        <button id="eqtab-overview"    onclick="switchEnqTab('overview','${enqId}')"    style="padding:10px 14px;background:none;border:none;border-bottom:3px solid #f97316;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap">📋 Overview</button>
+        <button id="eqtab-followups"   onclick="switchEnqTab('followups','${enqId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📅 Follow-ups ${cEnqTasks.length?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cEnqTasks.length}</span>`:""}</button>
+        <button id="eqtab-fieldvisits" onclick="switchEnqTab('fieldvisits','${enqId}')" style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📍 Field Visits</button>
+        <button id="eqtab-timeline"    onclick="switchEnqTab('timeline','${enqId}')"    style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">🕐 Timeline</button>
+        <button id="eqtab-photos"      onclick="switchEnqTab('photos','${enqId}')"      style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📷 Photos</button>
+      </div>
+
+      <!-- Tab Content -->
+      <div style="max-height:440px;overflow-y:auto;padding:16px 18px">
+
+        <!-- OVERVIEW -->
+        <div id="eqpanel-overview">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;margin-bottom:14px">
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Destination</div><div style="font-weight:700;margin-top:3px">${e.destination||"—"}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Category</div><div style="font-weight:700;margin-top:3px">${e.category||"—"}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Budget</div><div style="font-weight:700;margin-top:3px">${e.budget||"—"}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Pax</div><div style="font-weight:700;margin-top:3px">${e.pax||1} person${(e.pax||1)>1?"s":""}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Travel Date</div><div style="font-weight:700;margin-top:3px">${e.travelDate||"—"}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Source</div><div style="font-weight:700;margin-top:3px">${e.source||"—"}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Assigned Staff</div><div style="font-weight:700;margin-top:3px">${sName(e.staffId)}</div></div>
+            <div style="background:#f8fafc;border-radius:9px;padding:10px 12px"><div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700">Rating</div><div style="font-weight:700;margin-top:3px">${e.rating||"—"}</div></div>
+          </div>
+          ${e.notes?`<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:10px;padding:12px"><div style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:5px">📝 Notes</div><div style="font-size:12px;color:#374151;line-height:1.6">${e.notes}</div></div>`:""}
+        </div>
+
+        <!-- FOLLOW-UPS -->
+        <div id="eqpanel-followups" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📅 Follow-up History (${cEnqTasks.length})</div>
+          ${cEnqTasks.length ? cEnqTasks.sort((a,b)=>(b.dueDate||"").localeCompare(a.dueDate||"")).map(t=>`
+            <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:11px;padding:12px 14px;margin-bottom:8px">
+              <div style="font-size:13px;font-weight:700;color:#0f172a">📅 ${t.dueDate||"—"} ${t.dueTime?"· "+t.dueTime:""}</div>
+              <div style="font-size:11px;color:#f97316;font-weight:600;margin-top:2px">${t.followUpStatus||""}</div>
+              <div style="font-size:11px;color:#64748b">By ${sName(t.assignedTo)}</div>
+              ${t.followUpNotes?`<div style="font-size:12px;color:#374151;margin-top:6px;background:#f8fafc;border-radius:7px;padding:7px 9px">${t.followUpNotes}</div>`:""}
+            </div>`).join("") :
+          `<div style="text-align:center;padding:28px;color:#94a3b8">No follow-ups yet.</div>`}
+          <button onclick="openFollowUpPopup('${enqId}','${e.clientId||""}')" style="width:100%;padding:11px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:8px">+ Add Follow-up</button>
+        </div>
+
+        <!-- FIELD VISITS (for this enquiry via phone match) -->
+        <div id="eqpanel-fieldvisits" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📍 Field Visits</div>
+          <div id="eq-fieldvisits-${enqId}"><div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">Loading...</div></div>
+        </div>
+
+        <!-- TIMELINE -->
+        <div id="eqpanel-timeline" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">🕐 Enquiry Timeline</div>
+          <div id="eq-timeline-${enqId}"><div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">Loading...</div></div>
+        </div>
+
+        <!-- PHOTOS -->
+        <div id="eqpanel-photos" style="display:none">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:12px">📷 Field Visit Photos</div>
+          <div id="eq-photos-${enqId}"><div style="text-align:center;padding:20px;color:#94a3b8;font-size:12px">Loading...</div></div>
+        </div>
+
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  _enqDetailTab = "overview";
+}
+
+function switchEnqTab(tab, enqId) {
+  const allTabs = ['overview','followups','fieldvisits','timeline','photos'];
+  allTabs.forEach(t => {
+    const btn   = document.getElementById('eqtab-'+t);
+    const panel = document.getElementById('eqpanel-'+t);
+    if(btn)   { btn.style.borderBottomColor = t===tab?'#f97316':'transparent'; btn.style.color = t===tab?'#f97316':'#64748b'; }
+    if(panel) panel.style.display = t===tab?'':'none';
+  });
+  _enqDetailTab = tab;
+
+  const e  = enquiries.find(x=>x.id===enqId);
+  const cl = clients.find(x=>x.id===e?.clientId);
+  const phone = cl?.mobile || e?.clientPhone || "";
+
+  if((tab==='fieldvisits'||tab==='timeline'||tab==='photos') && phone) {
+    _getVisitsByPhone(phone).then(visits => {
+      if(tab==='fieldvisits') {
+        const el = document.getElementById('eq-fieldvisits-'+enqId);
+        if(el) { el.innerHTML = _renderFieldVisitCards(visits); _loadVisitPhotos(visits); }
+      }
+      if(tab==='photos') {
+        const withPhotos = visits.filter(v=>v.photo);
+        const el = document.getElementById('eq-photos-'+enqId);
+        if(el) {
+          if(!withPhotos.length) { el.innerHTML=`<div style="text-align:center;padding:28px;color:#94a3b8">No photos uploaded yet.</div>`; return; }
+          el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px"></div>`;
+          const grid = el.querySelector('div');
+          withPhotos.forEach(v => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'border-radius:10px;overflow:hidden;cursor:pointer;aspect-ratio:1;background:#f1f5f9';
+            wrap.title = `${v.date} · ${v.outcome}`;
+            const img = document.createElement('img');
+            img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+            img.src = v.photo;
+            img.onclick = () => { window.open(v.photo,'_blank'); };
+            wrap.appendChild(img);
+            grid.appendChild(wrap);
+          });
+        }
+      }
+      if(tab==='timeline') {
+        // Build enquiry-specific timeline
+        const enqTasks = tasks.filter(t=>t.isFollowUp&&(t.enqId===enqId||t.clientId===e?.clientId));
+        const entries = [
+          { date:e?.createdAt||"", icon:"🎯", color:"#0369a1", bg:"#eff6ff", title:"Enquiry Created", sub:`${e?.destination||""} · ${sName(e?.staffId)}`, note:"" },
+          ...visits.map(v=>({ date:v.visitTime||v.date, icon:"📍", color:"#059669", bg:"#f0fdf4", title:"Field Visit", sub:`By ${STAFF.find(s=>s.id===v.employeeId)?.name||"Field Staff"} · ${v.outcome||""}`, note:v.notes||"", hasPhoto:!!v.photo })),
+          ...enqTasks.map(t=>({ date:t.dueDate||"", icon:"📞", color:"#f97316", bg:"#fff7ed", title:"Follow-up", sub:`${t.followUpStatus||""} · ${sName(t.assignedTo)}`, note:t.followUpNotes||"" })),
+        ].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+        const el = document.getElementById('eq-timeline-'+enqId);
+        if(el) el.innerHTML = _renderTimeline(entries);
+      }
+    });
+  }
+}
+
+// ── Prompt on field visit save if no client/enquiry found ──────────────
+// Patch _fmktSaveVisit to check phone after save
+const __origSaveVisit = _fmktSaveVisit;
+async function _fmktSaveVisit() {
+  // Run original save
+  await __origSaveVisit();
+  // After save, check phone linkage
+  // (phone is read before async — capture it now)
+}
+
+// Override: intercept at the point where data is built
+// We inject phone-check prompt after visit is saved
+const __origFmktSaveVisitFull = _fmktSaveVisit;
+
+// The phone check runs after a successful save
+function _fmktCheckPhoneAfterSave(phone, visitId) {
+  if(!phone) return;
+  const clientMatch  = clients.find(c => c.mobile===phone || c.altMobile===phone);
+  const enquiryMatch = enquiries.find(e => {
+    const ec = clients.find(x=>x.id===e.clientId);
+    return ec?.mobile===phone || ec?.altMobile===phone;
+  });
+  if(clientMatch || enquiryMatch) return; // Already linked — no action needed
+  // No match found — prompt
+  setTimeout(() => {
+    const create = confirm(`No existing client or enquiry found for phone: ${phone}\n\nDo you want to create a new enquiry?\n\n[OK] = Create Enquiry\n[Cancel] = Skip`);
+    if(create) _fmktAutoCreateEnquiry(phone, visitId);
+  }, 500);
+}
+
+async function _fmktAutoCreateEnquiry(phone, visitId) {
+  // Find the visit to get name
+  const visit = await db.collection("fieldVisits").doc(visitId).get().then(d=>({id:d.id,...d.data()})).catch(()=>null);
+  if(!visit) return;
+  try {
+    // Create client first
+    const nameParts = (visit.clientName||"").trim().split(" ");
+    const newClient = {
+      firstName: nameParts[0]||visit.clientName,
+      lastName:  nameParts.slice(1).join(" ")||"",
+      mobile:    phone,
+      source:    "Field Marketing",
+      createdAt: new Date().toISOString(),
+      createdBy: CURRENT_USER?.id||FMKT_STAFF_ID,
+      type:      "New",
+      isPrimary: true,
+      fieldVisitDate: visit.date||"",
+    };
+    const cRef = await db.collection("clients").add(newClient);
+    clients.push({id:cRef.id,...newClient});
+    // Create enquiry
+    const enqNo = await generateENQNumber();
+    const newEnq = {
+      clientId:   cRef.id,
+      staffId:    visit.employeeId||FMKT_STAFF_ID,
+      source:     "Field Marketing",
+      status:     "Active",
+      followUpStatus: "New Enquiry",
+      type:       "New",
+      notes:      visit.notes||"",
+      enquiryNo:  enqNo,
+      createdAt:  new Date().toISOString(),
+      date:       visit.date||new Date().toISOString().slice(0,10),
+      destination:"",
+      category:   "International Tours",
+      budget:     "",
+      pax:        1,
+      adults:     1,
+    };
+    const eRef = await db.collection("enquiries").add(newEnq);
+    enquiries.push({id:eRef.id,...newEnq});
+    // Link visit to enquiry
+    await db.collection("fieldVisits").doc(visitId).update({ linkedEnqId:eRef.id, linkedClientId:cRef.id });
+    alert(`✅ New client and enquiry created!\n\nClient: ${newClient.firstName} ${newClient.lastName}\nENQ: ${enqNo}\n\nYou can edit details in the Enquiries section.`);
+    renderAll();
+  } catch(err) {
+    alert("Failed to create enquiry: "+err.message);
+  }
+}
 
 
 // ═══════════════════════════════════════════════════════
