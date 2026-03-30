@@ -137,6 +137,104 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 table{width:100%;border-collapse:collapse}
 th{background:#f8fafc;color:#64748b;font-size:9px;letter-spacing:.12em;font-weight:700;padding:9px 14px;text-align:left;border-bottom:1px solid #e2e8f0;white-space:nowrap}
 td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151;vertical-align:middle}
+/* ── Client table responsive fix ── */
+/* ── CLIENT TABLE — fully responsive, sticky first+last columns ── */
+.clients-table-scroll{
+  overflow-x:auto;
+  overflow-y:visible;
+  -webkit-overflow-scrolling:touch;
+  width:100%;
+  scrollbar-width:thin;
+  scrollbar-color:#cbd5e1 transparent;
+  position:relative;
+  border-radius:0 0 12px 12px;
+}
+.clients-table-scroll::-webkit-scrollbar{height:5px}
+.clients-table-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:99px}
+.clients-table-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+.clients-table{
+  table-layout:fixed;      /* column widths come from colgroup, not content */
+  border-collapse:separate;/* required for sticky columns */
+  border-spacing:0;
+  min-width:1160px;        /* sum of all col widths = never compress */
+  width:max-content;       /* on large screens: don't stretch beyond natural width */
+}
+/* All th/td get consistent padding and font */
+.clients-table th,.clients-table td{
+  padding:10px 12px;
+  font-size:12px;
+  vertical-align:middle;
+  border-bottom:1px solid #f1f5f9;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.clients-table thead tr th{
+  background:#f8fafc;
+  font-size:10px;
+  font-weight:700;
+  color:#64748b;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  border-bottom:2px solid #e2e8f0;
+  position:relative;
+}
+/* Explicit column widths — MUST match thead and tbody */
+.clients-table col.c-cat    {width:100px}
+.clients-table col.c-company{width:130px}
+.clients-table col.c-fname  {width:130px}
+.clients-table col.c-lname  {width:110px}
+.clients-table col.c-gender {width:70px}
+.clients-table col.c-mobile {width:140px}
+.clients-table col.c-email  {width:170px}
+.clients-table col.c-occ    {width:110px}
+.clients-table col.c-city   {width:100px}
+.clients-table col.c-state  {width:90px}
+.clients-table col.c-pin    {width:70px}
+.clients-table col.c-family {width:120px}
+.clients-table col.c-actions{width:180px}
+/* Sticky first column (Category) */
+.col-sticky-first{
+  position:sticky;
+  left:0;
+  z-index:3;
+  background:#fff;
+}
+.col-sticky-first::after{
+  content:"";
+  position:absolute;
+  top:0;right:-6px;bottom:0;
+  width:6px;
+  background:linear-gradient(to right,rgba(0,0,0,0.06),transparent);
+  pointer-events:none;
+}
+thead .col-sticky-first{
+  background:#f8fafc;
+  z-index:4;
+}
+tr:hover .col-sticky-first{background:#f8fafc}
+/* Sticky last column (Actions) */
+.col-sticky-last{
+  position:sticky;
+  right:0;
+  z-index:3;
+  background:#fff;
+  overflow:visible !important; /* needed for dropdown */
+}
+.col-sticky-last::before{
+  content:"";
+  position:absolute;
+  top:0;left:-6px;bottom:0;
+  width:6px;
+  background:linear-gradient(to left,rgba(0,0,0,0.06),transparent);
+  pointer-events:none;
+}
+thead .col-sticky-last{
+  background:#f8fafc;
+  z-index:4;
+}
+tr:hover .col-sticky-last{background:#f8fafc}
+tr:hover td{background:#f8fafc}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#fafafa}
 /* BADGES */
@@ -547,9 +645,43 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           </div>
         </div>
       </div>
-      <div class="card"><table><thead><tr>
-        <th>CATEGORY</th><th>COMPANY NAME</th><th>FIRST NAME</th><th>LAST NAME</th><th>GENDER</th><th>MOBILE / ALT</th><th>EMAIL</th><th>OCCUPATION</th><th>CITY</th><th>STATE</th><th>PINCODE</th><th>FAMILY</th><th>ACTIONS</th>
-      </tr></thead><tbody id="clients-tbody"></tbody></table></div>
+      <div class="card" style="padding:0;overflow:visible">
+        <div class="clients-table-scroll">
+          <table class="clients-table">
+            <colgroup>
+              <col class="c-cat"/>
+              <col class="c-company"/>
+              <col class="c-fname"/>
+              <col class="c-lname"/>
+              <col class="c-gender"/>
+              <col class="c-mobile"/>
+              <col class="c-email"/>
+              <col class="c-occ"/>
+              <col class="c-city"/>
+              <col class="c-state"/>
+              <col class="c-pin"/>
+              <col class="c-family"/>
+              <col class="c-actions"/>
+            </colgroup>
+            <thead><tr>
+              <th class="col-sticky-first">CATEGORY</th>
+              <th>COMPANY</th>
+              <th>FIRST NAME</th>
+              <th>LAST NAME</th>
+              <th>GENDER</th>
+              <th>MOBILE / ALT</th>
+              <th>EMAIL</th>
+              <th>OCCUPATION</th>
+              <th>CITY</th>
+              <th>STATE</th>
+              <th>PIN</th>
+              <th>FAMILY</th>
+              <th class="col-sticky-last">ACTIONS</th>
+            </tr></thead>
+            <tbody id="clients-tbody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- ENQUIRIES -->
@@ -1414,20 +1546,24 @@ function renderClients(){
     const cat = c.clientCategory || "Regular";
     const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
     return `<tr>
-    <td><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap">${cs.icon} ${cat}</span></td>
-    <td style="font-size:12px;font-weight:700;color:#0f172a;max-width:140px">${c.companyName?`<div style="font-weight:800;color:#0369a1">${c.companyName}</div>`:'<span style="color:#cbd5e1;font-size:11px">—</span>'}</td>
-    <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:26px;height:26px;font-size:9px">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
-      <div>
-        <strong>${c.firstName}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316;margin-left:4px">🔒</span>':""}
-        ${c.createdByName?`<div style="font-size:9px;color:#94a3b8">Added by ${c.createdByName}</div>`:""}
+    <td class="col-sticky-first"><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-block;max-width:95px;overflow:hidden;text-overflow:ellipsis">${cs.icon} ${cat}</span></td>
+    <td style="font-size:11px;font-weight:700">${c.companyName?`<span style="font-weight:800;color:#0369a1">${c.companyName}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
+    <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+      <div style="min-width:0;overflow:hidden">
+        <strong style="display:block;overflow:hidden;text-overflow:ellipsis">${c.firstName}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316">🔒</span>':""}
+        ${c.createdByName?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">By ${c.createdByName}</div>`:""}
       </div>
     </div></td>
     <td><strong>${c.lastName||'—'}</strong></td>
-    <td>${c.gender}</td>
-    <td><div>${c.mobile}</div>${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:''}</td>
-    <td style="font-size:11px">${c.email}</td><td>${c.occupation}</td><td>${c.city}</td><td>${c.state}</td><td>${c.pincode}</td>
-    <td style="font-size:10px;color:#7c3aed">${c.familyName?`<div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:2px 7px;display:inline-block">👨‍👩‍👧 ${c.familyName}${c.isPrimaryClient?' 👑':''}</div>`:''}</td>
-    <td style="position:relative;overflow:visible;white-space:nowrap">
+    <td>${c.gender||'—'}</td>
+    <td><div style="font-size:12px">${c.mobile||'—'}</div>${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:''}</td>
+    <td style="font-size:11px">${c.email||'—'}</td>
+    <td style="font-size:11px">${c.occupation||'—'}</td>
+    <td style="font-size:11px">${c.city||'—'}</td>
+    <td style="font-size:11px">${c.state||'—'}</td>
+    <td style="font-size:11px">${c.pincode||'—'}</td>
+    <td style="font-size:10px;color:#7c3aed">${c.familyName?`<span style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:2px 6px;display:inline-block;overflow:hidden;text-overflow:ellipsis;max-width:100%">👨‍👩‍👧 ${c.familyName}${c.isPrimaryClient?' 👑':''}</span>`:''}</td>
+    <td class="col-sticky-last">
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
         <button class="btn" style="background:#0369a1;color:#fff;font-size:10px;padding:4px 10px;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
         <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
