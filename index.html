@@ -2406,7 +2406,7 @@ function globalSearch(q){
       <td>${actionBtns(c)}</td>
     </tr>`).join("")}</tbody></table></div>`:""
   }
-    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">👨‍👩‍👧 Family Members (${familyMatches.length})</div>
+    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">Family Members (${familyMatches.length})</div>
     <div class="card" style="border-left:4px solid #8b5cf6"><table><thead><tr><th>NAME</th><th>RELATION</th><th>MOBILE</th><th>FAMILY GROUP</th><th>FOUND VIA</th><th>ACTIONS</th></tr></thead>
     <tbody>${familyMatches.map(c=>`<tr style="background:#faf5ff">
       <td><strong>${c.firstName} ${c.lastName}</strong>${c.isPrimaryClient?` <span style="background:#8b5cf6;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">👑 Primary</span>`:""}</td>
@@ -2506,7 +2506,7 @@ function openModal(type){
     <div class="form-grid"><div class="fg"><label>City</label><input id="c-city" placeholder="e.g. Ahmedabad"/></div><div class="fg"><label>Area</label><input id="c-area" placeholder="e.g. Navrangpura"/></div></div>
     <div class="form-grid single g1"><div class="fg"><label>Pincode</label><input id="c-pin" placeholder="380009"/></div></div>
     <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">👨‍👩‍👧 Family Linking (Optional)</div>
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">Family Linking (Optional)</div>
       <div class="form-grid">
         <div class="fg"><label>Family Group Name</label><input id="c-family-name" placeholder="e.g. Qureshi Family"/></div>
         <div class="fg"><label>Relationship</label><select id="c-relation"><option value="">— None —</option><option>Father</option><option>Mother</option><option>Son</option><option>Daughter</option><option>Husband</option><option>Wife</option><option>Brother</option><option>Sister</option><option>Grandfather</option><option>Grandmother</option><option>Uncle</option><option>Aunt</option><option>Partner</option><option>Friend</option><option>Other</option></select></div>
@@ -2847,7 +2847,7 @@ function openModal(type){
     <div class="form-grid"><div class="fg"><label>City</label><input id="ec-city" value="${c.city||""}"/></div><div class="fg"><label>State</label><select id="ec-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option${s===c.state?" selected":""}>${s}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>Pincode</label><input id="ec-pin" value="${c.pincode||""}"/></div></div>
     <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px;margin-bottom:8px">
-      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">👨‍👩‍👧 Family Linking</div>
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;margin-bottom:8px">Family Linking</div>
       <div class="form-grid">
         <div class="fg"><label>Family Group Name</label><input id="ec-family-name" value="${c.familyName||""}" placeholder="e.g. Qureshi Family"/></div>
         <div class="fg"><label>Relationship</label><select id="ec-relation">
@@ -9092,7 +9092,7 @@ function openClientProfile(clientId) {
   overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9997;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto";
 
   overlay.innerHTML = `
-    <div style="background:#fff;border-radius:18px;width:100%;max-width:680px;box-shadow:0 24px 64px rgba(0,0,0,0.25);margin:auto;display:flex;flex-direction:column;overflow:hidden">
+    <div style="background:#fff;border-radius:18px;width:100%;max-width:760px;box-shadow:0 24px 64px rgba(0,0,0,0.25);margin:auto;display:flex;flex-direction:column;overflow:hidden">
 
       <!-- Header -->
       <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);padding:20px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0">
@@ -9123,17 +9123,17 @@ function openClientProfile(clientId) {
         <button onclick="openClientDocs('${clientId}')" style="padding:7px 13px;background:#fff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📁 Docs</button>
       </div>
 
-      <!-- TABS — scrollable -->
-      <div style="position:relative;flex-shrink:0;overflow:hidden">
-        <div id="cp-tabs-scroll" style="display:flex;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:0 8px;flex-shrink:0;width:100%;box-sizing:border-box">
-        <button id="cptab-overview"   onclick="switchCPTab('overview','${clientId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid #f97316;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap;flex-shrink:0">🤖 Overview</button>
-        <button id="cptab-timeline"   onclick="switchCPTab('timeline','${clientId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">🕐 Timeline</button>
-        <button id="cptab-fieldvisits" onclick="switchCPTab('fieldvisits','${clientId}')" style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📍 Field Visits</button>
-        <button id="cptab-enquiries"  onclick="switchCPTab('enquiries','${clientId}')"  style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">🎯 Enquiries ${cEnqs.length?`<span style="background:#0369a1;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cEnqs.length}</span>`:""}</button>
-        <button id="cptab-followups"  onclick="switchCPTab('followups','${clientId}')"  style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📅 Follow-ups ${cTasks.length?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cTasks.length}</span>`:""}</button>
-        <button id="cptab-history"    onclick="switchCPTab('history','${clientId}')"    style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📜 Travel History</button>
-        <button id="cptab-payments"   onclick="switchCPTab('payments','${clientId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">💰 Payments</button>
-        <button id="cptab-family"     onclick="switchCPTab('family','${clientId}')"     style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">👨‍👩‍👧 Family ${familyMembers.length?`<span style="background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${familyMembers.length}</span>`:""}</button>
+      <!-- TABS — scrollable with hint -->
+      <div style="position:relative;flex-shrink:0">
+        <div id="cp-tabs-scroll" style="display:flex;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:0 6px 0 0;flex-shrink:0;width:100%;box-sizing:border-box">
+        <button id="cptab-overview"   onclick="switchCPTab('overview','${clientId}')"   style="padding:9px 10px;background:none;border:none;border-bottom:3px solid #f97316;font-size:10px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap;flex-shrink:0">Overview</button>
+        <button id="cptab-timeline"   onclick="switchCPTab('timeline','${clientId}')"   style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Timeline</button>
+        <button id="cptab-fieldvisits" onclick="switchCPTab('fieldvisits','${clientId}')" style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Field Visits</button>
+        <button id="cptab-enquiries"  onclick="switchCPTab('enquiries','${clientId}')"  style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Enquiries ${cEnqs.length?`<span style="background:#0369a1;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cEnqs.length}</span>`:""}</button>
+        <button id="cptab-followups"  onclick="switchCPTab('followups','${clientId}')"  style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Follow-ups ${cTasks.length?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cTasks.length}</span>`:""}</button>
+        <button id="cptab-history"    onclick="switchCPTab('history','${clientId}')"    style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Travels</button>
+        <button id="cptab-payments"   onclick="switchCPTab('payments','${clientId}')"   style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Payments</button>
+        <button id="cptab-family"     onclick="switchCPTab('family','${clientId}')"     style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Family ${familyMembers.length?`<span style="background:#7c3aed;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${familyMembers.length}</span>`:""}</button>
         </div>
       </div>
 
@@ -9375,10 +9375,10 @@ function openEnquiryDetail(enqId) {
       <!-- Tabs -->
       <div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:0 10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;min-width:0">
         <button id="eqtab-overview"    onclick="switchEnqTab('overview','${enqId}')"    style="padding:10px 14px;background:none;border:none;border-bottom:3px solid #f97316;font-size:11px;font-weight:700;color:#f97316;cursor:pointer;white-space:nowrap">📋 Overview</button>
-        <button id="eqtab-followups"   onclick="switchEnqTab('followups','${enqId}')"   style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📅 Follow-ups ${cEnqTasks.length?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cEnqTasks.length}</span>`:""}</button>
-        <button id="eqtab-fieldvisits" onclick="switchEnqTab('fieldvisits','${enqId}')" style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📍 Field Visits</button>
-        <button id="eqtab-timeline"    onclick="switchEnqTab('timeline','${enqId}')"    style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">🕐 Timeline</button>
-        <button id="eqtab-photos"      onclick="switchEnqTab('photos','${enqId}')"      style="padding:10px 14px;background:none;border:none;border-bottom:3px solid transparent;font-size:11px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap">📷 Photos</button>
+        <button id="eqtab-followups"   onclick="switchEnqTab('followups','${enqId}')"   style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">📅 Follow-ups ${cEnqTasks.length?`<span style="background:#f97316;color:#fff;font-size:9px;padding:1px 5px;border-radius:99px;margin-left:2px">${cEnqTasks.length}</span>`:""}</button>
+        <button id="eqtab-fieldvisits" onclick="switchEnqTab('fieldvisits','${enqId}')" style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Field Visits</button>
+        <button id="eqtab-timeline"    onclick="switchEnqTab('timeline','${enqId}')"    style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">Timeline</button>
+        <button id="eqtab-photos"      onclick="switchEnqTab('photos','${enqId}')"      style="padding:9px 10px;background:none;border:none;border-bottom:3px solid transparent;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;white-space:nowrap;flex-shrink:0">📷 Photos</button>
       </div>
 
       <!-- Tab Content -->
