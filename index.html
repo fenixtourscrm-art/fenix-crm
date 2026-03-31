@@ -524,6 +524,36 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
 
 
+
+/* ── ENQUIRY ACTIONS ─────────────────────────────────────────────── */
+.enq-actions-wrap{display:flex;gap:4px;align-items:center;flex-wrap:nowrap;min-width:0}
+.enq-btn{padding:4px 9px;border:none;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:.15s;line-height:1.4}
+.enq-btn:hover{filter:brightness(.93)}
+.enq-btn-book{background:#dcfce7;color:#166534;border:1px solid #86efac}
+.enq-btn-followup{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+.enq-btn-lost{background:#fee2e2;color:#dc2626;border:1px solid #fca5a5}
+.enq-btn-more{background:#f1f5f9;color:#374151;border:1px solid #e2e8f0}
+/* Actions dropdown */
+.enq-more-wrap{position:relative;display:inline-block}
+.enq-more-menu{
+  display:none;position:fixed;
+  background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+  min-width:160px;z-index:99999;overflow:hidden;
+}
+.enq-more-menu.open{display:block}
+.enq-more-item{padding:9px 14px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;transition:.12s;display:flex;align-items:center;gap:7px}
+.enq-more-item:hover{background:#f0f9ff;color:#0369a1}
+.enq-more-delete{color:#dc2626 !important}
+.enq-more-delete:hover{background:#fee2e2 !important;color:#dc2626 !important}
+/* Date header */
+.enq-date-hdr{
+  background:#fff7ed;padding:5px 14px;font-size:10px;font-weight:700;
+  color:#ea580c;border-top:1.5px solid #fed7aa;border-bottom:1px solid #fed7aa;
+  letter-spacing:.2px;
+  /* Sticky — always visible while scrolling */
+  position:sticky;top:0;z-index:2;
+}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1433,8 +1463,8 @@ const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
 const thisMonth=()=>today().slice(0,7);
-const rBadge=r=>{const m={"A+":"b-aplus","A":"b-a","B+":"b-bplus","B":"b-b","C":"b-c"};return `<span class="badge ${m[r]||'b-c'}">${r}</span>`;};
-const sBadge=s=>{const m={"Active":"b-active","Lost":"b-lost","Booked":"b-booked","Junk":"b-junk","Cancelled":"b-cancelled","Pending":"b-pending","Approved":"b-approved","Rejected":"b-rejected","Submitted":"b-submitted"};return `<span class="badge ${m[s]||'b-c'}">${s}</span>`;};
+const rBadge=r=>{const styles={"A+":"background:#dcfce7;color:#166534;border:1px solid #86efac","A":"background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0","B+":"background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe","B":"background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd","C":"background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0"};return r?`<span style="display:inline-block;padding:2px 7px;border-radius:99px;font-size:10px;font-weight:800;${styles[r]||styles.C}">${r}</span>`:'';};
+const sBadge=s=>{const styles={"Active":"background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe","Booked":"background:#dcfce7;color:#166534;border:1px solid #86efac","Lost":"background:#fee2e2;color:#dc2626;border:1px solid #fca5a5","Junk":"background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0","Cancelled":"background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0","Pending":"background:#fef3c7;color:#92400e;border:1px solid #fde68a"};const style=styles[s]||"background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0";return `<span style="display:inline-block;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700;${style}">${s||'—'}</span>`;};
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
@@ -1728,6 +1758,8 @@ function renderClients(){
     </td>
   </tr>`;
   }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
+  // Recheck scroll arrows after data renders
+  setTimeout(() => window._tblScrollUXRecheck?.(), 50);
 }
 // Portal dropdown — renders in <body> to escape overflow:hidden/clip constraints
 let _actionMenuClientId = null;
@@ -1902,9 +1934,9 @@ function renderEnquiries(){
   } else {
     sortedDates.forEach(dk=>{
       rows+=`<tr>
-        <td colspan="14" style="background:#fff7ed;padding:8px 14px;font-size:11px;font-weight:700;color:#ea580c;border-top:2px solid #fed7aa;border-bottom:1px solid #fed7aa;letter-spacing:.3px">
+        <td colspan="14" class="enq-date-hdr">
           ${dateLabel(dk)}
-          <span style="margin-left:8px;background:#f97316;color:#fff;font-size:10px;padding:1px 8px;border-radius:20px;font-weight:600">${groups[dk].length} enq${groups[dk].length>1?'s':''}</span>
+          <span style="margin-left:8px;background:#f97316;color:#fff;font-size:9px;padding:1px 7px;border-radius:20px;font-weight:700">${groups[dk].length}</span>
         </td>
       </tr>`;
       groups[dk].forEach(e=>{
@@ -1915,36 +1947,55 @@ function renderEnquiries(){
           : ((e.adults||0)+(e.childBed||0)+(e.childNoBed||0)+(e.infant||0))||e.pax||1;
         const enqTime=e.createdAt?new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}):'';
         const isCancelled = e.status==="Cancelled";
-        rows+=`<tr style="border-left:3px solid ${isCancelled?'#94a3b8':fuColor};${isCancelled?'background:#f8fafc;opacity:0.7':''}">
-    <td><div style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap">${e.enquiryNo||'—'}</div></td>
+        rows+=`<tr style="border-left:3px solid ${isCancelled?'#94a3b8':fuColor};${isCancelled?'background:#f8fafc;opacity:0.75':''}">
+    <td style="white-space:nowrap">
+      ${e.enquiryNo
+        ? `<div onclick="openEnquiryDetail('${e.id}')" style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap;cursor:pointer;display:inline-block" title="View enquiry detail">${e.enquiryNo}</div>`
+        : '<span style="color:#cbd5e1">—</span>'}
+    </td>
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
     <td class="col-sticky-first">
-      <strong>${cName(e.clientId)}</strong>
+      <strong style="font-size:12px">${cName(e.clientId)}</strong>
       ${e.primaryClientName ? `<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>` : ""}
     </td>
-    <td style="font-size:11px;max-width:100px">${e.source.split("–")[0].trim()}</td>
+    <td style="font-size:11px">${(e.source||'').split("–")[0].trim()}</td>
     <td><span class="badge" style="background:#f0fdf4;color:#166534;font-size:9px">${e.category||e.destType}</span></td>
-    <td style="font-size:12px">${e.destination}</td>
+    <td style="font-size:12px;font-weight:600">${e.destination}</td>
     <td style="font-size:11px;text-align:center">${totalPax||e.pax}<br><span style="font-size:9px;color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${e.adults||0}A ${e.childBed||0}CB`}</span></td>
-    <td>${e.budget}</td>
+    <td style="font-size:11px;font-weight:600">${e.budget}</td>
     <td>${rBadge(e.rating)}</td>
-    <td style="font-size:11px">
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:${fuColor};flex-shrink:0"></div><div>
-        <div style="font-size:10px;font-weight:600;color:#374151">${e.followUpStatus||"New Enquiry"}</div>
-        ${e.followUpDate?`<div style="font-size:9px;color:#94a3b8">${e.followUpDate}</div>`:""}
-      </div></div>
+    <td>
+      <div style="display:flex;align-items:center;gap:5px">
+        <div style="width:7px;height:7px;border-radius:50%;background:${fuColor};flex-shrink:0"></div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#374151">${e.followUpStatus||"New Enquiry"}</div>
+          ${e.followUpDate?`<div style="font-size:9px;color:#94a3b8">${e.followUpDate}</div>`:""}
+        </div>
+      </div>
     </td>
-    <td>${sBadge(e.status)}${e.lostReason?`<br><span style="font-size:9px;color:#94a3b8">${e.lostReason}</span>`:""}</td>
-    <td style="font-size:11px">${sName(e.staffId)}</td>
-    <td class="col-sticky-last">
-      <div style="display:flex;gap:3px;flex-wrap:nowrap">
-        <button class="btn btn-ghost" style="font-size:9px;padding:3px 7px" onclick="openEditEnq('${e.id}')">✏️</button>
-        <button class="btn" style="font-size:9px;padding:3px 7px;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;white-space:nowrap" onclick="openFollowUpPopup('${e.id}','${e.clientId}')">📅 Follow Up</button>
-        ${e.status==="Active"?`<button class="btn btn-success" style="font-size:9px;padding:3px 7px" onclick="markBooked('${e.id}')">Book</button>
-        <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="markLost('${e.id}')">Lost</button>
-        <button class="btn" style="font-size:9px;padding:3px 7px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0" onclick="markJunk('${e.id}')">Junk</button>
-        <button class="btn" style="font-size:9px;padding:3px 7px;background:#e2e8f0;color:#64748b;border:1px solid #cbd5e1" onclick="markCancelled('${e.id}')">🚫 Cancel</button>`:""}
-        <button class="btn btn-warn" style="font-size:9px;padding:3px 7px" onclick="del('enquiries','${e.id}')">✕</button>
+    <td>
+      ${sBadge(e.status)}
+      ${e.lostReason?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">${e.lostReason}</div>`:""}
+    </td>
+    <td style="font-size:11px">
+      <span title="${sName(e.staffId)}" style="display:inline-block;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:default">${sName(e.staffId)}</span>
+    </td>
+    <td class="col-sticky-last" style="overflow:visible">
+      <div class="enq-actions-wrap">
+        ${e.status==="Active"?`<button class="enq-btn enq-btn-book" onclick="markBooked('${e.id}')">✅ Book</button>`:''}
+        <button class="enq-btn enq-btn-followup" onclick="openFollowUpPopup('${e.id}','${e.clientId||''}')">📅 Follow Up</button>
+        ${e.status==="Active"?`<button class="enq-btn enq-btn-lost" onclick="markLost('${e.id}')">✗ Lost</button>`:''}
+        <div class="enq-more-wrap">
+          <button class="enq-btn enq-btn-more" onclick="toggleEnqMoreMenu('${e.id}',this)">Actions ▾</button>
+          <div class="enq-more-menu" id="enq-more-${e.id}">
+            <div class="enq-more-item" onclick="openEditEnq('${e.id}')">✏️ Edit</div>
+            <div class="enq-more-item" onclick="openEnquiryDetail('${e.id}')">📋 View Timeline</div>
+            <div class="enq-more-item" onclick="openClientProfile('${e.clientId||''}')">👤 Client Profile</div>
+            ${e.status==="Active"?`<div class="enq-more-item" onclick="markJunk('${e.id}')">🗑️ Junk</div>`:''}
+            ${e.status==="Active"?`<div class="enq-more-item" onclick="markCancelled('${e.id}')">🚫 Cancel</div>`:''}
+            <div class="enq-more-item enq-more-delete" onclick="del('enquiries','${e.id}')">✕ Delete</div>
+          </div>
+        </div>
       </div>
     </td>
   </tr>`;
@@ -11538,6 +11589,43 @@ function _tblScroll(scrollId, delta) {
   setTimeout(() => window._tblScrollUXRecheck?.(), 1200);
   setTimeout(() => window._tblScrollUXRecheck?.(), 2800);
 })();
+
+// ── Enquiry More Menu (portal dropdown) ─────────────────────────────
+let _enqMoreOpenId = null;
+
+function toggleEnqMoreMenu(enqId, triggerBtn) {
+  // Close any open menu
+  document.querySelectorAll('.enq-more-menu.open').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.enq-more-menu').forEach(m => m.style.position = 'fixed');
+
+  if(_enqMoreOpenId === enqId) {
+    _enqMoreOpenId = null;
+    return;
+  }
+  _enqMoreOpenId = enqId;
+
+  const menu = document.getElementById('enq-more-' + enqId);
+  if(!menu) return;
+
+  const rect = triggerBtn.getBoundingClientRect();
+  menu.style.top  = (rect.bottom + 4) + 'px';
+  menu.style.left = rect.left + 'px';
+  menu.classList.add('open');
+
+  // Reposition if off-screen
+  requestAnimationFrame(() => {
+    const mr = menu.getBoundingClientRect();
+    if(mr.bottom > window.innerHeight - 8) menu.style.top = (rect.top - mr.height - 4) + 'px';
+    if(mr.right  > window.innerWidth  - 8) menu.style.left = (rect.right - mr.width) + 'px';
+  });
+}
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('.enq-more-wrap')) {
+    document.querySelectorAll('.enq-more-menu.open').forEach(m => m.classList.remove('open'));
+    _enqMoreOpenId = null;
+  }
+});
 
 </script>
 </body>
