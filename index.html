@@ -188,7 +188,7 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 .tbl-wrap::after{
   content:"";
   position:absolute;
-  top:0;right:0;bottom:8px; /* stop above scrollbar */
+  top:0;right:0;bottom:8px;
   width:60px;
   background:linear-gradient(to right,transparent,rgba(255,255,255,0.95));
   pointer-events:none;
@@ -196,24 +196,72 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   border-radius:0 12px 0 0;
   transition:opacity .3s;
 }
-/* Hide the fade when fully scrolled to the right */
 .tbl-wrap.scrolled-end::after{opacity:0}
-/* Scroll hint bar */
-.tbl-hint{
-  display:none; /* shown by JS when overflow detected */
-  align-items:center;
-  gap:6px;
-  padding:5px 12px;
-  background:#fff7ed;
-  border:1px solid #fed7aa;
-  border-radius:8px;
-  font-size:11px;
-  font-weight:600;
-  color:#c2410c;
-  margin-bottom:6px;
-  width:fit-content;
+/* Top scrollbar strip */
+.tbl-top-scroll{
+  overflow-x:scroll;
+  overflow-y:hidden;
+  width:100%;
+  height:14px;           /* thin but clearly visible */
+  background:#f1f5f9;
+  border-bottom:1px solid #e2e8f0;
+  border-radius:12px 12px 0 0;
+  box-sizing:border-box;
+  scrollbar-width:auto;
+  scrollbar-color:#94a3b8 #e2e8f0;
+  /* Only show on desktop — hidden by JS on touch */
+  display:block;
 }
-.tbl-hint.visible{display:flex}
+/* Webkit top scrollbar */
+.tbl-top-scroll::-webkit-scrollbar{height:14px;display:block}
+.tbl-top-scroll::-webkit-scrollbar-track{background:#e2e8f0}
+.tbl-top-scroll::-webkit-scrollbar-thumb{
+  background:#94a3b8;
+  border-radius:99px;
+  border:3px solid #e2e8f0;
+  min-width:40px;
+}
+.tbl-top-scroll::-webkit-scrollbar-thumb:hover{background:#64748b}
+/* The inner spacer div */
+.tbl-top-scroll-inner{height:1px;min-width:100%}
+/* Hide top scrollbar on mobile */
+@media(max-width:768px){.tbl-top-scroll{display:none !important}}
+/* Table scroll arrow buttons */
+.tbl-arrow{
+  display:none;
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:10;
+  width:36px;
+  height:36px;
+  border-radius:50%;
+  background:rgba(15,23,42,0.55);
+  color:#fff;
+  border:none;
+  cursor:pointer;
+  font-size:18px;
+  font-weight:700;
+  align-items:center;
+  justify-content:center;
+  opacity:0;
+  transition:opacity .2s, background .2s, transform .15s;
+  box-shadow:0 2px 10px rgba(0,0,0,0.25);
+  line-height:1;
+  padding:0;
+}
+.tbl-arrow:hover{
+  background:rgba(15,23,42,0.85);
+  transform:translateY(-50%) scale(1.08);
+}
+.tbl-arrow.visible{display:flex}
+.tbl-arrow-left{left:6px}
+.tbl-arrow-right{right:6px}
+/* Show on parent hover OR touch */
+.tbl-wrap:hover .tbl-arrow.visible,
+.tbl-wrap:focus-within .tbl-arrow.visible{opacity:1}
+/* Always show on touch devices */
+@media(hover:none){.tbl-arrow.visible{opacity:0.7}}
 /* Base table style */
 .tbl-base{
   border-collapse:separate;
@@ -729,8 +777,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
       </div>
       <div class="card" style="padding:0;overflow:visible">
-        <div class="tbl-hint" id="hint-clients">⟵ Scroll horizontally to see more →</div>
         <div class="tbl-wrap" id="wrap-clients">
+          <button class="tbl-arrow tbl-arrow-left" id="arr-left-clients" onclick="_tblScroll('scroll-clients',-320)" aria-label="Scroll left">‹</button>
+          <button class="tbl-arrow tbl-arrow-right" id="arr-right-clients" onclick="_tblScroll('scroll-clients',320)" aria-label="Scroll right">›</button>
         <div class="tbl-scroll clients-table-scroll" id="scroll-clients">
           <table class="tbl-base clients-table">
             <colgroup>
@@ -814,8 +863,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button id="enq-backfill-btn" class="btn" style="display:none;background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:11px" onclick="backfillEnquiryNumbers()" title="Assign ENQ numbers to old enquiries">🔢 Fix ENQ Nos</button>
       </div>
       <div class="card" style="padding:0;overflow:visible">
-        <div class="tbl-hint" id="hint-enq">⟵ Scroll horizontally to see more →</div>
         <div class="tbl-wrap" id="wrap-enq">
+          <button class="tbl-arrow tbl-arrow-left" id="arr-left-enq" onclick="_tblScroll('scroll-enq',-320)" aria-label="Scroll left">‹</button>
+          <button class="tbl-arrow tbl-arrow-right" id="arr-right-enq" onclick="_tblScroll('scroll-enq',320)" aria-label="Scroll right">›</button>
         <div class="tbl-scroll" id="scroll-enq">
           <table class="tbl-base enq-table">
             <colgroup>
@@ -870,8 +920,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div id="bk-list-wrap">
         <div class="section-title" id="bk-list-title">All Bookings</div>
         <div class="card" style="padding:0;overflow:visible">
-          <div class="tbl-hint" id="hint-bk">⟵ Scroll horizontally to see more →</div>
           <div class="tbl-wrap" id="wrap-bk">
+            <button class="tbl-arrow tbl-arrow-left" id="arr-left-bk" onclick="_tblScroll('scroll-bk',-320)" aria-label="Scroll left">‹</button>
+            <button class="tbl-arrow tbl-arrow-right" id="arr-right-bk" onclick="_tblScroll('scroll-bk',320)" aria-label="Scroll right">›</button>
           <div class="tbl-scroll" id="scroll-bk">
             <table class="tbl-base bk-table">
               <colgroup>
@@ -11378,101 +11429,135 @@ function _fmktShowInstallPrompt() {
 }
 
 // ════════════════════════════════════════════════════════════════════
-//  TABLE SCROLL UX — hint, fade, shift+wheel
+//  TABLE SCROLL UX — top scrollbar + arrows + shift+wheel + fade
 // ════════════════════════════════════════════════════════════════════
 
+// Smooth scroll helper for arrow buttons
+function _tblScroll(scrollId, delta) {
+  const el = document.getElementById(scrollId);
+  if(el) el.scrollBy({ left: delta, behavior: 'smooth' });
+}
+
 (function() {
-  // Config
   const TABLES = [
-    { scroll: 'scroll-clients', wrap: 'wrap-clients', hint: 'hint-clients' },
-    { scroll: 'scroll-enq',     wrap: 'wrap-enq',     hint: 'hint-enq'     },
-    { scroll: 'scroll-bk',      wrap: 'wrap-bk',      hint: 'hint-bk'      },
+    { scroll: 'scroll-clients', wrap: 'wrap-clients', top: 'top-scroll-clients' },
+    { scroll: 'scroll-enq',     wrap: 'wrap-enq',     top: 'top-scroll-enq'     },
+    { scroll: 'scroll-bk',      wrap: 'wrap-bk',      top: 'top-scroll-bk'      },
   ];
 
+  function buildTopScrollbar(scrollEl, wrapEl, topId) {
+    // Don't build twice
+    if(document.getElementById(topId)) return;
+
+    // Only on non-touch (desktop/tablet with pointer)
+    const isTouch = window.matchMedia('(hover:none)').matches;
+    if(isTouch) return;
+
+    // Create the top scrollbar container
+    const topBar = document.createElement('div');
+    topBar.id = topId;
+    topBar.className = 'tbl-top-scroll';
+
+    // Inner div acts as the "content width" proxy — same width as the table
+    const inner = document.createElement('div');
+    inner.className = 'tbl-top-scroll-inner';
+    inner.style.width = scrollEl.scrollWidth + 'px';
+    topBar.appendChild(inner);
+
+    // Insert BEFORE the tbl-wrap
+    wrapEl.parentNode.insertBefore(topBar, wrapEl);
+
+    let syncingFromTop = false;
+    let syncingFromBottom = false;
+
+    // Top → Bottom sync
+    topBar.addEventListener('scroll', () => {
+      if(syncingFromBottom) return;
+      syncingFromTop = true;
+      scrollEl.scrollLeft = topBar.scrollLeft;
+      syncingFromTop = false;
+    }, { passive: true });
+
+    // Bottom → Top sync
+    scrollEl.addEventListener('scroll', () => {
+      if(syncingFromTop) return;
+      syncingFromBottom = true;
+      topBar.scrollLeft = scrollEl.scrollLeft;
+      syncingFromBottom = false;
+
+      // Fade management
+      const atEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 8;
+      wrapEl.classList.toggle('scrolled-end', atEnd);
+    }, { passive: true });
+
+    // Keep inner width in sync when table content changes
+    function syncWidth() {
+      const w = scrollEl.scrollWidth;
+      if(inner.style.width !== w + 'px') inner.style.width = w + 'px';
+      // Show/hide top bar based on actual overflow
+      topBar.style.display = (w > scrollEl.clientWidth + 4) ? '' : 'none';
+      // Arrow visibility
+      updateArrows(scrollEl, wrapEl, w);
+    }
+
+    // Watch for table width changes (data load)
+    const ro = new ResizeObserver(syncWidth);
+    ro.observe(scrollEl);
+    window.addEventListener('resize', syncWidth, { passive: true });
+    syncWidth();
+  }
+
+  function updateArrows(scrollEl, wrapEl, scrollWidth) {
+    const hasOverflow = (scrollWidth || scrollEl.scrollWidth) > scrollEl.clientWidth + 4;
+    // Find arrow buttons inside wrapEl
+    const leftBtn  = wrapEl.querySelector('.tbl-arrow-left');
+    const rightBtn = wrapEl.querySelector('.tbl-arrow-right');
+    if(leftBtn)  leftBtn.classList.toggle('visible', hasOverflow);
+    if(rightBtn) rightBtn.classList.toggle('visible', hasOverflow);
+    wrapEl.classList.toggle('scrolled-end', !hasOverflow);
+  }
+
   function initTableScrollUX() {
-    TABLES.forEach(({ scroll: scrollId, wrap: wrapId, hint: hintId }) => {
+    TABLES.forEach(({ scroll: scrollId, wrap: wrapId, top: topId }) => {
       const scrollEl = document.getElementById(scrollId);
       const wrapEl   = document.getElementById(wrapId);
-      const hintEl   = document.getElementById(hintId);
       if(!scrollEl || !wrapEl) return;
 
-      function checkOverflow() {
-        const hasOverflow = scrollEl.scrollWidth > scrollEl.clientWidth + 4;
-        // Show hint
-        if(hintEl) hintEl.classList.toggle('visible', hasOverflow);
-        // Initial fade: if overflow, show right fade
-        if(hasOverflow) {
-          wrapEl.classList.remove('scrolled-end');
-        } else {
-          wrapEl.classList.add('scrolled-end');
-        }
-      }
+      buildTopScrollbar(scrollEl, wrapEl, topId);
 
-      function onScroll() {
-        const atEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 8;
-        wrapEl.classList.toggle('scrolled-end', atEnd);
-        // Hide hint once user has scrolled (they know)
-        if(scrollEl.scrollLeft > 20 && hintEl) {
-          hintEl.classList.remove('visible');
-        }
-      }
-
-      // Shift + mouse wheel → horizontal scroll
-      scrollEl.addEventListener('wheel', function(e) {
-        if(e.shiftKey) {
-          e.preventDefault();
-          scrollEl.scrollLeft += e.deltaY;
-        } else if(Math.abs(e.deltaX) > 0) {
-          // Trackpad horizontal swipe — already works natively, but ensure bubbling
-          e.stopPropagation();
-        }
+      // Shift + wheel → horizontal scroll
+      scrollEl.addEventListener('wheel', e => {
+        if(e.shiftKey) { e.preventDefault(); scrollEl.scrollLeft += e.deltaY; }
       }, { passive: false });
 
-      scrollEl.addEventListener('scroll', onScroll, { passive: true });
-
-      // Check on load and whenever table content changes
-      checkOverflow();
-
-      // Re-check when tab becomes visible (tab switching)
+      // Tab visibility observer
       const tabEl = scrollEl.closest('.tab');
       if(tabEl) {
-        const observer = new MutationObserver(() => {
+        new MutationObserver(() => {
           if(tabEl.classList.contains('active')) {
-            setTimeout(checkOverflow, 50);
+            setTimeout(() => updateArrows(scrollEl, wrapEl), 80);
           }
-        });
-        observer.observe(tabEl, { attributes: true, attributeFilter: ['class'] });
+        }).observe(tabEl, { attributes: true, attributeFilter: ['class'] });
       }
-
-      // Re-check on window resize
-      window.addEventListener('resize', checkOverflow, { passive: true });
     });
   }
 
-  // Run after DOM is ready
+  // Expose recheck for external callers
+  window._tblScrollUXRecheck = function() {
+    TABLES.forEach(({ scroll: scrollId, wrap: wrapId }) => {
+      const s = document.getElementById(scrollId);
+      const w = document.getElementById(wrapId);
+      if(s && w) updateArrows(s, w);
+    });
+  };
+
   if(document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initTableScrollUX);
   } else {
-    // DOM already ready — run after a short delay to let tables render
     setTimeout(initTableScrollUX, 300);
   }
-
-  // Re-init after any renderClients/renderEnquiries/renderBookingList call
-  // Patch the render functions to re-check overflow after data loads
-  const _origInitTableScrollUX = initTableScrollUX;
-  window._tblScrollUXRecheck = function() {
-    TABLES.forEach(({ scroll: scrollId, wrap: wrapId, hint: hintId }) => {
-      const scrollEl = document.getElementById(scrollId);
-      const wrapEl   = document.getElementById(wrapId);
-      const hintEl   = document.getElementById(hintId);
-      if(!scrollEl || !wrapEl) return;
-      const hasOverflow = scrollEl.scrollWidth > scrollEl.clientWidth + 4;
-      if(hintEl) hintEl.classList.toggle('visible', hasOverflow);
-      wrapEl.classList.toggle('scrolled-end', !hasOverflow);
-    });
-  };
-  setTimeout(() => window._tblScrollUXRecheck?.(), 1000);
-  setTimeout(() => window._tblScrollUXRecheck?.(), 2500);
+  setTimeout(() => window._tblScrollUXRecheck?.(), 1200);
+  setTimeout(() => window._tblScrollUXRecheck?.(), 2800);
 })();
 
 </script>
