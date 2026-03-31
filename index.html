@@ -10158,31 +10158,30 @@ function _fmktLoadAllForManager() {
 }
 
 // ── GPS Helper ──────────────────────────────────────────────────────
+// Shared reverse-geocode helper
+function _fmktReverseGeoAndCall(lat, lng, onSuccess) {
+  fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=18&addressdetails=1`, {
+    headers: { "Accept-Language": "en" }
+  })
+    .then(r => r.json())
+    .then(data => {
+      const a    = data.address || {};
+      const area = a.suburb || a.neighbourhood || a.residential || a.quarter || a.village || "";
+      const road = a.road || a.pedestrian || a.footway || a.street || a.path || "";
+      const city = a.city || a.town || a.municipality || a.county || a.state_district || a.state || "";
+      const pin  = a.postcode || "";
+      const shortParts = [area, road, city].filter(Boolean);
+      const short = shortParts.length ? shortParts.slice(0,2).join(", ") : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+      onSuccess({ lat, lng, address: short, area, road, city, pin, fullAddress: data.display_name || short });
+    })
+    .catch(() => onSuccess({ lat, lng, address:`${lat.toFixed(4)}, ${lng.toFixed(4)}`, area:"", road:"", city:"", pin:"" }));
+}
+
+// One-shot GPS for check-in/out (still uses getCurrentPosition — that's fine)
 function _fmktGetGPS(onSuccess, onError) {
   if(!navigator.geolocation) { onError("GPS not supported on this device"); return; }
   navigator.geolocation.getCurrentPosition(
-    pos => {
-      const lat = pos.coords.latitude;
-      const lng = pos.coords.longitude;
-      // Reverse geocode via nominatim — zoom=18 gives street-level detail
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&zoom=18&addressdetails=1`, {
-        headers: { "Accept-Language": "en" }
-      })
-        .then(r=>r.json())
-        .then(data => {
-          const a = data.address || {};
-          // Build structured address parts
-          const area = a.suburb || a.neighbourhood || a.residential || a.quarter || a.village || "";
-          const road = a.road || a.pedestrian || a.footway || a.street || a.path || "";
-          const city = a.city || a.town || a.municipality || a.county || a.state_district || a.state || "";
-          const pin  = a.postcode || "";
-          // Short display string for check-in bar
-          const shortParts = [area, road, city].filter(Boolean);
-          const short = shortParts.length ? shortParts.slice(0,2).join(", ") : `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-          onSuccess({ lat, lng, address: short, area, road, city, pin, fullAddress: data.display_name || short });
-        })
-        .catch(() => onSuccess({ lat, lng, address:`${lat.toFixed(4)}, ${lng.toFixed(4)}`, area:"", road:"", city:"", pin:"" }));
-    },
+    pos => _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, onSuccess),
     err => onError("Could not get location: " + err.message),
     { enableHighAccuracy:true, timeout:15000 }
   );
@@ -10754,57 +10753,85 @@ function _fmktOpenVisitDetail(visitId) {
 }
 
 // ── LIVE LOCATION PINGS ──────────────────────────────────────────────
+// watchPosition ID — kept so we can clearWatch on stop
+let _fmktWatchId = null;
+// Timestamp of last Firebase write — rate-limit to 15s min
+let _fmktLastPingAt = 0;
+
 function _fmktStartPings() {
-  // Send first ping immediately on check-in
-  _fmktSendPing();
-  // Then every 5 minutes while screen is on
-  if(_fmktPingInterval) clearInterval(_fmktPingInterval);
-  _fmktPingInterval = setInterval(_fmktSendPing, 5 * 60 * 1000); // 5 minutes
-  // Background pings via Service Worker (screen off / minimized)
+  // Stop any existing watch
+  if(_fmktWatchId !== null) { navigator.geolocation.clearWatch(_fmktWatchId); _fmktWatchId = null; }
+  if(_fmktPingInterval) { clearInterval(_fmktPingInterval); _fmktPingInterval = null; }
+
+  if(!navigator.geolocation) { console.warn("[FMKT] GPS not supported"); return; }
+
+  // watchPosition fires continuously when device moves
+  _fmktWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      const now = Date.now();
+      // Rate-limit: write to Firebase at most once every 15 seconds
+      if(now - _fmktLastPingAt < 15000) return;
+      _fmktLastPingAt = now;
+      _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, gps => {
+        _fmktWritePing(gps);
+      });
+    },
+    err => console.warn("[FMKT] watchPosition error:", err.message),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+  );
+
+  // Fallback heartbeat every 15s — fires even if device hasn't moved
+  _fmktPingInterval = setInterval(() => {
+    navigator.geolocation.getCurrentPosition(
+      pos => _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, gps => _fmktWritePing(gps)),
+      err => console.warn("[FMKT] Heartbeat GPS error:", err.message),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+    );
+  }, 15 * 1000);
+
+  // Background via Service Worker (screen off / minimized)
   _fmktSwStartPings();
-  console.log("[FMKT] Live tracking started — pinging every 5 minutes");
+  console.log("[FMKT] Live tracking started — watchPosition + 15s heartbeat");
 }
 
 function _fmktStopPings() {
+  if(_fmktWatchId !== null) { navigator.geolocation.clearWatch(_fmktWatchId); _fmktWatchId = null; }
   if(_fmktPingInterval) { clearInterval(_fmktPingInterval); _fmktPingInterval = null; }
   _fmktSwStopPings();
   console.log("[FMKT] Live tracking stopped");
 }
 
-function _fmktSendPing() {
-  _fmktGetGPS(gps => {
-    const now = _fmktNow();
-    // Overwrite the single "latest" doc — this is what Live Map reads
-    db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).set({
-      lat:          gps.lat,
-      lng:          gps.lng,
-      address:      gps.address,
-      area:         gps.area  || "",
-      road:         gps.road  || "",
-      city:         gps.city  || "",
-      pin:          gps.pin   || "",
-      updatedAt:    now,
-      employeeName: FMKT_STAFF_NAME,
-      employeeId:   FMKT_STAFF_ID,
-    });
-    // Also append to location history subcollection (for trail / route)
-    db.collection("fieldPings")
-      .doc(String(FMKT_STAFF_ID))
-      .collection("history")
-      .add({
-        lat:       gps.lat,
-        lng:       gps.lng,
-        address:   gps.address,
-        area:      gps.area || "",
-        road:      gps.road || "",
-        city:      gps.city || "",
-        savedAt:   now,
-        date:      _fmktToday(),
-      });
-    console.log("[FMKT] Ping sent:", gps.address, "@", now);
-  }, err => {
-    console.warn("[FMKT] Ping failed:", err);
+// Write a GPS fix to Firebase — called by watchPosition, heartbeat, and SW
+function _fmktWritePing(gps) {
+  const now = _fmktNow();
+  db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).set({
+    lat:          gps.lat,
+    lng:          gps.lng,
+    address:      gps.address,
+    area:         gps.area  || "",
+    road:         gps.road  || "",
+    city:         gps.city  || "",
+    pin:          gps.pin   || "",
+    updatedAt:    now,
+    employeeName: FMKT_STAFF_NAME,
+    employeeId:   FMKT_STAFF_ID,
   });
+  // Trail subcollection
+  db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).collection("history").add({
+    lat:     gps.lat, lng: gps.lng, address: gps.address,
+    area:    gps.area || "", road: gps.road || "", city: gps.city || "",
+    savedAt: now, date: _fmktToday(),
+  });
+  console.log("[FMKT] Ping written:", gps.address, "@", now);
+}
+
+// Keep _fmktSendPing as alias for Service Worker compatibility
+function _fmktSendPing() {
+  navigator.geolocation.getCurrentPosition(
+    pos => _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, gps => _fmktWritePing(gps)),
+    err => console.warn("[FMKT] SW ping GPS error:", err.message),
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+  );
 }
 
 // ── SCREEN: MANAGER DASHBOARD ────────────────────────────────────────
@@ -11151,22 +11178,33 @@ function _fmktShowLiveMap() {
     }).addTo(_fmktLiveMap);
     _fmktLiveMap.on("click", () => _fmktLiveMap.closePopup());
 
-    // Load data immediately, then auto-refresh every 30 seconds
+    // onSnapshot fires immediately + on every Firebase change — no polling needed
     _fmktRefreshLiveLocation();
-    _fmktLiveRefresh = setInterval(_fmktRefreshLiveLocation, 30 * 1000);
+    // Keep 30s interval only as fallback for map marker if onSnapshot drops
+    _fmktLiveRefresh = setInterval(() => {
+      if(_fmktLiveMap && !_fmktLiveUnsubscribe) _fmktRefreshLiveLocation();
+    }, 30 * 1000);
   }, 100);
 }
 
 function _fmktCloseLiveMap() {
-  if(_fmktLiveRefresh) { clearInterval(_fmktLiveRefresh); _fmktLiveRefresh = null; }
-  if(_fmktLiveMap)     { _fmktLiveMap.remove(); _fmktLiveMap = null; }
+  if(_fmktLiveRefresh)     { clearInterval(_fmktLiveRefresh); _fmktLiveRefresh = null; }
+  if(_fmktLiveUnsubscribe) { _fmktLiveUnsubscribe(); _fmktLiveUnsubscribe = null; }
+  if(_fmktLiveMap)         { _fmktLiveMap.remove(); _fmktLiveMap = null; }
   _fmktLiveMarker = null;
   document.getElementById("fmkt-live-overlay")?.remove();
 }
 
+// Real-time Firestore listener for live map — auto-fires on every ping
+let _fmktLiveUnsubscribe = null;
+
 function _fmktRefreshLiveLocation() {
-  db.collection("fieldPings").doc(String(FMKT_STAFF_ID)).get()
-    .then(snap => {
+  // Cancel any existing listener
+  if(_fmktLiveUnsubscribe) { _fmktLiveUnsubscribe(); _fmktLiveUnsubscribe = null; }
+
+  // onSnapshot fires immediately with current data, then again on every change
+  _fmktLiveUnsubscribe = db.collection("fieldPings").doc(String(FMKT_STAFF_ID))
+    .onSnapshot(snap => {
       if(!snap.exists) {
         const updEl = document.getElementById("fmkt-live-updated");
         const addrEl = document.getElementById("fmkt-live-addr");
