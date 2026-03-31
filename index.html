@@ -778,6 +778,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Personal Visit',this)">🚶 Personal Visit</button>
         <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Social Media',this)">📱 Social Media</button>
         <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Corporate',this)">🏢 Corporate</button>
+        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Old Data',this)">📦 Old Data</button>
         <div style="position:relative;display:inline-block">
           <button id="staff-filter-btn" class="btn btn-ghost client-cat-filter" onclick="toggleStaffFilterMenu(this)" style="display:flex;align-items:center;gap:5px">👨‍💼 Staff <span id="staff-filter-arrow">▾</span></button>
           <div id="staff-filter-menu" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:200px;margin-top:4px;padding:6px 0">
@@ -1439,7 +1440,7 @@ const IND_STATES=["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattis
 const RATINGS=["A+","A","B+","B","C"];
 const ENQ_TYPES=["New","Old","Repeated"];
 const INTENTIONS=["Domestic Tickets","Visa","Cruise","Car","Hotels","Travel Insurance","Passport","International Tour","Domestic Tour"];
-const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Inquired","Personal Visit","Social Media","Corporate"];
+const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Inquired","Personal Visit","Social Media","Corporate","Old Data"];
 const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa","Passport"];
 const SOURCES=["Social Media – Facebook","Social Media – Instagram","Social Media – LinkedIn","Social Media – Twitter/X","Social Media – YouTube","Social Media – WhatsApp","Family Reference","Friends Reference","Customer Reference","Newspaper","Radio Mirchi","Flyer Distribution – Events","Personal Visit – Office","Field Marketing","Influencer Reference","Others"];
 const LOST_REASONS=["Budget issue","No response","Went to another agency","Trip cancelled","Other"];
@@ -1710,6 +1711,7 @@ const CLIENT_CAT_STYLES = {
   "Personal Visit":{bg:"#fff7ed",color:"#c2410c",icon:"🚶"},
   "Corporate":   {bg:"#eff6ff",color:"#1e40af",icon:"🏢"},
   "Inquired":    {bg:"#fef9c3",color:"#854d0e",icon:"🎯"},
+  "Old Data":    {bg:"#f1f5f9",color:"#64748b",icon:"📦"},
 };
 function renderClients(){
   // Show Fix Names button only for owner
@@ -1835,9 +1837,23 @@ function editClient(id){
 
 // ENQUIRIES
 let enqFilter="all", catFilter="all", enqStaffFilter=null;
+// Separate filter state — each is independent, combined with AND logic
+let enqStatusFilter="all", enqTypeFilter="all", enqRatingFilter="all";
 const RATINGS_LIST = ["A+","A","B+","B","C"];
-function filterEnq(f,el){enqFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
-function filterCat(f,el){catFilter=f;enqStaffFilter=null;const sb=document.getElementById("enq-staff-btn");if(sb)sb.innerHTML='👨‍💼 Staff <span id="enq-staff-arrow">▾</span>';document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
+function filterEnq(f,el){
+  const STATUSES=["Active","Lost","Booked","Junk","Cancelled"];
+  const TYPES=["New","Old","Repeated"];
+  const RATINGS=["A+","A","B+","B","C"];
+  if(f==="all"){ enqStatusFilter="all"; enqTypeFilter="all"; enqRatingFilter="all"; }
+  else if(STATUSES.includes(f)) enqStatusFilter=f;
+  else if(TYPES.includes(f))    enqTypeFilter=f;
+  else if(RATINGS.includes(f))  enqRatingFilter=f;
+  enqFilter=f; // keep for backward compat
+  document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));
+  el.classList.add("active-filter");
+  renderEnquiries();
+}
+function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
 
 function toggleEnqStaffMenu(btn) {
   const menu = document.getElementById("enq-staff-menu");
@@ -1874,15 +1890,15 @@ function selectEnqStaff(staffId, staffName) {
   const arrow = document.getElementById("enq-staff-arrow");
   if(menu) menu.style.display = "none";
   if(arrow) arrow.textContent = "▾";
-  document.querySelectorAll(".enq-filter").forEach(b => b.classList.remove("active-filter"));
+  // Only toggle staff button active state — do NOT clear other filters
   if(btn) {
-    btn.classList.add("active-filter");
     if(staffId) {
+      btn.classList.add("active-filter");
       const shortName = staffName ? staffName.split(" ").slice(-1)[0] : "Staff";
       btn.innerHTML = `👨‍💼 ${shortName} <span id="enq-staff-arrow">▾</span>`;
     } else {
-      btn.innerHTML = `👨‍💼 Staff <span id="enq-staff-arrow">▾</span>`;
       btn.classList.remove("active-filter");
+      btn.innerHTML = `👨‍💼 Staff <span id="enq-staff-arrow">▾</span>`;
     }
   }
   renderEnquiries();
@@ -1899,9 +1915,10 @@ document.addEventListener("click", e => {
 function renderEnquiries(){
   const _isOwner = CURRENT_USER && CURRENT_USER.id===1;
   let list = _isOwner ? enquiries : enquiries.filter(e=>e.staffId===CURRENT_USER?.id||e.createdBy===CURRENT_USER?.id);
-  if(enqFilter==="Active"||enqFilter==="Lost"||enqFilter==="Booked"||enqFilter==="Junk"||enqFilter==="Cancelled") list=list.filter(e=>e.status===enqFilter);
-  else if(enqFilter==="New"||enqFilter==="Old"||enqFilter==="Repeated") list=list.filter(e=>e.type===enqFilter);
-  else if(["A+","A","B+","B","C"].includes(enqFilter)) list=list.filter(e=>e.rating===enqFilter);
+  // AND logic — all active filters must match simultaneously
+  if(enqStatusFilter!=="all") list=list.filter(e=>e.status===enqStatusFilter);
+  if(enqTypeFilter!=="all")   list=list.filter(e=>e.type===enqTypeFilter);
+  if(enqRatingFilter!=="all") list=list.filter(e=>e.rating===enqRatingFilter);
   if(catFilter!=="all") list=list.filter(e=>e.category===catFilter||(Array.isArray(e.intentions)&&e.intentions.includes(catFilter)));
   if(_isOwner && enqStaffFilter!==null) list=list.filter(e=>e.staffId===enqStaffFilter);
   const fuColors={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
