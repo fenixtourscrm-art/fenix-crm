@@ -1476,6 +1476,11 @@ function showTab(tab,el){
   document.getElementById("tab-"+tab).classList.add("active");
   if(el)el.classList.add("active");
   document.getElementById("page-title").textContent=TITLES[tab]||tab;
+  // Hide AI insight panel when leaving the AI tab — it bleeds into other tabs otherwise
+  if(tab !== "ai") {
+    const p = document.getElementById("ai-insight-panel");
+    if(p) p.style.display = "none";
+  }
   renderAll();
   if(tab==="bookings")renderCalendar("book");
   if(tab==="visa")renderCalendar("book");
@@ -6571,6 +6576,9 @@ function setAIMode(mode) {
 }
 
 function renderInsightClientList(filter) {
+  // Guard: only render when AI tab is active
+  const aiTab = document.getElementById('tab-ai');
+  if(!aiTab || !aiTab.classList.contains('active')) return;
   const el = document.getElementById('insight-client-list');
   if(!el) return;
   let list = [...clients].sort((a,b) => (a.firstName||'').localeCompare(b.firstName||''));
@@ -6623,6 +6631,8 @@ function selectInsightClient(clientId) {
 }
 
 async function generateClientInsight(client) {
+  const aiTab = document.getElementById('tab-ai');
+  if(!aiTab || !aiTab.classList.contains('active')) return;
   const report = document.getElementById('insight-report');
   if(!report) return;
 
