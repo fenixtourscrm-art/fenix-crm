@@ -8910,19 +8910,19 @@ async function _fmktMoveToClient(visitId) {
       const newClient = {
         firstName,
         lastName,
-        mobile:     v.clientPhone || "",
-        source:     "Field Marketing",
-        notes:      v.notes || "",
-        fieldVisitDate:    v.date || "",
+        mobile:          v.clientPhone || "",
+        source:          "Field Marketing",
+        clientCategory:  "Personal Visit",
+        notes:           v.notes || "",
+        fieldVisitDate:  v.date || "",
         fieldVisitLocation: v.location?.address || "",
         fieldVisitOutcome:  v.outcome || "",
-        assignedStaff:      v.employeeId || FMKT_STAFF_ID,
-        createdAt:  new Date().toISOString(),
-        createdBy:  CURRENT_USER?.id || FMKT_STAFF_ID,
-        type:       "New",
-        category:   "Individual",
-        familyId:   null,
-        isPrimary:  true,
+        assignedStaff:   v.employeeId || FMKT_STAFF_ID,
+        createdAt:       new Date().toISOString(),
+        createdBy:       CURRENT_USER?.id || FMKT_STAFF_ID,
+        type:            "New",
+        familyId:        null,
+        isPrimary:       true,
       };
 
       const ref = await db.collection("clients").add(newClient);
@@ -10262,28 +10262,152 @@ function _fmktRenderHome() {
         <div class="fmkt-stat"><div class="fmkt-stat-val" style="color:#d97706;font-size:22px">${followups}</div><div class="fmkt-stat-lbl">📅 Follow-ups</div></div>
       </div>
 
-      <!-- Today's Visits List -->
-      ${totalVisits > 0 ? `
-        <div class="fmkt-section-title">Today's Visits (${totalVisits})</div>
-        ${_fmktVisits.map(v => `
-          <div class="fmkt-visit-card" onclick="_fmktOpenVisitDetail('${v.id}')">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-              <div style="flex:1;min-width:0">
-                <div style="font-size:15px;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.clientName}</div>
-                <div style="font-size:13px;color:#64748b;margin-top:3px">${v.clientPhone} · ${_fmktFmtTime(v.visitTime)}</div>
-              </div>
-              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-                ${_fmktOutcomePill(v.outcome)}
-                ${v.convertedToClient?'<span style="background:#dcfce7;color:#166534;font-size:9px;padding:1px 7px;border-radius:99px;font-weight:700">✅ Client</span>':""}
-              </div>
-            </div>
-            ${v.notes ? `<div style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.5">${v.notes}</div>` : ""}
-            ${v.followUpDate ? `<div style="font-size:12px;color:#d97706;margin-top:6px;font-weight:700">📅 Follow-up: ${v.followUpDate}</div>` : ""}
-          </div>`).join("")}
-      ` : `<div style="text-align:center;padding:36px 20px;color:#94a3b8;font-size:14px;line-height:1.7">
-        ${checkedIn ? "No visits logged yet.<br>Tap <strong>Log New Visit</strong> above." : "Tap <strong>Check In</strong> above to start your field day."}
-      </div>`}
+      <!-- Tabs: Today | Date View -->
+      <div style="display:flex;gap:0;margin-bottom:14px;border-bottom:2px solid #e2e8f0">
+        <button id="fmkt-home-tab-today" onclick="_fmktHomeTab='today';_fmktRenderHomeTab()"
+          style="flex:1;padding:10px 0;background:none;border:none;border-bottom:3px solid #f97316;font-size:13px;font-weight:700;color:#f97316;cursor:pointer">
+          📋 Today (${totalVisits})
+        </button>
+        <button id="fmkt-home-tab-dateview" onclick="_fmktHomeTab='dateview';_fmktRenderHomeTab()"
+          style="flex:1;padding:10px 0;background:none;border:none;border-bottom:3px solid transparent;font-size:13px;font-weight:700;color:#64748b;cursor:pointer">
+          📅 Date View
+        </button>
+      </div>
+      <div id="fmkt-home-content"></div>
     </div>`;
+  _fmktHomeTab = _fmktHomeTab || 'today';
+  _fmktRenderHomeTab();
+}
+
+let _fmktHomeTab = 'today';
+let _fmktHomeSelectedDate = new Date().toISOString().slice(0,10);
+
+function _fmktRenderHomeTab() {
+  // Sync tab button styles
+  const todayBtn    = document.getElementById('fmkt-home-tab-today');
+  const dateBtn     = document.getElementById('fmkt-home-tab-dateview');
+  if(todayBtn) { todayBtn.style.borderBottomColor = _fmktHomeTab==='today'?'#f97316':'transparent'; todayBtn.style.color = _fmktHomeTab==='today'?'#f97316':'#64748b'; }
+  if(dateBtn)  { dateBtn.style.borderBottomColor  = _fmktHomeTab==='dateview'?'#f97316':'transparent'; dateBtn.style.color  = _fmktHomeTab==='dateview'?'#f97316':'#64748b'; }
+
+  const el = document.getElementById('fmkt-home-content');
+  if(!el) return;
+
+  if(_fmktHomeTab === 'today') {
+    // ── TODAY TAB ──
+    const visits = _fmktVisits;
+    el.innerHTML = visits.length ? visits.map(v => `
+      <div class="fmkt-visit-card">
+        <div onclick="_fmktOpenVisitDetail('${v.id}')" style="cursor:pointer">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:15px;font-weight:800;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${v.clientName}</div>
+              <div style="font-size:13px;color:#64748b;margin-top:3px">${v.clientPhone} · ${_fmktFmtTime(v.visitTime)}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+              ${_fmktOutcomePill(v.outcome)}
+              ${v.convertedToClient?'<span style="background:#dcfce7;color:#166534;font-size:9px;padding:1px 7px;border-radius:99px;font-weight:700">✅ Client</span>':""}
+            </div>
+          </div>
+          ${v.notes?`<div style="font-size:13px;color:#64748b;margin-top:8px;line-height:1.5">${v.notes}</div>`:""}
+          ${v.followUpDate?`<div style="font-size:12px;color:#d97706;margin-top:6px;font-weight:700">📅 Follow-up: ${v.followUpDate}</div>`:""}
+        </div>
+        ${!v.convertedToClient ? `
+        <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+          <button onclick="_fmktMoveToClient('${v.id}')"
+            style="width:100%;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+            👤 Move to Personal Visit Client
+          </button>
+        </div>` : `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9;text-align:center;font-size:12px;font-weight:700;color:#059669">✅ Already moved to Client</div>`}
+      </div>`).join('') :
+      `<div style="text-align:center;padding:36px 20px;color:#94a3b8;font-size:14px;line-height:1.7">
+        No visits logged yet.<br>Tap <strong>Log New Visit</strong> above.
+      </div>`;
+  } else {
+    // ── DATE VIEW TAB ──
+    const today = _fmktToday();
+    el.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:10px 14px">
+        <span style="font-size:12px;font-weight:700;color:#64748b;white-space:nowrap">📅 Pick Date:</span>
+        <input type="date" id="fmkt-home-date" value="${_fmktHomeSelectedDate}" max="${today}"
+          style="border:none;background:transparent;font-size:14px;font-weight:600;color:#0f172a;outline:none;flex:1"
+          onchange="_fmktHomeSelectedDate=this.value;_fmktLoadHomeDate()"/>
+        <button onclick="_fmktHomeSelectedDate='${today}';document.getElementById('fmkt-home-date').value='${today}';_fmktLoadHomeDate()"
+          style="padding:5px 12px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">Today</button>
+      </div>
+      <div id="fmkt-home-date-content"><div style="text-align:center;padding:20px;color:#94a3b8">⏳ Loading...</div></div>`;
+    _fmktLoadHomeDate();
+  }
+}
+
+function _fmktLoadHomeDate() {
+  const el = document.getElementById('fmkt-home-date-content');
+  if(!el) return;
+  el.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">⏳ Loading visits for ${_fmktHomeSelectedDate}...</div>`;
+
+  db.collection('fieldVisits')
+    .where('employeeId','==',FMKT_STAFF_ID)
+    .where('date','==',_fmktHomeSelectedDate)
+    .get()
+    .then(snap => {
+      const visits = snap.docs.map(d=>({id:d.id,...d.data()}))
+        .sort((a,b)=>(b.visitTime||'').localeCompare(a.visitTime||''));
+
+      const dateLabel = new Date(_fmktHomeSelectedDate+'T12:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+
+      if(!visits.length) {
+        el.innerHTML = `<div style="text-align:center;padding:36px 20px;color:#94a3b8">
+          <div style="font-size:28px;margin-bottom:8px">📭</div>
+          <div style="font-size:14px;font-weight:700;color:#374151">No visits on this date</div>
+          <div style="font-size:12px;margin-top:4px">${dateLabel}</div>
+        </div>`;
+        return;
+      }
+
+      el.innerHTML = `
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:10px">${dateLabel} · ${visits.length} visit${visits.length!==1?'s':''}</div>
+        ${visits.map(v => `
+          <div class="fmkt-visit-card">
+            <div onclick="_fmktOpenVisitDetail('${v.id}')" style="cursor:pointer">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:15px;font-weight:800;color:#0f172a">${v.clientName}</div>
+                  <div style="font-size:12px;color:#64748b;margin-top:2px">${v.clientPhone} · ${_fmktFmtTime(v.visitTime)}</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                  ${_fmktOutcomePill(v.outcome)}
+                  ${v.convertedToClient?'<span style="background:#dcfce7;color:#166534;font-size:9px;padding:1px 7px;border-radius:99px;font-weight:700">✅ Client</span>':""}
+                </div>
+              </div>
+              ${v.notes?`<div style="font-size:12px;color:#64748b;line-height:1.5;margin-top:4px">${v.notes}</div>`:""}
+              ${v.followUpDate?`<div style="font-size:11px;color:#d97706;font-weight:700;margin-top:4px">📅 Follow-up: ${v.followUpDate}</div>`:""}
+            </div>
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">
+              ${!v.convertedToClient ? `
+              <button onclick="_fmktMoveToClientFromDate('${v.id}')"
+                style="width:100%;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+                👤 Move to Personal Visit Client
+              </button>` : `<div style="text-align:center;font-size:12px;font-weight:700;color:#059669">✅ Already moved to Client</div>`}
+            </div>
+          </div>`).join('')}`;
+    })
+    .catch(err => {
+      if(el) el.innerHTML = `<div style="color:#dc2626;padding:16px">Error: ${err.message}</div>`;
+    });
+}
+
+// Move to client from date view (refreshes date view after)
+async function _fmktMoveToClientFromDate(visitId) {
+  // Temporarily add to _fmktDateVisits so _fmktMoveToClient can find it
+  const snap = await db.collection('fieldVisits').doc(visitId).get();
+  if(!snap.exists) return alert('Visit not found');
+  const v = {id:snap.id,...snap.data()};
+  if(!_fmktDateVisits.find(x=>x.id===visitId)) _fmktDateVisits.push(v);
+  await _fmktMoveToClient(visitId);
+  // Reload date view
+  setTimeout(_fmktLoadHomeDate, 800);
+}
+
+// Dummy close to satisfy original template closure
 }
 
 function _fmktOutcomePill(outcome) {
