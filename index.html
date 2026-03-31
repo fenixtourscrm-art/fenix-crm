@@ -395,10 +395,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 .cat-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap}
 /* ACTION BTN */
 .action-btn-wrap{position:relative;display:inline-block}
-.action-dropdown{display:none;position:absolute;right:0;top:100%;background:#fff;border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);z-index:9990;min-width:200px;overflow:hidden;margin-top:4px}
-.action-dropdown.open{display:block}
-.action-dropdown-item{padding:10px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
-.action-dropdown-item:hover{background:#fff7ed;color:#ea580c}
+/* Portal dropdown replaces .action-dropdown — no CSS needed here */
+.action-dropdown-item{padding:10px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px}
 .three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
 .search-bar{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;color:#1e293b;padding:7px 12px;font-size:12px;font-family:'Inter',sans-serif;outline:none;width:230px}
 .search-bar:focus{border-color:#f97316;background:#fff}
@@ -1624,12 +1622,7 @@ function renderClients(){
     <td class="col-sticky-last">
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
         <button class="btn" style="background:#0369a1;color:#fff;font-size:10px;padding:4px 10px;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
-        <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}')">Actions ▾</button>
-        <div class="action-dropdown" id="action-menu-${c.id}" style="position:absolute;top:100%;left:0;z-index:9990;background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.15);min-width:180px;display:none">
-          <div class="action-dropdown-item" onclick="generateEnquiry('${c.id}')">🎯 Generate Enquiry</div>
-          <div class="action-dropdown-item" onclick="logMarketingCall('${c.id}')">📞 Log Marketing Call</div>
-          <div class="action-dropdown-item" onclick="openClientDocs('${c.id}')">📁 Documents</div>
-        </div>
+        <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}',this)">Actions ▾</button>
         <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
         <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
       </div>
@@ -1637,16 +1630,68 @@ function renderClients(){
   </tr>`;
   }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
 }
-function toggleActionMenu(id){
-  document.querySelectorAll(".action-dropdown").forEach(d=>{
-    if(d.id!=="action-menu-"+id) d.style.display="none";
-  });
-  const m=document.getElementById("action-menu-"+id);
-  if(m) m.style.display = (m.style.display==="block")?"none":"block";
+// Portal dropdown — renders in <body> to escape overflow:hidden/clip constraints
+let _actionMenuClientId = null;
+
+function toggleActionMenu(clientId, triggerBtn) {
+  // Close if already open for same client
+  const existing = document.getElementById("portal-action-menu");
+  if(existing) {
+    existing.remove();
+    if(_actionMenuClientId === clientId) { _actionMenuClientId = null; return; }
+  }
+  _actionMenuClientId = clientId;
+
+  // Get trigger button position
+  const rect = triggerBtn.getBoundingClientRect();
+  const scrollY = window.scrollY || document.documentElement.scrollTop;
+  const scrollX = window.scrollX || document.documentElement.scrollLeft;
+
+  // Build portal menu
+  const menu = document.createElement("div");
+  menu.id = "portal-action-menu";
+  menu.style.cssText = `
+    position:fixed;
+    top:${rect.bottom + 4}px;
+    left:${rect.left}px;
+    z-index:99999;
+    background:#fff;
+    border:1.5px solid #e2e8f0;
+    border-radius:10px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.18);
+    min-width:190px;
+    overflow:hidden;
+    font-family:Inter,sans-serif;
+  `;
+
+  menu.innerHTML = `
+    <div onclick="generateEnquiry('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">🎯 Generate Enquiry</div>
+    <div onclick="logMarketingCall('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">📞 Log Marketing Call</div>
+    <div onclick="openClientDocs('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">📁 Documents</div>
+  `;
+
+  document.body.appendChild(menu);
+
+  // Reposition if it goes off bottom of screen
+  const menuRect = menu.getBoundingClientRect();
+  if(menuRect.bottom > window.innerHeight - 10) {
+    menu.style.top = (rect.top - menuRect.height - 4) + "px";
+  }
+  // Reposition if it goes off right of screen
+  if(menuRect.right > window.innerWidth - 10) {
+    menu.style.left = (rect.right - menuRect.width) + "px";
+  }
 }
-document.addEventListener("click", e=>{
-  if(!e.target.closest(".action-btn-wrap") && !e.target.closest(".action-dropdown") && !e.target.closest(".btn-primary")) {
-    document.querySelectorAll(".action-dropdown").forEach(d=>d.style.display="none");
+
+function closePortalMenu() {
+  const menu = document.getElementById("portal-action-menu");
+  if(menu) menu.remove();
+  _actionMenuClientId = null;
+}
+
+document.addEventListener("click", e => {
+  if(!e.target.closest("#portal-action-menu") && !e.target.closest(".btn-primary")) {
+    closePortalMenu();
   }
 });
 document.addEventListener("click",e=>{if(!e.target.closest(".action-btn-wrap"))document.querySelectorAll(".action-dropdown").forEach(d=>d.classList.remove("open"));});
