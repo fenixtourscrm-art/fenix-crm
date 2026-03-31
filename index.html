@@ -769,16 +769,16 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
       <!-- Client Category Filter Tabs -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        <button class="btn btn-ghost client-cat-filter active-filter" onclick="filterClientCat('all',this)">👥 All Clients</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Platinum',this)">💎 Platinum</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Gold',this)">🥇 Gold</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Silver',this)">🥈 Silver</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Regular',this)">👤 Regular</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Inquired',this)">🎯 Inquired</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Personal Visit',this)">🚶 Personal Visit</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Social Media',this)">📱 Social Media</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Corporate',this)">🏢 Corporate</button>
-        <button class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Old Data',this)">📦 Old Data</button>
+        <button id="ccf-all"          class="btn btn-ghost client-cat-filter active-filter" onclick="filterClientCat('all',this)">👥 All Clients</button>
+        <button id="ccf-Platinum"     class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Platinum',this)">💎 Platinum</button>
+        <button id="ccf-Gold"         class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Gold',this)">🥇 Gold</button>
+        <button id="ccf-Silver"       class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Silver',this)">🥈 Silver</button>
+        <button id="ccf-Regular"      class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Regular',this)">👤 Regular</button>
+        <button id="ccf-Inquired"     class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Inquired',this)">🎯 Inquired</button>
+        <button id="ccf-PersonalVisit" class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Personal Visit',this)">🚶 Personal Visit</button>
+        <button id="ccf-SocialMedia"  class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Social Media',this)">📱 Social Media</button>
+        <button id="ccf-Corporate"    class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Corporate',this)">🏢 Corporate</button>
+        <button id="ccf-OldData"      class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Old Data',this)">📦 Old Data</button>
         <div style="position:relative;display:inline-block">
           <button id="staff-filter-btn" class="btn btn-ghost client-cat-filter" onclick="toggleStaffFilterMenu(this)" style="display:flex;align-items:center;gap:5px">👨‍💼 Staff <span id="staff-filter-arrow">▾</span></button>
           <div id="staff-filter-menu" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:200px;margin-top:4px;padding:6px 0">
@@ -1726,9 +1726,13 @@ function renderClients(){
     const needsStateFix = clients.some(cl => cl.state === "Andhra Pradesh" && cl.importedFrom);
     stateBtn.style.display = (CURRENT_USER?.id === 1 && needsStateFix) ? '' : 'none';
   }
-  let list = clients;
-  if(clientCatFilter !== "all") list = clients.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
+  let list = [...clients]; // copy so sort doesn't mutate original
+  if(clientCatFilter !== "all") list = list.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
   if(clientStaffFilter) list = list.filter(cl => cl.createdByName === clientStaffFilter);
+  // Sort: newest first (by createdAt desc)
+  list.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
+  // Update counts on filter tabs
+  _updateClientCatCounts();
   document.getElementById("clients-tbody").innerHTML=list.map(c=>{
     const cat = c.clientCategory || "Regular";
     const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
@@ -1763,6 +1767,40 @@ function renderClients(){
   // Recheck scroll arrows after data renders
   setTimeout(() => window._tblScrollUXRecheck?.(), 50);
 }
+
+function _updateClientCatCounts() {
+  const cats = {
+    'all':           clients.length,
+    'Platinum':      clients.filter(c=>(c.clientCategory||"Regular")==="Platinum").length,
+    'Gold':          clients.filter(c=>(c.clientCategory||"Regular")==="Gold").length,
+    'Silver':        clients.filter(c=>(c.clientCategory||"Regular")==="Silver").length,
+    'Regular':       clients.filter(c=>(c.clientCategory||"Regular")==="Regular").length,
+    'Inquired':      clients.filter(c=>(c.clientCategory||"Regular")==="Inquired").length,
+    'Personal Visit':clients.filter(c=>(c.clientCategory||"Regular")==="Personal Visit").length,
+    'Social Media':  clients.filter(c=>(c.clientCategory||"Regular")==="Social Media").length,
+    'Corporate':     clients.filter(c=>(c.clientCategory||"Regular")==="Corporate").length,
+    'Old Data':      clients.filter(c=>(c.clientCategory||"Regular")==="Old Data").length,
+  };
+  const idMap = {
+    'all':'ccf-all','Platinum':'ccf-Platinum','Gold':'ccf-Gold','Silver':'ccf-Silver',
+    'Regular':'ccf-Regular','Inquired':'ccf-Inquired','Personal Visit':'ccf-PersonalVisit',
+    'Social Media':'ccf-SocialMedia','Corporate':'ccf-Corporate','Old Data':'ccf-OldData',
+  };
+  const labels = {
+    'all':'👥 All Clients','Platinum':'💎 Platinum','Gold':'🥇 Gold','Silver':'🥈 Silver',
+    'Regular':'👤 Regular','Inquired':'🎯 Inquired','Personal Visit':'🚶 Personal Visit',
+    'Social Media':'📱 Social Media','Corporate':'🏢 Corporate','Old Data':'📦 Old Data',
+  };
+  Object.entries(cats).forEach(([cat, count]) => {
+    const btn = document.getElementById(idMap[cat]);
+    if(!btn) return;
+    const badge = count > 0
+      ? `<span style="background:rgba(249,115,22,.15);color:#ea580c;font-size:9px;padding:1px 6px;border-radius:99px;font-weight:800;margin-left:4px">${count}</span>`
+      : '';
+    btn.innerHTML = labels[cat] + badge;
+  });
+}
+
 // Portal dropdown — renders in <body> to escape overflow:hidden/clip constraints
 let _actionMenuClientId = null;
 
@@ -8883,10 +8921,13 @@ async function _fmktMoveToClient(visitId) {
   if(!confirm(`Move this visit to Client Data?\n\nClient: ${v.clientName}\nPhone: ${v.clientPhone}\n\nThis will:\n• Create/link client in Client section\n• Mark visit as "Converted to Client"\n• Keep all visit data intact`)) return;
 
   try {
-    // Check if client with same phone already exists
-    const phoneMatch = clients.find(c =>
-      (c.mobile || c.alternateMobile || "") === v.clientPhone
-    );
+    // Check if client with same phone already exists (check both mobile fields)
+    const cleanPhone = (v.clientPhone || "").replace(/\D/g, "").slice(-10);
+    const phoneMatch = cleanPhone ? clients.find(c => {
+      const m1 = (c.mobile || "").replace(/\D/g, "").slice(-10);
+      const m2 = (c.altMobile || c.alternateMobile || "").replace(/\D/g, "").slice(-10);
+      return (m1 && m1 === cleanPhone) || (m2 && m2 === cleanPhone);
+    }) : null;
 
     let clientId = null;
 
