@@ -145,39 +145,18 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 /* ══ SHARED TABLE STYLES ══════════════════════════════════════════ */
 /* All three tables (Clients, Enquiries, Bookings) use same approach */
 .tbl-scroll{
-  /* overflow-x:auto + overflow-y:clip (not visible!) avoids the browser
-     silently converting both to auto which kills the scrollbar on some browsers */
-  overflow-x:scroll;    /* ALWAYS show scrollbar, not just when overflowing */
+  overflow-x:scroll;
   overflow-y:clip;
   width:100%;
   -webkit-overflow-scrolling:touch;
-  scrollbar-width:auto;
-  scrollbar-color:#64748b #e2e8f0;
+  /* Hide bottom scrollbar — top scrollbar handles it */
+  scrollbar-width:none;
   position:relative;
   padding-bottom:0;
   box-sizing:border-box;
 }
-/* Webkit (Chrome/Edge/Safari) — explicit, thick, always visible */
-.tbl-scroll::-webkit-scrollbar{
-  height:10px;
-  display:block !important;
-}
-.tbl-scroll::-webkit-scrollbar-track{
-  background:#e2e8f0;
-  border-radius:99px;
-  margin:0 4px;
-}
-.tbl-scroll::-webkit-scrollbar-thumb{
-  background:#64748b;
-  border-radius:99px;
-  border:2px solid #e2e8f0;
-  min-width:40px; /* ensure thumb is grabbable */
-}
-.tbl-scroll::-webkit-scrollbar-thumb:hover{
-  background:#334155;
-}
-/* Force scrollbar space even before overflow — stops layout shift */
-.tbl-scroll::-webkit-scrollbar-button{display:none}
+/* Hide bottom scrollbar in Webkit (Chrome/Edge/Safari) */
+.tbl-scroll::-webkit-scrollbar{display:none;height:0}
 /* Table wrapper — provides right-fade overlay and scroll hint */
 .tbl-wrap{
   position:relative;
