@@ -1986,15 +1986,7 @@ function renderEnquiries(){
         <button class="enq-btn enq-btn-followup" onclick="openFollowUpPopup('${e.id}','${e.clientId||''}')">📅 Follow Up</button>
         ${e.status==="Active"?`<button class="enq-btn enq-btn-lost" onclick="markLost('${e.id}')">✗ Lost</button>`:''}
         <div class="enq-more-wrap">
-          <button class="enq-btn enq-btn-more" onclick="toggleEnqMoreMenu('${e.id}',this)">Actions ▾</button>
-          <div class="enq-more-menu" id="enq-more-${e.id}">
-            <div class="enq-more-item" onclick="openEditEnq('${e.id}')">✏️ Edit</div>
-            <div class="enq-more-item" onclick="openEnquiryDetail('${e.id}')">📋 View Timeline</div>
-            <div class="enq-more-item" onclick="openClientProfile('${e.clientId||''}')">👤 Client Profile</div>
-            ${e.status==="Active"?`<div class="enq-more-item" onclick="markJunk('${e.id}')">🗑️ Junk</div>`:''}
-            ${e.status==="Active"?`<div class="enq-more-item" onclick="markCancelled('${e.id}')">🚫 Cancel</div>`:''}
-            <div class="enq-more-item enq-more-delete" onclick="del('enquiries','${e.id}')">✕ Delete</div>
-          </div>
+          <button class="enq-btn enq-btn-more" onclick="toggleEnqMoreMenu('${e.id}',this,'${e.clientId||''}','${e.status||''}')">Actions ▾</button>
         </div>
       </div>
     </td>
@@ -11590,39 +11582,72 @@ function _tblScroll(scrollId, delta) {
   setTimeout(() => window._tblScrollUXRecheck?.(), 2800);
 })();
 
-// ── Enquiry More Menu (portal dropdown) ─────────────────────────────
+// ── Enquiry More Menu — portal (renders in body, escapes all overflow/stacking) ──
 let _enqMoreOpenId = null;
 
-function toggleEnqMoreMenu(enqId, triggerBtn) {
-  // Close any open menu
-  document.querySelectorAll('.enq-more-menu.open').forEach(m => m.classList.remove('open'));
-  document.querySelectorAll('.enq-more-menu').forEach(m => m.style.position = 'fixed');
+function toggleEnqMoreMenu(enqId, triggerBtn, clientId, status) {
+  // Remove existing portal menu
+  const existing = document.getElementById('enq-portal-menu');
+  if(existing) existing.remove();
 
-  if(_enqMoreOpenId === enqId) {
-    _enqMoreOpenId = null;
-    return;
-  }
+  // Toggle off if same button
+  if(_enqMoreOpenId === enqId) { _enqMoreOpenId = null; return; }
   _enqMoreOpenId = enqId;
 
-  const menu = document.getElementById('enq-more-' + enqId);
-  if(!menu) return;
-
   const rect = triggerBtn.getBoundingClientRect();
-  menu.style.top  = (rect.bottom + 4) + 'px';
-  menu.style.left = rect.left + 'px';
-  menu.classList.add('open');
+  const isActive = status === 'Active';
+
+  // Build menu HTML
+  const menu = document.createElement('div');
+  menu.id = 'enq-portal-menu';
+  menu.style.cssText = [
+    'position:fixed',
+    `top:${rect.bottom + 4}px`,
+    `left:${rect.left}px`,
+    'background:#fff',
+    'border:1.5px solid #e2e8f0',
+    'border-radius:10px',
+    'box-shadow:0 8px 32px rgba(0,0,0,.18)',
+    'min-width:170px',
+    'z-index:999999',
+    'overflow:hidden',
+    'font-family:Inter,sans-serif',
+  ].join(';');
+
+  const items = [
+    { label:'✏️ Edit',            fn:`openEditEnq('${enqId}')` },
+    { label:'📋 View Timeline',   fn:`openEnquiryDetail('${enqId}')` },
+    { label:'👤 Client Profile',  fn:`openClientProfile('${clientId}')`, hide: !clientId },
+    { label:'🗑️ Junk',           fn:`markJunk('${enqId}')`,      hide: !isActive },
+    { label:'🚫 Cancel',         fn:`markCancelled('${enqId}')`, hide: !isActive },
+    { label:'✕ Delete',          fn:`del('enquiries','${enqId}')`, danger: true },
+  ];
+
+  items.forEach(item => {
+    if(item.hide) return;
+    const div = document.createElement('div');
+    div.style.cssText = `padding:10px 15px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;color:${item.danger?'#dc2626':'#374151'};transition:.12s`;
+    div.textContent = item.label;
+    div.onmouseenter = () => div.style.background = item.danger ? '#fee2e2' : '#f0f9ff';
+    div.onmouseleave = () => div.style.background = '';
+    div.onclick = (ev) => { ev.stopPropagation(); menu.remove(); _enqMoreOpenId = null; eval(item.fn); };
+    menu.appendChild(div);
+  });
+
+  document.body.appendChild(menu);
 
   // Reposition if off-screen
   requestAnimationFrame(() => {
     const mr = menu.getBoundingClientRect();
-    if(mr.bottom > window.innerHeight - 8) menu.style.top = (rect.top - mr.height - 4) + 'px';
+    if(mr.bottom > window.innerHeight - 8) menu.style.top  = (rect.top - mr.height - 4) + 'px';
     if(mr.right  > window.innerWidth  - 8) menu.style.left = (rect.right - mr.width) + 'px';
   });
 }
 
 document.addEventListener('click', e => {
-  if(!e.target.closest('.enq-more-wrap')) {
-    document.querySelectorAll('.enq-more-menu.open').forEach(m => m.classList.remove('open'));
+  if(!e.target.closest('.enq-more-wrap') && !e.target.closest('#enq-portal-menu')) {
+    const m = document.getElementById('enq-portal-menu');
+    if(m) m.remove();
     _enqMoreOpenId = null;
   }
 });
