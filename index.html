@@ -148,12 +148,50 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   overflow-y:visible;
   width:100%;
   -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;
-  scrollbar-color:#cbd5e1 transparent;
+  /* Visible scrollbar so users know they can scroll */
+  scrollbar-width:auto;
+  scrollbar-color:#94a3b8 #f1f5f9;
+  position:relative;
 }
-.tbl-scroll::-webkit-scrollbar{height:5px}
-.tbl-scroll::-webkit-scrollbar-track{background:#f1f5f9}
-.tbl-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+/* Webkit scrollbar — thicker + branded */
+.tbl-scroll::-webkit-scrollbar{height:8px;display:block}
+.tbl-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:99px}
+.tbl-scroll::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:99px;border:1px solid #f1f5f9}
+.tbl-scroll::-webkit-scrollbar-thumb:hover{background:#64748b}
+/* Table wrapper — provides right-fade overlay and scroll hint */
+.tbl-wrap{
+  position:relative;
+  /* Right-gradient fade — signals more content to the right */
+}
+.tbl-wrap::after{
+  content:"";
+  position:absolute;
+  top:0;right:0;bottom:8px; /* stop above scrollbar */
+  width:60px;
+  background:linear-gradient(to right,transparent,rgba(255,255,255,0.95));
+  pointer-events:none;
+  z-index:4;
+  border-radius:0 12px 0 0;
+  transition:opacity .3s;
+}
+/* Hide the fade when fully scrolled to the right */
+.tbl-wrap.scrolled-end::after{opacity:0}
+/* Scroll hint bar */
+.tbl-hint{
+  display:none; /* shown by JS when overflow detected */
+  align-items:center;
+  gap:6px;
+  padding:5px 12px;
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+  border-radius:8px;
+  font-size:11px;
+  font-weight:600;
+  color:#c2410c;
+  margin-bottom:6px;
+  width:fit-content;
+}
+.tbl-hint.visible{display:flex}
 /* Base table style */
 .tbl-base{
   border-collapse:separate;
@@ -669,7 +707,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
       </div>
       <div class="card" style="padding:0">
-        <div class="tbl-scroll clients-table-scroll">
+        <div class="tbl-hint" id="hint-clients">⟵ Scroll horizontally to see more →</div>
+        <div class="tbl-wrap" id="wrap-clients">
+        <div class="tbl-scroll clients-table-scroll" id="scroll-clients">
           <table class="tbl-base clients-table">
             <colgroup>
               <col class="c-cat"/>
@@ -704,6 +744,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
             <tbody id="clients-tbody"></tbody>
           </table>
         </div>
+        </div><!-- /tbl-wrap -->
       </div>
     </div>
 
@@ -751,7 +792,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button id="enq-backfill-btn" class="btn" style="display:none;background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:11px" onclick="backfillEnquiryNumbers()" title="Assign ENQ numbers to old enquiries">🔢 Fix ENQ Nos</button>
       </div>
       <div class="card" style="padding:0">
-        <div class="tbl-scroll">
+        <div class="tbl-hint" id="hint-enq">⟵ Scroll horizontally to see more →</div>
+        <div class="tbl-wrap" id="wrap-enq">
+        <div class="tbl-scroll" id="scroll-enq">
           <table class="tbl-base enq-table">
             <colgroup>
               <col class="ec-no"/><col class="ec-type"/><col class="ec-client"/>
@@ -770,6 +813,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
             <tbody id="enq-tbody"></tbody>
           </table>
         </div>
+        </div><!-- /tbl-wrap -->
       </div>
     </div>
 
@@ -804,7 +848,9 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div id="bk-list-wrap">
         <div class="section-title" id="bk-list-title">All Bookings</div>
         <div class="card" style="padding:0">
-          <div class="tbl-scroll">
+          <div class="tbl-hint" id="hint-bk">⟵ Scroll horizontally to see more →</div>
+          <div class="tbl-wrap" id="wrap-bk">
+          <div class="tbl-scroll" id="scroll-bk">
             <table class="tbl-base bk-table">
               <colgroup>
                 <col class="bc-cat"/><col class="bc-client"/><col class="bc-dest"/>
@@ -822,6 +868,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
               <tbody id="book-tbody"></tbody>
             </table>
           </div>
+          </div><!-- /tbl-wrap -->
         </div>
       </div>
     </div>
@@ -11307,6 +11354,104 @@ function _fmktShowInstallPrompt() {
     alert('To install:\n1. Tap the ⋮ menu in Chrome\n2. Tap "Add to Home Screen"\n3. Done!');
   }
 }
+
+// ════════════════════════════════════════════════════════════════════
+//  TABLE SCROLL UX — hint, fade, shift+wheel
+// ════════════════════════════════════════════════════════════════════
+
+(function() {
+  // Config
+  const TABLES = [
+    { scroll: 'scroll-clients', wrap: 'wrap-clients', hint: 'hint-clients' },
+    { scroll: 'scroll-enq',     wrap: 'wrap-enq',     hint: 'hint-enq'     },
+    { scroll: 'scroll-bk',      wrap: 'wrap-bk',      hint: 'hint-bk'      },
+  ];
+
+  function initTableScrollUX() {
+    TABLES.forEach(({ scroll: scrollId, wrap: wrapId, hint: hintId }) => {
+      const scrollEl = document.getElementById(scrollId);
+      const wrapEl   = document.getElementById(wrapId);
+      const hintEl   = document.getElementById(hintId);
+      if(!scrollEl || !wrapEl) return;
+
+      function checkOverflow() {
+        const hasOverflow = scrollEl.scrollWidth > scrollEl.clientWidth + 4;
+        // Show hint
+        if(hintEl) hintEl.classList.toggle('visible', hasOverflow);
+        // Initial fade: if overflow, show right fade
+        if(hasOverflow) {
+          wrapEl.classList.remove('scrolled-end');
+        } else {
+          wrapEl.classList.add('scrolled-end');
+        }
+      }
+
+      function onScroll() {
+        const atEnd = scrollEl.scrollLeft + scrollEl.clientWidth >= scrollEl.scrollWidth - 8;
+        wrapEl.classList.toggle('scrolled-end', atEnd);
+        // Hide hint once user has scrolled (they know)
+        if(scrollEl.scrollLeft > 20 && hintEl) {
+          hintEl.classList.remove('visible');
+        }
+      }
+
+      // Shift + mouse wheel → horizontal scroll
+      scrollEl.addEventListener('wheel', function(e) {
+        if(e.shiftKey) {
+          e.preventDefault();
+          scrollEl.scrollLeft += e.deltaY;
+        } else if(Math.abs(e.deltaX) > 0) {
+          // Trackpad horizontal swipe — already works natively, but ensure bubbling
+          e.stopPropagation();
+        }
+      }, { passive: false });
+
+      scrollEl.addEventListener('scroll', onScroll, { passive: true });
+
+      // Check on load and whenever table content changes
+      checkOverflow();
+
+      // Re-check when tab becomes visible (tab switching)
+      const tabEl = scrollEl.closest('.tab');
+      if(tabEl) {
+        const observer = new MutationObserver(() => {
+          if(tabEl.classList.contains('active')) {
+            setTimeout(checkOverflow, 50);
+          }
+        });
+        observer.observe(tabEl, { attributes: true, attributeFilter: ['class'] });
+      }
+
+      // Re-check on window resize
+      window.addEventListener('resize', checkOverflow, { passive: true });
+    });
+  }
+
+  // Run after DOM is ready
+  if(document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTableScrollUX);
+  } else {
+    // DOM already ready — run after a short delay to let tables render
+    setTimeout(initTableScrollUX, 300);
+  }
+
+  // Re-init after any renderClients/renderEnquiries/renderBookingList call
+  // Patch the render functions to re-check overflow after data loads
+  const _origInitTableScrollUX = initTableScrollUX;
+  window._tblScrollUXRecheck = function() {
+    TABLES.forEach(({ scroll: scrollId, wrap: wrapId, hint: hintId }) => {
+      const scrollEl = document.getElementById(scrollId);
+      const wrapEl   = document.getElementById(wrapId);
+      const hintEl   = document.getElementById(hintId);
+      if(!scrollEl || !wrapEl) return;
+      const hasOverflow = scrollEl.scrollWidth > scrollEl.clientWidth + 4;
+      if(hintEl) hintEl.classList.toggle('visible', hasOverflow);
+      wrapEl.classList.toggle('scrolled-end', !hasOverflow);
+    });
+  };
+  setTimeout(() => window._tblScrollUXRecheck?.(), 1000);
+  setTimeout(() => window._tblScrollUXRecheck?.(), 2500);
+})();
 
 </script>
 </body>
