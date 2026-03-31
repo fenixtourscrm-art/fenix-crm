@@ -147,16 +147,14 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 .tbl-scroll{
   /* overflow-x:auto + overflow-y:clip (not visible!) avoids the browser
      silently converting both to auto which kills the scrollbar on some browsers */
-  overflow-x:auto;
+  overflow-x:scroll;    /* ALWAYS show scrollbar, not just when overflowing */
   overflow-y:clip;
   width:100%;
   -webkit-overflow-scrolling:touch;
-  /* Always show scrollbar — critical for desktop mouse users */
   scrollbar-width:auto;
   scrollbar-color:#64748b #e2e8f0;
   position:relative;
-  /* Padding-bottom reserves space so the scrollbar is never clipped */
-  padding-bottom:2px;
+  padding-bottom:0;
   box-sizing:border-box;
 }
 /* Webkit (Chrome/Edge/Safari) — explicit, thick, always visible */
