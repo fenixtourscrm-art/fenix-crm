@@ -10690,15 +10690,29 @@ function _fmktRenderTerritoryTab() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <div>
         <div style="font-size:13px;font-weight:800;color:#0f172a">🎯 Territory Planning</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">Click the map to drop a target pin, add a directive and assign to staff</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Click the map to drop a target pin · Use Explore Industry to find target zones</div>
       </div>
-      <div style="display:flex;gap:8px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <select id="fmkt-territory-date-filter" onchange="_fmktLoadTerritoryTargets()"
           style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;background:#fff">
           <option value="${today}">Today</option>
           <option value="all">All Dates</option>
         </select>
+        <select id="fmkt-industry-filter" onchange="_fmktFetchIndustry(this.value)"
+          style="padding:6px 12px;border:1.5px solid #6366f1;border-radius:8px;font-size:12px;font-weight:600;background:#fff;color:#4338ca;cursor:pointer">
+          <option value="">🔍 Explore Industry</option>
+          <option value="medical">🏥 Medical & Pharmacies</option>
+          <option value="garments">👗 Garments & Textiles</option>
+          <option value="it">💻 IT & Corporate</option>
+          <option value="industrial">🏭 Industrial & Factories</option>
+          <option value="clear">✕ Clear Overlay</option>
+        </select>
       </div>
+    </div>
+    <!-- Industry overlay status -->
+    <div id="fmkt-industry-status" style="display:none;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:7px 12px;margin-bottom:8px;font-size:11px;font-weight:600;color:#0369a1;display:flex;align-items:center;gap:8px">
+      <span id="fmkt-industry-status-text">Loading...</span>
+      <button onclick="_fmktClearIndustryLayer()" style="margin-left:auto;padding:2px 10px;background:#0369a1;color:#fff;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">✕ Clear</button>
     </div>
 
     <!-- Map -->
@@ -10949,6 +10963,153 @@ async function _fmktMarkObjectiveDone(targetId) {
     if(btn) { btn.disabled = false; btn.textContent = '✅ Mark Done'; }
     alert('Location error: ' + err);
   });
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  OVERPASS API — Live Industry Overlays on Territory Map
+// ════════════════════════════════════════════════════════════════════
+
+let _fmktIndustryLayer = null; // L.layerGroup for current overlay
+
+// Industry definitions — Overpass query tags + display config
+const FMKT_INDUSTRIES = {
+  medical: {
+    label: '🏥 Medical & Pharmacies',
+    color: '#ef4444',
+    fillColor: '#fca5a5',
+    queries: [
+      'node["amenity"="pharmacy"]',
+      'node["amenity"="clinic"]',
+      'node["amenity"="hospital"]',
+      'node["healthcare"="pharmacy"]',
+    ]
+  },
+  garments: {
+    label: '👗 Garments & Textiles',
+    color: '#8b5cf6',
+    fillColor: '#c4b5fd',
+    queries: [
+      'node["shop"="clothes"]',
+      'node["shop"="boutique"]',
+      'node["shop"="fabric"]',
+      'node["shop"="tailor"]',
+      'node["craft"="weaving"]',
+    ]
+  },
+  it: {
+    label: '💻 IT & Corporate',
+    color: '#3b82f6',
+    fillColor: '#93c5fd',
+    queries: [
+      'node["office"="it"]',
+      'node["office"="company"]',
+      'node["building"="office"]',
+      'node["amenity"="coworking_space"]',
+    ]
+  },
+  industrial: {
+    label: '🏭 Industrial & Factories',
+    color: '#f97316',
+    fillColor: '#fdba74',
+    queries: [
+      'node["industrial"="factory"]',
+      'node["landuse"="industrial"]',
+      'node["man_made"="works"]',
+      'node["building"="industrial"]',
+    ]
+  }
+};
+
+async function _fmktFetchIndustry(type) {
+  if(type === 'clear' || !type) {
+    _fmktClearIndustryLayer();
+    document.getElementById('fmkt-industry-filter').value = '';
+    return;
+  }
+
+  if(!_fmktTerritoryMap) return;
+  const cfg = FMKT_INDUSTRIES[type];
+  if(!cfg) return;
+
+  // Show loading status
+  const statusEl = document.getElementById('fmkt-industry-status');
+  const statusTxt = document.getElementById('fmkt-industry-status-text');
+  if(statusEl) { statusEl.style.display = 'flex'; }
+  if(statusTxt) statusTxt.textContent = `⏳ Fetching ${cfg.label} data from OpenStreetMap...`;
+
+  // Clear previous overlay
+  _fmktClearIndustryLayer();
+  _fmktIndustryLayer = L.layerGroup().addTo(_fmktTerritoryMap);
+
+  // Use Ahmedabad bounding box — expand slightly beyond current view for better coverage
+  const bounds = _fmktTerritoryMap.getBounds().pad(0.1);
+  const bbox = `${bounds.getSouth().toFixed(4)},${bounds.getWest().toFixed(4)},${bounds.getNorth().toFixed(4)},${bounds.getEast().toFixed(4)}`;
+
+  // Build Overpass query — union all relevant node types
+  const nodeQueries = cfg.queries.map(q => q + '(' + bbox + ');').join(' ');
+  const query = '[out:json][timeout:25];(' + nodeQueries + ');out body;';
+
+  try {
+    const resp = await fetch('https://overpass-api.de/api/interpreter', {
+      method: 'POST',
+      body: 'data=' + encodeURIComponent(query),
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    });
+
+    if(!resp.ok) throw new Error('Overpass API returned ' + resp.status);
+    const data = await resp.json();
+    const nodes = data.elements || [];
+
+    if(nodes.length === 0) {
+      if(statusTxt) statusTxt.textContent = `${cfg.label} — No locations found in this area`;
+      return;
+    }
+
+    // Render as circle markers
+    let count = 0;
+    nodes.forEach(node => {
+      if(!node.lat || !node.lon) return;
+      const circle = L.circleMarker([node.lat, node.lon], {
+        radius:      6,
+        color:       cfg.color,
+        fillColor:   cfg.fillColor,
+        fillOpacity: 0.8,
+        weight:      1.5,
+      });
+
+      // Popup with business name if available
+      const name = node.tags?.name || node.tags?.['name:en'] || cfg.label.split(' ')[1];
+      circle.bindPopup(`
+        <div style="font-family:Inter,sans-serif;font-size:12px;padding:2px">
+          <div style="font-weight:700;color:#0f172a">${name}</div>
+          ${node.tags?.['addr:street'] ? `<div style="color:#64748b;margin-top:2px">${node.tags['addr:street']}</div>` : ''}
+          <button onclick="_fmktDropTargetPin(${node.lat},${node.lon});this.closest('.leaflet-popup').querySelector('.leaflet-popup-close-button').click()"
+            style="margin-top:6px;width:100%;padding:5px;background:#10b981;color:#fff;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+            🎯 Drop Target Here
+          </button>
+        </div>`);
+
+      if(_fmktIndustryLayer) _fmktIndustryLayer.addLayer(circle);
+      count++;
+    });
+
+    if(statusTxt) statusTxt.textContent = `${cfg.label} — ${count} locations found · Click any dot to drop a target pin`;
+    if(statusEl)  statusEl.style.display = 'flex';
+
+  } catch(err) {
+    if(statusTxt) statusTxt.textContent = `⚠️ Could not load industry data: ${err.message}`;
+    console.warn('[FMKT Overpass]', err);
+  }
+}
+
+function _fmktClearIndustryLayer() {
+  if(_fmktIndustryLayer && _fmktTerritoryMap) {
+    _fmktTerritoryMap.removeLayer(_fmktIndustryLayer);
+    _fmktIndustryLayer = null;
+  }
+  const statusEl = document.getElementById('fmkt-industry-status');
+  if(statusEl) statusEl.style.display = 'none';
 }
 
 // ── SCREEN: HOME ────────────────────────────────────────────────────
