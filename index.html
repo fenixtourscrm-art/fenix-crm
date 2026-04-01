@@ -12285,6 +12285,7 @@ function _fmktRefreshLiveLocation() {
   if(_fmktLiveUnsubscribe) { _fmktLiveUnsubscribe(); _fmktLiveUnsubscribe = null; }
 
   // onSnapshot fires immediately with current data, then again on every change
+  // Error handler passed as 2nd arg — onSnapshot returns unsubscribe fn, NOT a Promise so .catch() doesn't work
   _fmktLiveUnsubscribe = db.collection("fieldPings").doc(String(FMKT_STAFF_ID))
     .onSnapshot(snap => {
       if(!snap.exists) {
@@ -12347,8 +12348,7 @@ function _fmktRefreshLiveLocation() {
         const dist = _fmktLiveMap.distance(prev, L.latLng(pos));
         if(dist > 50) _fmktLiveMap.panTo(pos);
       }
-    })
-    .catch(err => console.warn("[FMKT] Live location refresh failed:", err));
+    }, err => console.warn("[FMKT] Live location refresh failed:", err));
 }
 
 function _fmktRenderMgrFollowups() {
