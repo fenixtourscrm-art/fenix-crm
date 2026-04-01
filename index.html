@@ -11801,9 +11801,7 @@ function _fmktStartPings() {
       });
     },
     err => console.warn("[FMKT] watchPosition error:", err.message),
-    // Low-power mode for continuous background tracking — saves battery on field devices
-    // Cell/WiFi triangulation is accurate enough for "is Paresh still moving?" checks
-    { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 }
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
   );
 
   // Fallback heartbeat every 15s — low power (stationary detection)
@@ -11811,8 +11809,7 @@ function _fmktStartPings() {
     navigator.geolocation.getCurrentPosition(
       pos => _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, gps => _fmktWritePing(gps)),
       err => console.warn("[FMKT] Heartbeat GPS error:", err.message),
-      // Low accuracy for heartbeat — high accuracy fires up the GPS chip unnecessarily
-      { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
     );
   }, 15 * 1000);
 
