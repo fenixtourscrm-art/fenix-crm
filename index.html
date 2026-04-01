@@ -10523,21 +10523,25 @@ async function _fmktLoadAnalytics() {
   const cutoff = days[0];
 
   try {
-    // Fetch visits for last 7 days
-    let vQ = db.collection('fieldVisits').where('date','>=',cutoff);
-    if(!isOwner) vQ = vQ.where('employeeId','==',staffId);
+    // Fetch visits for last 7 days — filter by same staff as checkins
+    let vQ = db.collection('fieldVisits')
+      .where('employeeId','==', analyticsStaffId)
+      .where('date','>=', cutoff);
     const visitsSnap = await vQ.get();
     const allVisits = visitsSnap.docs.map(d=>({id:d.id,...d.data()}));
 
-    // Fetch checkins for last 7 days
-    let cQ = db.collection('fieldCheckins').where('date','>=',cutoff);
-    if(!isOwner) cQ = cQ.where('employeeId','==',staffId);
+    // Fetch checkins for last 7 days — always filter by staffId for accurate field hours
+    // If owner view, default to tracking Paresh (id:2) for analytics
+    const analyticsStaffId = isOwner ? 2 : staffId;
+    let cQ = db.collection('fieldCheckins')
+      .where('employeeId','==', analyticsStaffId)
+      .where('date','>=', cutoff);
     const checkinsSnap = await cQ.get();
     const allCheckins = checkinsSnap.docs.map(d=>({id:d.id,...d.data()}));
 
     // Fetch ping history for distance calculation
     const pingPromises = days.map(day => {
-      let q = db.collection('fieldPings').doc(String(staffId)).collection('history').where('date','==',day);
+      let q = db.collection('fieldPings').doc(String(analyticsStaffId)).collection('history').where('date','==',day);
       return q.get().then(s => ({day, pings: s.docs.map(d=>d.data())}));
     });
     const pingsByDay = await Promise.all(pingPromises);
@@ -10548,13 +10552,15 @@ async function _fmktLoadAnalytics() {
       const dayCheckin = allCheckins.find(c => (c.date||'').slice(0,10) === day || (c.checkinTime||'').slice(0,10) === day);
       const dayPings = pingsByDay.find(p=>p.day===day)?.pings || [];
 
-      // Field time in hours
+      // Field time in hours — cap at 24h to catch bad/corrupt timestamps
       let fieldHours = 0;
       if(dayCheckin?.checkinTime && dayCheckin?.checkoutTime) {
-        fieldHours = (new Date(dayCheckin.checkoutTime) - new Date(dayCheckin.checkinTime)) / 3600000;
+        const ms = new Date(dayCheckin.checkoutTime) - new Date(dayCheckin.checkinTime);
+        fieldHours = ms > 0 && ms < 86400000 ? ms / 3600000 : 0;
       } else if(dayCheckin?.checkinTime) {
-        // Still in field or no checkout
-        fieldHours = (Date.now() - new Date(dayCheckin.checkinTime)) / 3600000;
+        const ms = Date.now() - new Date(dayCheckin.checkinTime);
+        // Only count if within last 24h (avoids stale unclosed checkins inflating velocity)
+        fieldHours = ms > 0 && ms < 86400000 ? ms / 3600000 : 0;
       }
 
       // Velocity: visits per hour
