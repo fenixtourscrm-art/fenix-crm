@@ -271,6 +271,8 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 }
 .tbl-base tbody tr:hover td{background:#fafafa}
 .tbl-base tbody tr:last-child td{border-bottom:none}
+/* Skip off-screen row rendering — native browser perf boost for long tables */
+.tbl-base tbody tr{content-visibility:auto;contain-intrinsic-size:0 48px}
 /* Sticky first col */
 .col-sticky-first{
   position:sticky;
@@ -2545,8 +2547,12 @@ function globalSearch(q){
   document.getElementById("page-title").textContent=`🔍 "${q}"`;
   const ql=q.toLowerCase();
 
-  // Primary client matches — exclude sub-family members from main list
-  const fc=clients.filter(c=>!c.linkedPrimaryId&&`${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email} ${c.city} ${c.companyName||""}`.toLowerCase().includes(ql));
+  // Primary client matches — use pre-calculated index for speed
+  // Falls back to inline check if _searchIndex missing (old data before re-fetch)
+  const fc=clients.filter(c=>!c.linkedPrimaryId&&(
+    c._searchIndex ? c._searchIndex.includes(ql)
+    : `${c.firstName} ${c.lastName} ${c.mobile} ${c.altMobile||""} ${c.email} ${c.city} ${c.companyName||""}`.toLowerCase().includes(ql)
+  ));
 
   // ── Family member matching — use familyId (UUID) as primary key ──
   const familyMatches=[];
@@ -2598,7 +2604,10 @@ function globalSearch(q){
     }
   });
 
-  const fe=enquiries.filter(e=>`${cName(e.clientId)} ${e.destination} ${e.source} ${e.category||""}`.toLowerCase().includes(ql));
+  const fe=enquiries.filter(e=>{
+    const base = e._searchIndex || `${e.destination} ${e.source} ${e.category||""}`.toLowerCase();
+    return base.includes(ql) || cName(e.clientId).toLowerCase().includes(ql);
+  });
   const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""} ${b.category||""}`.toLowerCase().includes(ql));
 
   // Permission: owner (id=1) can delete, staff cannot
@@ -3673,7 +3682,25 @@ function loadFromFirestore() {
         if(col==="enquiries") {
           if(!Array.isArray(data.intentions)) data.intentions = [];
         }
-        return {id: d.id, ...data};
+        // Pre-calculate a single search index string at load time
+        // Searching one string is far faster than checking 6+ fields on every keystroke
+        let _searchIndex = "";
+        if(col === "clients") {
+          _searchIndex = [
+            data.firstName, data.lastName, data.mobile, data.altMobile,
+            data.email, data.city, data.state, data.companyName, data.occupation
+          ].filter(Boolean).join(" ").toLowerCase();
+        } else if(col === "enquiries") {
+          _searchIndex = [
+            data.destination, data.source, data.category, data.status,
+            data.rating, data.budget, data.type
+          ].filter(Boolean).join(" ").toLowerCase();
+        } else if(col === "bookings") {
+          _searchIndex = [
+            data.destination, data.status, data.paymentStatus, data.category
+          ].filter(Boolean).join(" ").toLowerCase();
+        }
+        return {id: d.id, ...data, _searchIndex};
       });
       if(col==="clients")   clients    = docs;
       if(col==="enquiries") enquiries  = docs;
@@ -10231,10 +10258,12 @@ function _fmktReverseGeoAndCall(lat, lng, onSuccess) {
 // One-shot GPS for check-in/out (still uses getCurrentPosition — that's fine)
 function _fmktGetGPS(onSuccess, onError) {
   if(!navigator.geolocation) { onError("GPS not supported on this device"); return; }
+  // High accuracy only for manual user actions (check-in, check-out, log visit)
+  // This fires the physical GPS chip exactly when precise location matters
   navigator.geolocation.getCurrentPosition(
     pos => _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, onSuccess),
     err => onError("Could not get location: " + err.message),
-    { enableHighAccuracy:true, timeout:15000 }
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
   );
 }
 
@@ -10949,15 +10978,18 @@ function _fmktStartPings() {
       });
     },
     err => console.warn("[FMKT] watchPosition error:", err.message),
-    { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+    // Low-power mode for continuous background tracking — saves battery on field devices
+    // Cell/WiFi triangulation is accurate enough for "is Paresh still moving?" checks
+    { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 }
   );
 
-  // Fallback heartbeat every 15s — fires even if device hasn't moved
+  // Fallback heartbeat every 15s — low power (stationary detection)
   _fmktPingInterval = setInterval(() => {
     navigator.geolocation.getCurrentPosition(
       pos => _fmktReverseGeoAndCall(pos.coords.latitude, pos.coords.longitude, gps => _fmktWritePing(gps)),
       err => console.warn("[FMKT] Heartbeat GPS error:", err.message),
-      { enableHighAccuracy: true, maximumAge: 5000, timeout: 10000 }
+      // Low accuracy for heartbeat — high accuracy fires up the GPS chip unnecessarily
+      { enableHighAccuracy: false, maximumAge: 10000, timeout: 10000 }
     );
   }, 15 * 1000);
 
@@ -11682,6 +11714,10 @@ function _fmktShowInstallPrompt() {
 // ════════════════════════════════════════════════════════════════════
 
 // Smooth scroll helper for arrow buttons
+// XSS sanitize — strip HTML special chars before injecting user data into innerHTML
+const sanitize = s => s == null ? "" : String(s).replace(/[&<>'"]/g,
+  t => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[t]));
+
 function _tblScroll(scrollId, delta) {
   const el = document.getElementById(scrollId);
   if(el) el.scrollBy({ left: delta, behavior: 'smooth' });
