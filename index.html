@@ -10564,8 +10564,11 @@ async function _fmktLoadAnalytics() {
         fieldHours = ms > 0 && ms < 86400000 ? ms / 3600000 : 0;
       }
 
-      // Velocity: visits per hour
-      const velocity = fieldHours > 0 ? (dayVisits.length / fieldHours).toFixed(1) : '—';
+      // Velocity: only meaningful if in field for at least 15 minutes
+      // Shorter sessions = test checkins or bad data, show — instead of huge number
+      const velocity = (fieldHours >= 0.25 && dayVisits.length > 0)
+        ? (dayVisits.length / fieldHours).toFixed(1)
+        : '—';
 
       // Distance: sum of consecutive ping distances
       let distKm = 0;
