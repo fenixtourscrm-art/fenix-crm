@@ -559,6 +559,11 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- MarkerCluster + Heatmap for Field Marketing history map -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
 
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -8714,6 +8719,8 @@ function _fmktRenderManager() {
         <button class="fmkt-mgr-tab ${_fmktMgrTab==='map'?'active':''}" onclick="_fmktMgrTab='map';_fmktRenderManager()">🗺️ Map</button>
         <button class="fmkt-mgr-tab ${_fmktMgrTab==='followups'?'active':''}" onclick="_fmktMgrTab='followups';_fmktRenderManager()">📅 Follow-ups</button>
         <button class="fmkt-mgr-tab ${_fmktMgrTab==='history'?'active':''}" onclick="_fmktMgrTab='history';_fmktRenderManager()">📊 History</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='locations'?'active':''}" onclick="_fmktMgrTab='locations';_fmktRenderManager()">📍 Locations</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='analytics'?'active':''}" onclick="_fmktMgrTab='analytics';_fmktRenderManager()">📈 Analytics</button>
       </div>
 
       <div id="fmkt-mgr-content"></div>
@@ -8723,7 +8730,9 @@ function _fmktRenderManager() {
   else if(_fmktMgrTab==="datewise") _fmktRenderDateView();
   else if(_fmktMgrTab==="map")      _fmktRenderMgrMap();
   else if(_fmktMgrTab==="followups") _fmktRenderMgrFollowups();
-  else if(_fmktMgrTab==="history")  _fmktRenderHistoryTab();
+  else if(_fmktMgrTab==="history")   _fmktRenderHistoryTab();
+  else if(_fmktMgrTab==="locations") _fmktRenderLocationsTab();
+  else if(_fmktMgrTab==="analytics") _fmktRenderAnalyticsTab();
 }
 
 // ── DATE-WISE VIEW ────────────────────────────────────────────────────
@@ -10303,6 +10312,351 @@ function _fmktRender() {
   if(_fmktScreen === "visit")    { _fmktRenderVisitScreen();    return; }
   if(_fmktScreen === "checkout") { _fmktRenderCheckoutScreen(); return; }
   _fmktRenderHome();
+}
+
+
+// ════════════════════════════════════════════════════════════════════
+//  LOCATIONS TAB — Historical visit map with clustering + heatmap
+// ════════════════════════════════════════════════════════════════════
+
+let _fmktLocMap = null;
+let _fmktLocFilter = '30'; // default: last 30 days
+
+function _fmktRenderLocationsTab() {
+  const el = document.getElementById('fmkt-mgr-content');
+  if(!el) return;
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:700;color:#0f172a">Visit Location History</div>
+      <select id="fmkt-loc-filter" onchange="_fmktLocFilter=this.value;_fmktLoadLocationsMap()"
+        style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;background:#fff;cursor:pointer">
+        <option value="1">Today</option>
+        <option value="7">Last 7 Days</option>
+        <option value="30" selected>Last 30 Days</option>
+        <option value="0">All Time</option>
+      </select>
+      <div id="fmkt-loc-toggle" style="display:flex;gap:4px">
+        <button id="fmkt-loc-btn-cluster" onclick="_fmktLocMode='cluster';_fmktDrawLocations()"
+          style="padding:6px 12px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">📍 Clusters</button>
+        <button id="fmkt-loc-btn-heat" onclick="_fmktLocMode='heat';_fmktDrawLocations()"
+          style="padding:6px 12px;background:#f1f5f9;color:#64748b;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔥 Heatmap</button>
+      </div>
+      <div id="fmkt-loc-legend" style="display:flex;gap:10px;flex-wrap:wrap;font-size:11px;font-weight:600;color:#64748b">
+        <span>🟢 Closed</span><span>🔵 Interested</span><span>🟠 Follow-up</span><span>🔴 Not Interested</span>
+      </div>
+    </div>
+    <div id="fmkt-loc-map" style="height:420px;border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden"></div>
+    <div id="fmkt-loc-stats" style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap"></div>`;
+
+  setTimeout(() => _fmktLoadLocationsMap(), 80);
+}
+
+let _fmktLocMode = 'cluster';
+let _fmktLocVisits = [];
+
+function _fmktLoadLocationsMap() {
+  // Destroy existing map
+  if(_fmktLocMap) { _fmktLocMap.remove(); _fmktLocMap = null; }
+
+  const days = parseInt(_fmktLocFilter) || 0;
+  const cutoff = days > 0
+    ? new Date(Date.now() - days * 86400000).toISOString().slice(0,10)
+    : '2000-01-01';
+
+  const mapEl = document.getElementById('fmkt-loc-map');
+  if(!mapEl) return;
+
+  // Loading state
+  mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;background:#f8fafc;color:#64748b;font-size:13px;font-weight:600">⏳ Loading visits...</div>';
+
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  let q = db.collection('fieldVisits');
+  if(!isOwner) q = q.where('employeeId', '==', FMKT_STAFF_ID);
+  if(days > 0) q = q.where('date', '>=', cutoff);
+
+  q.get().then(snap => {
+    _fmktLocVisits = snap.docs
+      .map(d => ({id: d.id, ...d.data()}))
+      .filter(v => v.location?.lat && v.location?.lng);
+
+    // Re-init map
+    mapEl.innerHTML = '';
+    _fmktLocMap = L.map('fmkt-loc-map', {zoomControl: true});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(_fmktLocMap);
+
+    if(_fmktLocVisits.length === 0) {
+      _fmktLocMap.setView([23.0225, 72.5714], 12);
+      const statsEl = document.getElementById('fmkt-loc-stats');
+      if(statsEl) statsEl.innerHTML = '<div style="color:#94a3b8;font-size:12px">No visits with location data for this period.</div>';
+      return;
+    }
+
+    _fmktDrawLocations();
+    _fmktRenderLocStats();
+  }).catch(err => {
+    if(mapEl) mapEl.innerHTML = `<div style="padding:20px;color:#dc2626">Error: ${err.message}</div>`;
+  });
+}
+
+function _fmktDrawLocations() {
+  if(!_fmktLocMap || !_fmktLocVisits.length) return;
+
+  // Update toggle button styles
+  const cb = document.getElementById('fmkt-loc-btn-cluster');
+  const hb = document.getElementById('fmkt-loc-btn-heat');
+  if(cb) { cb.style.background = _fmktLocMode==='cluster' ? '#3b82f6' : '#f1f5f9'; cb.style.color = _fmktLocMode==='cluster' ? '#fff' : '#64748b'; }
+  if(hb) { hb.style.background = _fmktLocMode==='heat'    ? '#ef4444' : '#f1f5f9'; hb.style.color = _fmktLocMode==='heat'    ? '#fff' : '#64748b'; }
+
+  // Remove existing layers (keep tile layer)
+  _fmktLocMap.eachLayer(l => { if(!(l instanceof L.TileLayer)) _fmktLocMap.removeLayer(l); });
+
+  const outcomeColor = {
+    'Closed':       '#10b981',
+    'Interested':   '#3b82f6',
+    'Follow-up':    '#f97316',
+    'Not Interested':'#ef4444',
+  };
+
+  const bounds = [];
+
+  if(_fmktLocMode === 'cluster') {
+    // MarkerCluster mode
+    const cluster = window.L.markerClusterGroup
+      ? L.markerClusterGroup({ maxClusterRadius: 50, showCoverageOnHover: false })
+      : L.layerGroup(); // fallback if plugin not loaded
+
+    _fmktLocVisits.forEach(v => {
+      const color = outcomeColor[v.outcome] || '#94a3b8';
+      const icon = L.divIcon({
+        html: `<div style="width:14px;height:14px;background:${color};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
+        className: '', iconSize: [14,14], iconAnchor: [7,7]
+      });
+      const marker = L.marker([v.location.lat, v.location.lng], {icon});
+      const time = v.visitTime ? new Date(v.visitTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '';
+      marker.bindPopup(`
+        <div style="font-family:Inter,sans-serif;min-width:160px;padding:4px 2px">
+          <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:6px">${v.clientName||'—'}</div>
+          <div style="font-size:11px;color:#64748b;line-height:2">
+            <div>${v.clientPhone||''}</div>
+            <div>${v.date||''} ${time ? '· '+time : ''}</div>
+            <div style="margin-top:4px"><span style="background:${color}20;color:${color};border:1px solid ${color}40;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700">${v.outcome||'—'}</span></div>
+            ${v.notes ? `<div style="margin-top:6px;font-size:11px;color:#374151">${v.notes}</div>` : ''}
+          </div>
+        </div>`);
+      cluster.addLayer(marker);
+      bounds.push([v.location.lat, v.location.lng]);
+    });
+    _fmktLocMap.addLayer(cluster);
+
+  } else {
+    // Heatmap mode
+    const heatPoints = _fmktLocVisits.map(v => [v.location.lat, v.location.lng, 0.8]);
+    if(window.L.heatLayer) {
+      L.heatLayer(heatPoints, {
+        radius: 30, blur: 20, maxZoom: 17,
+        gradient: {0.2:'#3b82f6', 0.5:'#f97316', 0.8:'#ef4444', 1.0:'#dc2626'}
+      }).addTo(_fmktLocMap);
+    }
+    _fmktLocVisits.forEach(v => bounds.push([v.location.lat, v.location.lng]));
+  }
+
+  if(bounds.length) _fmktLocMap.fitBounds(bounds, {padding: [30,30], maxZoom: 15});
+}
+
+function _fmktRenderLocStats() {
+  const el = document.getElementById('fmkt-loc-stats');
+  if(!el || !_fmktLocVisits.length) return;
+  const total = _fmktLocVisits.length;
+  const byOutcome = {};
+  _fmktLocVisits.forEach(v => { byOutcome[v.outcome||'Unknown'] = (byOutcome[v.outcome||'Unknown']||0)+1; });
+  const colors = {'Closed':'#10b981','Interested':'#3b82f6','Follow-up':'#f97316','Not Interested':'#ef4444'};
+  el.innerHTML = Object.entries(byOutcome).map(([k,v]) =>
+    `<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${colors[k]||'#94a3b8'};flex-shrink:0"></div>
+      <div style="font-size:12px;font-weight:700;color:#0f172a">${k}</div>
+      <div style="font-size:14px;font-weight:800;color:${colors[k]||'#64748b'}">${v}</div>
+      <div style="font-size:10px;color:#94a3b8">${Math.round(v/total*100)}%</div>
+    </div>`
+  ).join('') + `<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 14px;font-size:12px;font-weight:700;color:#64748b">Total: ${total} visits</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  ANALYTICS TAB — Performance velocity, distance, trends
+// ════════════════════════════════════════════════════════════════════
+
+// Haversine distance in km between two lat/lng points
+function _fmktHaversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function _fmktRenderAnalyticsTab() {
+  const el = document.getElementById('fmkt-mgr-content');
+  if(!el) return;
+  el.innerHTML = `
+    <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:14px">📈 Performance Analytics — Last 7 Days</div>
+    <div id="fmkt-analytics-content">
+      <div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">⏳ Loading performance data...</div>
+    </div>`;
+  _fmktLoadAnalytics();
+}
+
+async function _fmktLoadAnalytics() {
+  const el = document.getElementById('fmkt-analytics-content');
+  if(!el) return;
+
+  const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
+  const staffId = FMKT_STAFF_ID;
+
+  // Last 7 days
+  const days = [];
+  for(let i=6; i>=0; i--) {
+    const d = new Date(Date.now() - i*86400000);
+    days.push(d.toISOString().slice(0,10));
+  }
+  const cutoff = days[0];
+
+  try {
+    // Fetch visits for last 7 days
+    let vQ = db.collection('fieldVisits').where('date','>=',cutoff);
+    if(!isOwner) vQ = vQ.where('employeeId','==',staffId);
+    const visitsSnap = await vQ.get();
+    const allVisits = visitsSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+    // Fetch checkins for last 7 days
+    let cQ = db.collection('fieldCheckins').where('date','>=',cutoff);
+    if(!isOwner) cQ = cQ.where('employeeId','==',staffId);
+    const checkinsSnap = await cQ.get();
+    const allCheckins = checkinsSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+    // Fetch ping history for distance calculation
+    const pingPromises = days.map(day => {
+      let q = db.collection('fieldPings').doc(String(staffId)).collection('history').where('date','==',day);
+      return q.get().then(s => ({day, pings: s.docs.map(d=>d.data())}));
+    });
+    const pingsByDay = await Promise.all(pingPromises);
+
+    // Build per-day stats
+    const stats = days.map(day => {
+      const dayVisits = allVisits.filter(v => (v.date||'').slice(0,10) === day);
+      const dayCheckin = allCheckins.find(c => (c.date||'').slice(0,10) === day || (c.checkinTime||'').slice(0,10) === day);
+      const dayPings = pingsByDay.find(p=>p.day===day)?.pings || [];
+
+      // Field time in hours
+      let fieldHours = 0;
+      if(dayCheckin?.checkinTime && dayCheckin?.checkoutTime) {
+        fieldHours = (new Date(dayCheckin.checkoutTime) - new Date(dayCheckin.checkinTime)) / 3600000;
+      } else if(dayCheckin?.checkinTime) {
+        // Still in field or no checkout
+        fieldHours = (Date.now() - new Date(dayCheckin.checkinTime)) / 3600000;
+      }
+
+      // Velocity: visits per hour
+      const velocity = fieldHours > 0 ? (dayVisits.length / fieldHours).toFixed(1) : '—';
+
+      // Distance: sum of consecutive ping distances
+      let distKm = 0;
+      const sorted = [...dayPings].sort((a,b)=>(a.savedAt||'').localeCompare(b.savedAt||''));
+      for(let i=1; i<sorted.length; i++) {
+        if(sorted[i-1].lat && sorted[i].lat) {
+          distKm += _fmktHaversine(sorted[i-1].lat, sorted[i-1].lng, sorted[i].lat, sorted[i].lng);
+        }
+      }
+
+      // Outcome breakdown
+      const closed   = dayVisits.filter(v=>v.outcome==='Closed').length;
+      const interest = dayVisits.filter(v=>v.outcome==='Interested').length;
+      const followup = dayVisits.filter(v=>v.outcome==='Follow-up').length;
+
+      return {
+        day, visits: dayVisits.length, fieldHours, velocity,
+        distKm: distKm.toFixed(1), closed, interest, followup,
+        kmPerVisit: dayVisits.length > 0 && distKm > 0 ? (distKm/dayVisits.length).toFixed(1) : '—',
+        checkedIn: !!dayCheckin
+      };
+    });
+
+    // Trend badge: compare today vs yesterday
+    const today = stats[6];
+    const yesterday = stats[5];
+    const trendPct = yesterday.visits > 0
+      ? Math.round(((today.visits - yesterday.visits) / yesterday.visits) * 100)
+      : null;
+    const trendBadge = trendPct === null ? '' :
+      trendPct > 0 ? `<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800">▲ +${trendPct}% vs yesterday</span>`
+      : trendPct < 0 ? `<span style="background:#fee2e2;color:#dc2626;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800">▼ ${trendPct}% vs yesterday</span>`
+      : `<span style="background:#f1f5f9;color:#64748b;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:800">→ No change</span>`;
+
+    // Render
+    el.innerHTML = `
+      <!-- Today highlight -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:14px;padding:16px 20px;margin-bottom:16px;color:#fff">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-size:11px;color:#94a3b8;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Today — ${today.day}</div>
+            <div style="font-size:24px;font-weight:900;margin-top:2px">${today.visits} visits ${trendBadge}</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-width:260px">
+            <div style="text-align:center"><div style="font-size:18px;font-weight:800">${today.velocity}</div><div style="font-size:10px;color:#94a3b8">visits/hr</div></div>
+            <div style="text-align:center"><div style="font-size:18px;font-weight:800">${today.distKm} km</div><div style="font-size:10px;color:#94a3b8">driven</div></div>
+            <div style="text-align:center"><div style="font-size:18px;font-weight:800">${today.kmPerVisit} km</div><div style="font-size:10px;color:#94a3b8">per visit</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7-day table -->
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#f8fafc">
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:left;border-bottom:1px solid #e2e8f0">DATE</th>
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0">VISITS</th>
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0">FIELD TIME</th>
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0">VELOCITY</th>
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0">DISTANCE</th>
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0">KM/VISIT</th>
+              <th style="padding:10px 14px;font-size:10px;font-weight:700;color:#64748b;text-align:center;border-bottom:1px solid #e2e8f0">OUTCOME</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${stats.map((s,i) => {
+              const isToday = i===6;
+              const dateLabel = new Date(s.day+'T12:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
+              const hrs = s.fieldHours > 0 ? `${Math.floor(s.fieldHours)}h ${Math.round((s.fieldHours%1)*60)}m` : '—';
+              return `<tr style="${isToday?'background:#eff6ff;font-weight:700':''}${!s.checkedIn?'opacity:0.5':''}">
+                <td style="padding:10px 14px;font-size:12px;border-bottom:1px solid #f1f5f9">
+                  ${dateLabel}${isToday?' <span style="background:#3b82f6;color:#fff;font-size:9px;padding:1px 6px;border-radius:99px;font-weight:700">TODAY</span>':''}
+                </td>
+                <td style="padding:10px 14px;font-size:13px;font-weight:800;text-align:center;border-bottom:1px solid #f1f5f9;color:${s.visits>0?'#0f172a':'#cbd5e1'}">${s.visits||'—'}</td>
+                <td style="padding:10px 14px;font-size:12px;text-align:center;border-bottom:1px solid #f1f5f9;color:#64748b">${hrs}</td>
+                <td style="padding:10px 14px;font-size:12px;font-weight:700;text-align:center;border-bottom:1px solid #f1f5f9;color:${parseFloat(s.velocity)>5?'#10b981':parseFloat(s.velocity)>2?'#f97316':'#64748b'}">${s.velocity}</td>
+                <td style="padding:10px 14px;font-size:12px;text-align:center;border-bottom:1px solid #f1f5f9;color:#64748b">${s.distKm > 0 ? s.distKm+' km' : '—'}</td>
+                <td style="padding:10px 14px;font-size:12px;font-weight:700;text-align:center;border-bottom:1px solid #f1f5f9;color:${parseFloat(s.kmPerVisit)<3?'#10b981':parseFloat(s.kmPerVisit)<6?'#f97316':'#ef4444'}">${s.kmPerVisit !== '—' ? s.kmPerVisit+' km' : '—'}</td>
+                <td style="padding:10px 14px;text-align:center;border-bottom:1px solid #f1f5f9">
+                  ${s.visits > 0 ? `<div style="font-size:10px;line-height:1.8">
+                    ${s.closed?`<span style="color:#10b981;font-weight:700">✅${s.closed}</span> `:''}
+                    ${s.interest?`<span style="color:#3b82f6;font-weight:700">👍${s.interest}</span> `:''}
+                    ${s.followup?`<span style="color:#f97316;font-weight:700">📅${s.followup}</span>`:''}
+                  </div>` : '<span style="color:#e2e8f0">—</span>'}
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:#94a3b8;padding:0 4px">
+        Velocity = visits ÷ field hours · Distance calculated from GPS ping trail · KM/Visit = efficiency ratio (lower = better)
+      </div>`;
+
+  } catch(err) {
+    if(el) el.innerHTML = `<div style="padding:20px;color:#dc2626;font-size:13px">Error loading analytics: ${err.message}</div>`;
+  }
 }
 
 // ── SCREEN: HOME ────────────────────────────────────────────────────
