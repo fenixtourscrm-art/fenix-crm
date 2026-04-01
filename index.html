@@ -11198,7 +11198,15 @@ function _fmktRenderHomeTab() {
   if(_fmktHomeTab === 'today') {
     // ── TODAY TAB ──
     const visits = _fmktVisits;
-    el.innerHTML = visits.length ? visits.map(v => `
+    const unconverted = visits.filter(v => !v.convertedToClient);
+    const moveAllBtn = unconverted.length > 1 ? `
+      <div style="margin-bottom:12px">
+        <button onclick="_fmktMoveAllToClient()"
+          style="width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          👥 Move All ${unconverted.length} Visits to Personal Visit Client
+        </button>
+      </div>` : '';
+    el.innerHTML = (visits.length ? moveAllBtn : '') + (visits.length ? visits.map(v => `
       <div class="fmkt-visit-card">
         <div onclick="_fmktOpenVisitDetail('${v.id}')" style="cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
@@ -11224,7 +11232,7 @@ function _fmktRenderHomeTab() {
       </div>`).join('') :
       `<div style="text-align:center;padding:36px 20px;color:#94a3b8;font-size:14px;line-height:1.7">
         No visits logged yet.<br>Tap <strong>Log New Visit</strong> above.
-      </div>`;
+      </div>`);
   } else {
     // ── DATE VIEW TAB ──
     const today = _fmktToday();
@@ -11296,6 +11304,53 @@ function _fmktLoadHomeDate() {
     .catch(err => {
       if(el) el.innerHTML = `<div style="color:#dc2626;padding:16px">Error: ${err.message}</div>`;
     });
+}
+
+// Move ALL today's unconverted visits to Personal Visit clients in one go
+async function _fmktMoveAllToClient() {
+  const unconverted = _fmktVisits.filter(v => !v.convertedToClient);
+  if(!unconverted.length) return alert('All visits are already moved to clients.');
+
+  if(!confirm(`Move all ${unconverted.length} visits to Personal Visit clients?
+
+This will create/link a client for each visit that hasn't been converted yet.`)) return;
+
+  // Show progress
+  const el = document.getElementById('fmkt-home-content');
+  if(el) {
+    const progressDiv = document.createElement('div');
+    progressDiv.id = 'fmkt-moveall-progress';
+    progressDiv.style.cssText = 'background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:14px;margin-bottom:12px;font-size:13px;font-weight:700;color:#166534';
+    progressDiv.textContent = `⏳ Moving 0 of ${unconverted.length}...`;
+    el.insertBefore(progressDiv, el.firstChild);
+  }
+
+  let done = 0;
+  let failed = 0;
+
+  for(const v of unconverted) {
+    try {
+      await _fmktMoveToClient(v.id);
+      done++;
+    } catch(e) {
+      failed++;
+      console.warn('[MoveAll] Failed for', v.clientName, e);
+    }
+    // Update progress
+    const prog = document.getElementById('fmkt-moveall-progress');
+    if(prog) prog.textContent = `⏳ Moving ${done} of ${unconverted.length}...`;
+    // Small delay to avoid Firestore rate limits
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  const prog = document.getElementById('fmkt-moveall-progress');
+  if(prog) {
+    prog.style.background = '#dcfce7';
+    prog.textContent = `✅ Done! ${done} clients added${failed ? ` · ${failed} failed` : ''}`;
+  }
+
+  // Refresh tab after short delay
+  setTimeout(() => _fmktRenderHomeTab(), 1000);
 }
 
 // Move to client from date view (refreshes date view after)
