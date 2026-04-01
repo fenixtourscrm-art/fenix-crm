@@ -8721,6 +8721,7 @@ function _fmktRenderManager() {
         <button class="fmkt-mgr-tab ${_fmktMgrTab==='history'?'active':''}" onclick="_fmktMgrTab='history';_fmktRenderManager()">📊 History</button>
         <button class="fmkt-mgr-tab ${_fmktMgrTab==='locations'?'active':''}" onclick="_fmktMgrTab='locations';_fmktRenderManager()">📍 Locations</button>
         <button class="fmkt-mgr-tab ${_fmktMgrTab==='analytics'?'active':''}" onclick="_fmktMgrTab='analytics';_fmktRenderManager()">📈 Analytics</button>
+        <button class="fmkt-mgr-tab ${_fmktMgrTab==='territory'?'active':''}" onclick="_fmktMgrTab='territory';_fmktRenderManager()">🎯 Territory</button>
       </div>
 
       <div id="fmkt-mgr-content"></div>
@@ -8733,6 +8734,7 @@ function _fmktRenderManager() {
   else if(_fmktMgrTab==="history")   _fmktRenderHistoryTab();
   else if(_fmktMgrTab==="locations") _fmktRenderLocationsTab();
   else if(_fmktMgrTab==="analytics") _fmktRenderAnalyticsTab();
+  else if(_fmktMgrTab==="territory") _fmktRenderTerritoryTab();
 }
 
 // ── DATE-WISE VIEW ────────────────────────────────────────────────────
@@ -10669,6 +10671,286 @@ async function _fmktLoadAnalytics() {
   }
 }
 
+
+// ════════════════════════════════════════════════════════════════════
+//  TERRITORY PLANNING — Manager map + Agent objectives
+// ════════════════════════════════════════════════════════════════════
+
+let _fmktTerritoryMap = null;
+let _fmktTerritoryMarkers = [];
+let _fmktPendingPin = null; // temp pin while manager fills form
+
+// ── MANAGER: Territory Planning Tab ─────────────────────────────────
+function _fmktRenderTerritoryTab() {
+  const el = document.getElementById('fmkt-mgr-content');
+  if(!el) return;
+  const today = _fmktToday();
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:13px;font-weight:800;color:#0f172a">🎯 Territory Planning</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">Click the map to drop a target pin, add a directive and assign to staff</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <select id="fmkt-territory-date-filter" onchange="_fmktLoadTerritoryTargets()"
+          style="padding:6px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:600;background:#fff">
+          <option value="${today}">Today</option>
+          <option value="all">All Dates</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Map -->
+    <div id="fmkt-territory-map" style="height:380px;border-radius:12px;border:1.5px solid #e2e8f0;overflow:hidden;margin-bottom:12px"></div>
+
+    <!-- Add Directive Form (hidden until pin dropped) -->
+    <div id="fmkt-territory-form" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:#0f172a;margin-bottom:10px">📌 New Target Pin</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div>
+          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">DIRECTIVE / TASK</label>
+          <textarea id="fmkt-directive-text" rows="3" placeholder="e.g. Visit medical stores near Ring Road, target 5 pharmacies"
+            style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;resize:vertical;box-sizing:border-box;outline:none"></textarea>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">ASSIGN TO</label>
+            <select id="fmkt-directive-staff"
+              style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;outline:none">
+              ${STAFF.filter(s=>s.id!==1).map(s=>`<option value="${s.id}">${s.name}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">DATE</label>
+            <input type="date" id="fmkt-directive-date" value="${today}"
+              style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;background:#fff;outline:none;box-sizing:border-box"/>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="_fmktSaveTarget()"
+          style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+          💾 Save Target
+        </button>
+        <button onclick="_fmktCancelPin()"
+          style="padding:10px 20px;background:#f1f5f9;color:#64748b;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <!-- Saved Targets List -->
+    <div id="fmkt-territory-list"></div>`;
+
+  setTimeout(() => {
+    if(_fmktTerritoryMap) { _fmktTerritoryMap.remove(); _fmktTerritoryMap = null; }
+    _fmktTerritoryMap = L.map('fmkt-territory-map').setView([23.0225, 72.5714], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(_fmktTerritoryMap);
+
+    // Click to drop pin
+    _fmktTerritoryMap.on('click', e => _fmktDropTargetPin(e.latlng.lat, e.latlng.lng));
+
+    _fmktLoadTerritoryTargets();
+  }, 80);
+}
+
+function _fmktDropTargetPin(lat, lng) {
+  // Remove previous pending pin
+  if(_fmktPendingPin) { _fmktTerritoryMap.removeLayer(_fmktPendingPin); _fmktPendingPin = null; }
+
+  const icon = L.divIcon({
+    html: `<div style="width:22px;height:22px;background:#f97316;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;font-size:10px">🎯</div>`,
+    className: '', iconSize: [22,22], iconAnchor: [11,11]
+  });
+  _fmktPendingPin = L.marker([lat, lng], {icon}).addTo(_fmktTerritoryMap);
+  _fmktPendingPin._lat = lat;
+  _fmktPendingPin._lng = lng;
+
+  // Show form
+  const form = document.getElementById('fmkt-territory-form');
+  if(form) form.style.display = '';
+  const textarea = document.getElementById('fmkt-directive-text');
+  if(textarea) textarea.focus();
+}
+
+function _fmktCancelPin() {
+  if(_fmktPendingPin) { _fmktTerritoryMap.removeLayer(_fmktPendingPin); _fmktPendingPin = null; }
+  const form = document.getElementById('fmkt-territory-form');
+  if(form) form.style.display = 'none';
+}
+
+async function _fmktSaveTarget() {
+  const text   = document.getElementById('fmkt-directive-text')?.value.trim();
+  const staffId= parseInt(document.getElementById('fmkt-directive-staff')?.value);
+  const date   = document.getElementById('fmkt-directive-date')?.value;
+
+  if(!text)  return alert('Please write a directive first.');
+  if(!date)  return alert('Please set a date.');
+  if(!_fmktPendingPin) return alert('Please click the map to drop a pin first.');
+
+  const data = {
+    targetLat:     _fmktPendingPin._lat,
+    targetLng:     _fmktPendingPin._lng,
+    directiveText: text,
+    assignedTo:    staffId,
+    date:          date,
+    status:        'pending',
+    createdBy:     CURRENT_USER?.id,
+    createdAt:     _fmktNow(),
+  };
+
+  try {
+    await db.collection('fieldTargets').add(data);
+    _fmktCancelPin();
+    document.getElementById('fmkt-directive-text').value = '';
+    _fmktLoadTerritoryTargets();
+    alert('✅ Target saved! ' + (STAFF.find(s=>s.id===staffId)?.name||'Staff') + ' will see it on ' + date);
+  } catch(e) {
+    alert('Save failed: ' + e.message);
+  }
+}
+
+function _fmktLoadTerritoryTargets() {
+  const dateFilter = document.getElementById('fmkt-territory-date-filter')?.value || _fmktToday();
+  let q = db.collection('fieldTargets');
+  if(dateFilter !== 'all') q = q.where('date', '==', dateFilter);
+
+  q.get().then(snap => {
+    const targets = snap.docs.map(d => ({id: d.id, ...d.data()}));
+
+    // Clear existing target markers (keep pending pin)
+    _fmktTerritoryMarkers.forEach(m => {
+      if(_fmktTerritoryMap && m !== _fmktPendingPin) _fmktTerritoryMap.removeLayer(m);
+    });
+    _fmktTerritoryMarkers = [];
+
+    targets.forEach(t => {
+      if(!t.targetLat || !t.targetLng) return;
+      const done = t.status === 'completed';
+
+      // Target pin (red=pending, green=completed)
+      const tIcon = L.divIcon({
+        html: `<div style="width:22px;height:22px;background:${done?'#10b981':'#ef4444'};border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.3);font-size:10px;display:flex;align-items:center;justify-content:center">${done?'✅':'🎯'}</div>`,
+        className: '', iconSize: [22,22], iconAnchor: [11,11]
+      });
+      const staffName = STAFF.find(s=>s.id===t.assignedTo)?.name || 'Staff';
+      const tMarker = L.marker([t.targetLat, t.targetLng], {icon: tIcon}).addTo(_fmktTerritoryMap);
+      tMarker.bindPopup(`
+        <div style="font-family:Inter,sans-serif;min-width:200px;padding:4px 2px">
+          <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:6px">${done?'✅ Completed':'🎯 Target'}</div>
+          <div style="font-size:12px;color:#374151;line-height:1.6;margin-bottom:8px">${t.directiveText}</div>
+          <div style="font-size:11px;color:#64748b">👤 ${staffName} · 📅 ${t.date}</div>
+          ${done && t.completedLat ? `<div style="font-size:11px;color:#10b981;margin-top:4px;font-weight:700">📍 Completed at: ${t.completedLat.toFixed(4)}, ${t.completedLng.toFixed(4)}</div>` : ''}
+          <button onclick="if(confirm('Delete this target?'))db.collection('fieldTargets').doc('${t.id}').delete().then(()=>_fmktLoadTerritoryTargets())"
+            style="margin-top:8px;padding:4px 12px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🗑️ Delete</button>
+        </div>`);
+      _fmktTerritoryMarkers.push(tMarker);
+
+      // If completed, also show where agent actually was
+      if(done && t.completedLat && t.completedLng) {
+        const cIcon = L.divIcon({
+          html: `<div style="width:16px;height:16px;background:#3b82f6;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)"></div>`,
+          className: '', iconSize: [16,16], iconAnchor: [8,8]
+        });
+        const cMarker = L.marker([t.completedLat, t.completedLng], {icon: cIcon}).addTo(_fmktTerritoryMap);
+        cMarker.bindPopup(`<div style="font-family:Inter,sans-serif;font-size:12px;padding:4px"><strong>Completed here</strong><br>${STAFF.find(s=>s.id===t.assignedTo)?.name||'Staff'}<br>${t.completedAt?new Date(t.completedAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}):''}</div>`);
+        // Draw line from target to completion point
+        L.polyline([[t.targetLat,t.targetLng],[t.completedLat,t.completedLng]], {
+          color:'#10b981', weight:2, dashArray:'5,5', opacity:0.7
+        }).addTo(_fmktTerritoryMap);
+        _fmktTerritoryMarkers.push(cMarker);
+      }
+    });
+
+    // Render list
+    const listEl = document.getElementById('fmkt-territory-list');
+    if(!listEl) return;
+    if(!targets.length) {
+      listEl.innerHTML = `<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">No targets for this date. Click the map to add one.</div>`;
+      return;
+    }
+    listEl.innerHTML = targets.map(t => {
+      const staffName = STAFF.find(s=>s.id===t.assignedTo)?.name || 'Staff';
+      const done = t.status === 'completed';
+      return `<div style="background:#fff;border:1.5px solid ${done?'#86efac':'#e2e8f0'};border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:flex-start;gap:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:${done?'#dcfce7':'#fee2e2'};display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">${done?'✅':'🎯'}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:700;color:#0f172a;line-height:1.4">${t.directiveText}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:4px">👤 ${staffName} · 📅 ${t.date} · <span style="color:${done?'#10b981':'#f97316'};font-weight:700">${done?'Completed':'Pending'}</span></div>
+        </div>
+        <button onclick="if(confirm('Delete?'))db.collection('fieldTargets').doc('${t.id}').delete().then(()=>_fmktLoadTerritoryTargets())"
+          style="padding:4px 10px;background:#f1f5f9;color:#94a3b8;border:none;border-radius:6px;font-size:11px;cursor:pointer">✕</button>
+      </div>`;
+    }).join('');
+  }).catch(err => {
+    const listEl = document.getElementById('fmkt-territory-list');
+    if(listEl) listEl.innerHTML = `<div style="color:#dc2626;font-size:12px;padding:10px">Error: ${err.message}</div>`;
+  });
+}
+
+// ── AGENT: Load Today's Objectives (text-only, no map) ───────────────
+function _fmktLoadObjectives() {
+  const card = document.getElementById('fmkt-objectives-card');
+  if(!card) return;
+
+  const today = _fmktToday();
+  db.collection('fieldTargets')
+    .where('assignedTo', '==', FMKT_STAFF_ID)
+    .where('date', '==', today)
+    .get()
+    .then(snap => {
+      const targets = snap.docs.map(d => ({id: d.id, ...d.data()}));
+      const pending = targets.filter(t => t.status !== 'completed');
+      if(!pending.length) { card.innerHTML = ''; return; }
+
+      card.innerHTML = `
+        <div style="background:linear-gradient(135deg,#1e3a5f,#0f172a);border-radius:14px;padding:14px 16px;margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📝 Today's Objectives</div>
+          ${pending.map(t => `
+            <div style="background:rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:8px" id="fmkt-obj-${t.id}">
+              <div style="font-size:14px;font-weight:700;color:#fff;line-height:1.5;margin-bottom:8px">${t.directiveText}</div>
+              <button onclick="_fmktMarkObjectiveDone('${t.id}')"
+                style="width:100%;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">
+                ✅ Mark Done
+              </button>
+            </div>`).join('')}
+        </div>`;
+    })
+    .catch(() => { if(card) card.innerHTML = ''; });
+}
+
+async function _fmktMarkObjectiveDone(targetId) {
+  const btn = document.querySelector(`#fmkt-obj-${targetId} button`);
+  if(btn) { btn.disabled = true; btn.textContent = '📍 Getting your location...'; }
+
+  // Get GPS transparently — same flow as normal visit log
+  _fmktGetGPS(async gps => {
+    try {
+      await db.collection('fieldTargets').doc(targetId).update({
+        status:       'completed',
+        completedLat: gps.lat,
+        completedLng: gps.lng,
+        completedAt:  _fmktNow(),
+        completedBy:  FMKT_STAFF_ID,
+      });
+      // Show completion in UI
+      const objDiv = document.getElementById(`fmkt-obj-${targetId}`);
+      if(objDiv) objDiv.innerHTML = `<div style="font-size:13px;font-weight:700;color:#86efac">✅ Marked done · ${gps.address}</div>`;
+      // Reload to remove from list if all done
+      setTimeout(_fmktLoadObjectives, 1500);
+    } catch(e) {
+      if(btn) { btn.disabled = false; btn.textContent = '✅ Mark Done'; }
+      alert('Could not save: ' + e.message);
+    }
+  }, err => {
+    if(btn) { btn.disabled = false; btn.textContent = '✅ Mark Done'; }
+    alert('Location error: ' + err);
+  });
+}
+
 // ── SCREEN: HOME ────────────────────────────────────────────────────
 function _fmktRenderHome() {
   const isOwner = CURRENT_USER && FMKT_OWNER_IDS.includes(CURRENT_USER.id);
@@ -10683,6 +10965,9 @@ function _fmktRenderHome() {
 
   document.getElementById("fmkt-root").innerHTML = `
     <div class="fmkt-wrap">
+
+      <!-- Today's Objectives (injected async after render) -->
+      <div id="fmkt-objectives-card"></div>
 
       <!-- Header -->
       <div class="fmkt-header">
@@ -10732,6 +11017,8 @@ function _fmktRenderHome() {
     </div>`;
   _fmktHomeTab = _fmktHomeTab || 'today';
   _fmktRenderHomeTab();
+  // Load today's objectives from manager
+  _fmktLoadObjectives();
 }
 
 let _fmktHomeTab = 'today';
