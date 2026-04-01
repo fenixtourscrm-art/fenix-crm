@@ -10523,16 +10523,17 @@ async function _fmktLoadAnalytics() {
   const cutoff = days[0];
 
   try {
-    // Fetch visits for last 7 days — filter by same staff as checkins
+    // Declare first — used in all three queries below
+    const analyticsStaffId = isOwner ? 2 : staffId;
+
+    // Fetch visits for last 7 days
     let vQ = db.collection('fieldVisits')
       .where('employeeId','==', analyticsStaffId)
       .where('date','>=', cutoff);
     const visitsSnap = await vQ.get();
     const allVisits = visitsSnap.docs.map(d=>({id:d.id,...d.data()}));
 
-    // Fetch checkins for last 7 days — always filter by staffId for accurate field hours
-    // If owner view, default to tracking Paresh (id:2) for analytics
-    const analyticsStaffId = isOwner ? 2 : staffId;
+    // Fetch checkins for last 7 days
     let cQ = db.collection('fieldCheckins')
       .where('employeeId','==', analyticsStaffId)
       .where('date','>=', cutoff);
