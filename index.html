@@ -10573,12 +10573,15 @@ async function _fmktLoadAnalytics() {
         : '—';
 
       // Distance: sum of consecutive ping distances
+      // Max single hop = 2km (GPS glitch filter) — Ahmedabad city span ~60km so daily max ~80km realistic
       let distKm = 0;
-      const sorted = [...dayPings].sort((a,b)=>(a.savedAt||'').localeCompare(b.savedAt||''));
+      const sorted = [...dayPings]
+        .filter(p => p.lat && p.lng)
+        .sort((a,b) => (a.savedAt||'').localeCompare(b.savedAt||''));
       for(let i=1; i<sorted.length; i++) {
-        if(sorted[i-1].lat && sorted[i].lat) {
-          distKm += _fmktHaversine(sorted[i-1].lat, sorted[i-1].lng, sorted[i].lat, sorted[i].lng);
-        }
+        const hop = _fmktHaversine(sorted[i-1].lat, sorted[i-1].lng, sorted[i].lat, sorted[i].lng);
+        // Skip any single hop > 2km — GPS glitch, stale ping, or bad coordinate
+        if(hop <= 2.0) distKm += hop;
       }
 
       // Outcome breakdown
