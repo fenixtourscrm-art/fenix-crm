@@ -3625,7 +3625,14 @@ auth.onAuthStateChanged(function(user) {
   // Authorised!
   CURRENT_USER = staff;
   USER_PERMS   = PERM_MAP[staff.id];
-  STAFF = [{"id":1,"name":"Ms. Rehana Ansari","role":"Managing Director","initials":"RA"},{"id":2,"name":"Mr. Paresh Gajera","role":"Sales Executive","initials":"PG"},{"id":3,"name":"Ms. Nusaiba Puthawala","role":"Visa Executive","initials":"NP"},{"id":4,"name":"Mr. Ahyan Shaikh","role":"Operation Dept","initials":"AS"}];
+  STAFF = [
+    {"id":1,"name":"Ms. Rehana Ansari",    "role":"Managing Director",  "initials":"RA"},
+    {"id":2,"name":"Mr. Paresh Gajera",    "role":"Sales Executive",    "initials":"PG"},
+    {"id":3,"name":"Ms. Nusaiba Puthawala","role":"Visa Executive",     "initials":"NP"},
+    {"id":4,"name":"Mr. Ahyan Shaikh",     "role":"Operation Dept",     "initials":"AS"},
+    {"id":5,"name":"Mr. Taha Rangwala",    "role":"Accountant",         "initials":"TR"},
+    {"id":6,"name":"Ms. Ayesha Rangoonwala","role":"Marketing Executive","initials":"AR"},
+  ];
 
   document.getElementById("fb-login-screen").style.display = "none";
   document.querySelectorAll(".sidebar,.topbar,.main").forEach(el => { if(el) el.style.visibility="visible"; });
