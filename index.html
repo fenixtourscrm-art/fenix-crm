@@ -6046,8 +6046,8 @@ function loadGeoJSON() {
               // Find best match in our data
               const match = findCountryMatch(name);
               showDestInfo(match || name);
-              if(hint) hint.textContent = '📍 ' + (match || name);
               const hint = document.getElementById('dest-map-hint');
+              if(hint) hint.textContent = '📍 ' + (match || name);
             }
           });
           layer.bindTooltip(name, { permanent: false, direction: 'top', className: 'country-tooltip' });
