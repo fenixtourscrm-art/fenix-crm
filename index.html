@@ -1379,12 +1379,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
               <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:5px">FROM CURRENCY</label>
               <select id="cur-from" onchange="convertCurrency()"
                 style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:600;background:#fff;outline:none;box-sizing:border-box">
-                <option value="USD">🇺🇸 USD — US Dollar</option>
-                <option value="EUR">🇪🇺 EUR — Euro</option>
-                <option value="GBP">🇬🇧 GBP — British Pound</option>
-                <option value="AED">🇦🇪 AED — UAE Dirham</option>
-                <option value="SGD">🇸🇬 SGD — Singapore Dollar</option>
-                <option value="THB">🇹🇭 THB — Thai Baht</option>
+                <!-- Options populated dynamically from API response -->
+                <option value="">Select currency...</option>
               </select>
             </div>
             <div style="flex:1;min-width:140px">
@@ -12878,17 +12874,30 @@ document.addEventListener('click', e => {
 //  Storage: Firebase doc currencies/latest — refreshed once per day
 // ════════════════════════════════════════════════════════════════════
 
-const CUR_CURRENCIES = ['USD','EUR','GBP','AED','SGD','THB'];
+// All major world currencies — featured ones shown as cards, all available in converter
+const CUR_FEATURED   = ['USD','EUR','GBP','AED','SGD','THB','JPY','AUD','CAD','CHF','MYR','ZAR'];
+const CUR_CURRENCIES = CUR_FEATURED; // cards use featured list
 // Flag image URLs from flagcdn.com (free CDN, reliable cross-browser)
-const CUR_FLAGS = {
-  USD: '<img src="https://flagcdn.com/w40/us.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="USD"/>',
-  EUR: '<img src="https://flagcdn.com/w40/eu.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="EUR"/>',
-  GBP: '<img src="https://flagcdn.com/w40/gb.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="GBP"/>',
-  AED: '<img src="https://flagcdn.com/w40/ae.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="AED"/>',
-  SGD: '<img src="https://flagcdn.com/w40/sg.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="SGD"/>',
-  THB: '<img src="https://flagcdn.com/w40/th.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="THB"/>',
+// Flag images — flagcdn.com (free CDN)
+function _curFlag(code) {
+  const map = {USD:'us',EUR:'eu',GBP:'gb',AED:'ae',SGD:'sg',THB:'th',JPY:'jp',AUD:'au',CAD:'ca',CHF:'ch',MYR:'my',ZAR:'za',NZD:'nz',HKD:'hk',SEK:'se',NOK:'no',DKK:'dk',KWD:'kw',BHD:'bh',OMR:'om',QAR:'qa',SAR:'sa',MXN:'mx',BRL:'br',TRY:'tr',RUB:'ru',CNY:'cn',KRW:'kr',IDR:'id',PHP:'ph',VND:'vn',BDT:'bd',PKR:'pk',LKR:'lk',NPR:'np',MMK:'mm',KHR:'kh',LAK:'la',MOP:'mo',TWD:'tw',EGP:'eg',MAD:'ma',KES:'ke',NGN:'ng',GHS:'gh',TZS:'tz',UGX:'ug',ZMW:'zm',ETB:'et',CZK:'cz',HUF:'hu',PLN:'pl',RON:'ro',HRK:'hr',BGN:'bg',ISK:'is',MKD:'mk',RSD:'rs',COP:'co',ARS:'ar',CLP:'cl',PEN:'pe',UYU:'uy',BOB:'bo',PYG:'py',VEF:'ve',GTQ:'gt',HNL:'hn',NIO:'ni',CRC:'cr',PAB:'pa',DOP:'do',JMD:'jm',TTD:'tt',BBD:'bb',BSD:'bs',BZD:'bz',GYD:'gy',SRD:'sr',AWG:'aw',HTG:'ht',CUP:'cu',XCD:'ag',FJD:'fj',PGK:'pg',WST:'ws',TOP:'to',VUV:'vu',SBD:'sb'};
+  const cc = map[code];
+  return cc ? `<img src="https://flagcdn.com/w40/${cc}.png" width="32" height="21" style="border-radius:3px;object-fit:cover" alt="${code}"/>` : '🏳️';
+}
+const CUR_FLAGS = new Proxy({}, { get: (t,k) => _curFlag(k) });
+const CUR_NAMES = {
+  USD:'US Dollar',EUR:'Euro',GBP:'British Pound',AED:'UAE Dirham',SGD:'Singapore Dollar',THB:'Thai Baht',
+  JPY:'Japanese Yen',AUD:'Australian Dollar',CAD:'Canadian Dollar',CHF:'Swiss Franc',MYR:'Malaysian Ringgit',
+  ZAR:'South African Rand',NZD:'New Zealand Dollar',HKD:'Hong Kong Dollar',SEK:'Swedish Krona',
+  NOK:'Norwegian Krone',DKK:'Danish Krone',KWD:'Kuwaiti Dinar',BHD:'Bahraini Dinar',OMR:'Omani Rial',
+  QAR:'Qatari Riyal',SAR:'Saudi Riyal',MXN:'Mexican Peso',BRL:'Brazilian Real',TRY:'Turkish Lira',
+  RUB:'Russian Ruble',CNY:'Chinese Yuan',KRW:'South Korean Won',IDR:'Indonesian Rupiah',PHP:'Philippine Peso',
+  VND:'Vietnamese Dong',BDT:'Bangladeshi Taka',PKR:'Pakistani Rupee',LKR:'Sri Lankan Rupee',
+  NPR:'Nepalese Rupee',MMK:'Myanmar Kyat',KHR:'Cambodian Riel',TWD:'Taiwan Dollar',EGP:'Egyptian Pound',
+  MAD:'Moroccan Dirham',KES:'Kenyan Shilling',NGN:'Nigerian Naira',CZK:'Czech Koruna',HUF:'Hungarian Forint',
+  PLN:'Polish Zloty',RON:'Romanian Leu',SEK:'Swedish Krona',COP:'Colombian Peso',ARS:'Argentine Peso',
+  CLP:'Chilean Peso',PEN:'Peruvian Sol',
 };
-const CUR_NAMES = {USD:'US Dollar',EUR:'Euro',GBP:'British Pound',AED:'UAE Dirham',SGD:'Singapore Dollar',THB:'Thai Baht'};
 
 // Rates stored as: how many INR per 1 unit of currency (e.g. 1 USD = 83.5 INR)
 let _curRates = {}; // { USD: 83.5, EUR: 91.2, ... }
@@ -13014,8 +13023,28 @@ function renderCurrencyCards(payload) {
         <div style="font-size:11px;font-weight:700;color:${c.lbl};margin-bottom:6px">${cur}</div>
         <div style="font-size:20px;font-weight:900;color:${c.val}">₹${rate ? rate.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</div>
         <div style="font-size:9px;color:#94a3b8;margin-top:3px">per 1 ${cur}</div>
+        <a href="https://www.xe.com/currencyconverter/convert/?Amount=1&From=${cur}&To=INR"
+          target="_blank" rel="noopener"
+          onclick="event.stopPropagation()"
+          style="display:inline-block;margin-top:7px;font-size:9px;font-weight:700;color:#0369a1;text-decoration:none;background:#e0f2fe;padding:2px 8px;border-radius:99px">
+          🔗 XE
+        </a>
       </div>`;
   }).join('');
+
+  // Populate converter select with ALL currencies returned by API
+  const sel = document.getElementById('cur-from');
+  if(sel && payload.rates) {
+    const allCodes = Object.keys(payload.rates).sort();
+    const featured = CUR_FEATURED;
+    // Featured first, then rest alphabetically
+    const ordered = [...featured.filter(c => payload.rates[c]), ...allCodes.filter(c => !featured.includes(c))];
+    sel.innerHTML = ordered.map(c => {
+      const name = CUR_NAMES[c] || c;
+      const selected = c === 'USD' ? ' selected' : '';
+      return `<option value="${c}"${selected}>${c} — ${name}</option>`;
+    }).join('');
+  }
 
   convertCurrency(); // refresh converter if amount is set
 }
