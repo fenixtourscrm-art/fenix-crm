@@ -1356,7 +1356,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
             <div style="font-size:13px;font-weight:700;color:#0f172a">⚙️ Rate Markup</div>
             <div style="display:flex;align-items:center;gap:8px">
               <span style="font-size:12px;color:#64748b">Add ₹</span>
-              <input type="number" id="cur-markup" value="0.50" min="0" max="10" step="0.05"
+              <input type="number" id="cur-markup" value="0" min="0" max="10" step="0.05"
                 onchange="_curMarkup=parseFloat(this.value)||0;renderCurrencyCards(_curLastPayload);convertCurrency()"
                 style="width:70px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:700;outline:none;text-align:center"/>
               <span style="font-size:12px;color:#64748b">per unit (applied to all rates)</span>
@@ -12978,7 +12978,7 @@ async function fetchAndSaveRates(manualRefresh) {
   }
 }
 
-let _curMarkup = 0.50;  // default ₹0.50 markup per unit
+let _curMarkup = 0;  // default 0 — staff sets their own markup
 let _curLastPayload = null; // keep last payload for re-render on markup change
 
 function renderCurrencyCards(payload) {
