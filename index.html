@@ -12864,7 +12864,15 @@ document.addEventListener('click', e => {
 // ════════════════════════════════════════════════════════════════════
 
 const CUR_CURRENCIES = ['USD','EUR','GBP','AED','SGD','THB'];
-const CUR_FLAGS = {USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',AED:'🇦🇪',SGD:'🇸🇬',THB:'🇹🇭'};
+// Flag image URLs from flagcdn.com (free CDN, reliable cross-browser)
+const CUR_FLAGS = {
+  USD: '<img src="https://flagcdn.com/w40/us.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="USD"/>',
+  EUR: '<img src="https://flagcdn.com/w40/eu.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="EUR"/>',
+  GBP: '<img src="https://flagcdn.com/w40/gb.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="GBP"/>',
+  AED: '<img src="https://flagcdn.com/w40/ae.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="AED"/>',
+  SGD: '<img src="https://flagcdn.com/w40/sg.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="SGD"/>',
+  THB: '<img src="https://flagcdn.com/w40/th.png" width="36" height="24" style="border-radius:3px;object-fit:cover" alt="THB"/>',
+};
 const CUR_NAMES = {USD:'US Dollar',EUR:'Euro',GBP:'British Pound',AED:'UAE Dirham',SGD:'Singapore Dollar',THB:'Thai Baht'};
 
 // Rates stored as: how many INR per 1 unit of currency (e.g. 1 USD = 83.5 INR)
@@ -12973,7 +12981,7 @@ function renderCurrencyCards(payload) {
       <div style="background:${c.bg};border:1.5px solid ${c.border};border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.15s"
         onclick="document.getElementById('cur-from').value='${cur}';document.getElementById('cur-amount').focus();convertCurrency()"
         onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
-        <div style="font-size:22px;margin-bottom:4px">${CUR_FLAGS[cur]}</div>
+        <div style="height:28px;display:flex;align-items:center;justify-content:center;margin-bottom:6px">${CUR_FLAGS[cur]}</div>
         <div style="font-size:11px;font-weight:700;color:${c.lbl};margin-bottom:6px">${cur}</div>
         <div style="font-size:20px;font-weight:900;color:${c.val}">₹${rate ? rate.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—'}</div>
         <div style="font-size:9px;color:#94a3b8;margin-top:3px">per 1 ${cur}</div>
@@ -13001,7 +13009,7 @@ function convertCurrency() {
   resultEl.textContent = '₹' + inr.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 
   if(detailEl) detailEl.innerHTML =
-    `1 ${CUR_FLAGS[fromCur]} ${fromCur} = ₹${rate.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})} &nbsp;·&nbsp; `+
+    `1 <span style="vertical-align:middle">${CUR_FLAGS[fromCur]}</span> ${fromCur} = ₹${rate.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})} &nbsp;·&nbsp; `+
     `Rate from: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`;
 }
 
