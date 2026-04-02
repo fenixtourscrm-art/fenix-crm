@@ -1483,6 +1483,7 @@ let STAFF = [
   {id:4,name:"Mr. Ahyan Shaikh",role:"Operation Dept",initials:"AS"},
   {id:5,name:"Mr. Taha Rangwala",role:"Accountant",initials:"TR"},
   {id:6,name:"Ms. Ayesha Rangoonwala",role:"Marketing Executive",initials:"AR"},
+  {id:7,name:"Ms. Meghna Kukadia",role:"Manager",initials:"MK"},
 ];
 let mktCalls=[];
 let nxtStaff=10;
@@ -2038,8 +2039,8 @@ document.addEventListener("click", e => {
 });
 
 function renderEnquiries(){
-  // id:1 = Owner, id:6 = Marketing (both see all enquiries)
-  const _isOwner = CURRENT_USER && (CURRENT_USER.id===1 || CURRENT_USER.id===6);
+  // id:1 = Owner, id:6 = Marketing, id:7 = Manager (all see all enquiries)
+  const _isOwner = CURRENT_USER && (CURRENT_USER.id===1 || CURRENT_USER.id===6 || CURRENT_USER.id===7);
   let list = _isOwner ? enquiries : enquiries.filter(e=>e.staffId===CURRENT_USER?.id||e.createdBy===CURRENT_USER?.id);
   // AND logic — all active filters must match simultaneously
   if(enqStatusFilter!=="all") list=list.filter(e=>e.status===enqStatusFilter);
@@ -3624,14 +3625,15 @@ renderStaff();
 // ═══════════════════════════════════════════════
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
-const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "booking@fenixtours.co.in": {"id": 6, "name": "Ms. Ayesha Rangoonwala", "role": "Marketing Executive", "initials": "AR", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
+const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "booking@fenixtours.co.in": {"id": 6, "name": "Ms. Ayesha Rangoonwala", "role": "Marketing Executive", "initials": "AR", "isOwner": false}, "manager@fenixtours.co.in": {"id": 7, "name": "Ms. Meghna Kukadia", "role": "Manager", "initials": "MK", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
 const PERM_MAP  = {
   "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
   "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
-  "6": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","followup","quiz","ai","destinations","bugreports","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": false}
+  "6": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","followup","quiz","ai","destinations","bugreports","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": false},
+  "7": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": true}
 }
 
 try {
@@ -3711,6 +3713,7 @@ auth.onAuthStateChanged(function(user) {
     {"id":4,"name":"Mr. Ahyan Shaikh",     "role":"Operation Dept",     "initials":"AS"},
     {"id":5,"name":"Mr. Taha Rangwala",    "role":"Accountant",         "initials":"TR"},
     {"id":6,"name":"Ms. Ayesha Rangoonwala","role":"Marketing Executive","initials":"AR"},
+    {"id":7,"name":"Ms. Meghna Kukadia","role":"Manager","initials":"MK"},
   ];
 
   document.getElementById("fb-login-screen").style.display = "none";
@@ -8625,6 +8628,7 @@ function renderLeaderboard() {
     {id:'4', name:'Mr. Ahyan Shaikh', initials:'AS'},
     {id:'5', name:'Mr. Taha Rangwala', initials:'TR'},
     {id:'6', name:'Ms. Ayesha Rangoonwala', initials:'AR'},
+    {id:'7', name:'Ms. Meghna Kukadia', initials:'MK'},
   ];
 
   const rows = STAFF_LIST.map(s => {
