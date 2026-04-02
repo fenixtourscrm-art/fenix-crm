@@ -1350,6 +1350,21 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <div class="card" style="padding:16px;text-align:center;color:#94a3b8">Loading...</div>
         </div>
 
+        <!-- Markup Setting (owner only) -->
+        <div id="cur-markup-wrap" class="card" style="padding:14px 20px;margin-bottom:12px;display:none">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="font-size:13px;font-weight:700;color:#0f172a">⚙️ Rate Markup</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:#64748b">Add ₹</span>
+              <input type="number" id="cur-markup" value="0.50" min="0" max="10" step="0.05"
+                onchange="_curMarkup=parseFloat(this.value)||0;renderCurrencyCards(_curLastPayload);convertCurrency()"
+                style="width:70px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;font-weight:700;outline:none;text-align:center"/>
+              <span style="font-size:12px;color:#64748b">per unit (applied to all rates)</span>
+            </div>
+            <div style="font-size:11px;color:#94a3b8;font-style:italic">Only visible to you · Customers see final rate only</div>
+          </div>
+        </div>
+
         <!-- Converter -->
         <div class="card" style="padding:20px">
           <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:14px">🧮 Convert to INR</div>
@@ -12954,17 +12969,27 @@ async function fetchAndSaveRates(manualRefresh) {
   }
 }
 
+let _curMarkup = 0.50;  // default ₹0.50 markup per unit
+let _curLastPayload = null; // keep last payload for re-render on markup change
+
 function renderCurrencyCards(payload) {
+  _curLastPayload = payload; // save for re-render
   const cardsEl = document.getElementById('cur-rate-cards');
   const updEl   = document.getElementById('cur-last-updated');
   if(!cardsEl) return;
+
+  // Show markup control only to owner (id:1)
+  const markupWrap = document.getElementById('cur-markup-wrap');
+  if(markupWrap) markupWrap.style.display = (CURRENT_USER?.id === 1) ? '' : 'none';
+  // Sync markup input value
+  const markupInput = document.getElementById('cur-markup');
+  if(markupInput && parseFloat(markupInput.value) !== _curMarkup) markupInput.value = _curMarkup.toFixed(2);
 
   const updTime = payload.updatedAt
     ? new Date(payload.updatedAt).toLocaleString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hour12:true})
     : payload.date;
   if(updEl) updEl.textContent = `Last updated: ${updTime}`;
 
-  // Colour scheme per currency
   const colors = {
     USD:{bg:'#eff6ff',border:'#bfdbfe',val:'#1d4ed8',lbl:'#3b82f6'},
     EUR:{bg:'#f0fdf4',border:'#bbf7d0',val:'#166534',lbl:'#16a34a'},
@@ -12975,8 +13000,12 @@ function renderCurrencyCards(payload) {
   };
 
   cardsEl.innerHTML = CUR_CURRENCIES.map(cur => {
-    const rate = payload.rates?.[cur];
-    const c    = colors[cur] || {bg:'#f8fafc',border:'#e2e8f0',val:'#0f172a',lbl:'#64748b'};
+    const rawRate = payload.rates?.[cur];
+    // Apply markup — this is what staff sees and quotes to clients
+    const rate = rawRate ? parseFloat((rawRate + _curMarkup).toFixed(4)) : null;
+    // Update _curRates with marked-up values so converter also uses them
+    if(rate) _curRates[cur] = rate;
+    const c = colors[cur] || {bg:'#f8fafc',border:'#e2e8f0',val:'#0f172a',lbl:'#64748b'};
     return `
       <div style="background:${c.bg};border:1.5px solid ${c.border};border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:.15s"
         onclick="document.getElementById('cur-from').value='${cur}';document.getElementById('cur-amount').focus();convertCurrency()"
