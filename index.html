@@ -12860,9 +12860,12 @@ let _swRegistration = null;
 // Register Service Worker
 if('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
+    navigator.serviceWorker.getRegistrations().then(regs => { regs.forEach(r => r.unregister()); });
     navigator.serviceWorker.register('/fenix-crm/sw.js')
       .then(reg => {
         _swRegistration = reg;
+        reg.update();
+        if(reg.waiting) reg.waiting.postMessage({type:'SKIP_WAITING'});
         console.log('[PWA] Service Worker registered:', reg.scope);
         // Request periodic background sync permission (Chrome Android)
         _fmktRequestPeriodicSync(reg);
