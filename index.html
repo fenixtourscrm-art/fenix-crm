@@ -471,7 +471,7 @@ thead .col-sticky-last{background:#f8fafc;z-index:3}
 body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(circle at 1px 1px,rgba(249,115,22,0.06) 1px,transparent 0);background-size:28px 28px;pointer-events:none;z-index:0}
 /* ── GRADIENT HEADER GLOW ── */
 .topbar::after{content:"";position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,#f97316 30%,#dc2626 70%,transparent)}
-.topbar{position:relative;overflow:visible;z-index:100}
+.topbar{position:relative;overflow:visible}
 /* ── BOOKING CARDS ── */
 .bk-cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:18px}
 .bk-card{background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer;transition:all .2s;box-shadow:0 2px 6px rgba(0,0,0,0.05);animation:fadeSlideIn .4s ease both}
@@ -683,6 +683,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
     <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
+    <div class="nav-item" onclick="showTab('rooming',this)"><span class="nav-icon">🛏️</span>Rooming List</div>
   </nav>
   <div class="sidebar-footer">
     <div class="agent-row">
@@ -710,7 +711,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <span id="notif-badge" style="display:none;position:absolute;top:-2px;right:-2px;background:#dc2626;color:#fff;font-size:9px;font-weight:800;border-radius:99px;min-width:16px;height:16px;display:none;align-items:center;justify-content:center;padding:0 3px">0</span>
         </button>
         <!-- Notification Panel -->
-        <div id="notif-panel" style="display:none;position:fixed;top:60px;right:16px;width:380px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.18);z-index:999999;overflow:hidden">
+        <div id="notif-panel" style="display:none;position:fixed;top:60px;right:16px;width:380px;background:#fff;border:1.5px solid #e2e8f0;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.18);z-index:99999;overflow:hidden">
           <!-- Panel Header with tabs -->
           <div style="background:#f8fafc;border-bottom:1px solid #f1f5f9">
             <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px 0">
@@ -1465,6 +1466,194 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div id="bug-list"></div>
     </div>
 
+<!-- ════════════════════════════════════════════════════════
+     ROOMING LIST TAB
+     ════════════════════════════════════════════════════════ -->
+<div class="tab" id="tab-rooming">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div>
+      <div class="section-title" style="margin:0">🛏️ Rooming List</div>
+      <div style="font-size:12px;color:#64748b;margin-top:3px">Store passenger details from Passport & Aadhaar for fast flight/hotel booking.</div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" style="background:#0ea5e9;color:#fff;font-size:12px;font-weight:700" onclick="openRoomingUpload()">📷 Upload Passport / Aadhaar</button>
+      <button class="btn btn-primary" style="font-size:12px;font-weight:700" onclick="openRoomingForm(null)">+ Add Passenger</button>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:12px;margin-bottom:20px">
+    <div style="background:#fff;border-radius:12px;padding:14px 16px;border:1.5px solid #e2e8f0;text-align:center">
+      <div id="rl-stat-total" style="font-size:24px;font-weight:800;color:#0f172a">0</div>
+      <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:2px">Total</div>
+    </div>
+    <div style="background:#eff6ff;border-radius:12px;padding:14px 16px;border:1.5px solid #bfdbfe;text-align:center">
+      <div id="rl-stat-intl" style="font-size:24px;font-weight:800;color:#1d4ed8">0</div>
+      <div style="font-size:11px;color:#1d4ed8;font-weight:600;margin-top:2px">International</div>
+    </div>
+    <div style="background:#f0fdf4;border-radius:12px;padding:14px 16px;border:1.5px solid #86efac;text-align:center">
+      <div id="rl-stat-dom" style="font-size:24px;font-weight:800;color:#166534">0</div>
+      <div style="font-size:11px;color:#166534;font-weight:600;margin-top:2px">Domestic</div>
+    </div>
+    <div style="background:#fefce8;border-radius:12px;padding:14px 16px;border:1.5px solid #fde68a;text-align:center">
+      <div id="rl-stat-expiring" style="font-size:24px;font-weight:800;color:#92400e">0</div>
+      <div style="font-size:11px;color:#92400e;font-weight:600;margin-top:2px">⚠️ Expiring Soon</div>
+    </div>
+  </div>
+
+  <!-- Search + Filter -->
+  <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+    <input id="rl-search" placeholder="🔍 Search by Name / Passport No / Aadhaar / Family..." oninput="renderRoomingList()"
+      style="flex:1;min-width:200px;padding:8px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px"/>
+    <select id="rl-filter-type" onchange="renderRoomingList()"
+      style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff;color:#374151">
+      <option value="all">All Types</option>
+      <option value="International">International</option>
+      <option value="Domestic">Domestic</option>
+    </select>
+  </div>
+
+  <!-- Table -->
+  <div style="background:#fff;border-radius:14px;border:1.5px solid #e2e8f0;overflow:hidden">
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f8fafc;border-bottom:1.5px solid #e2e8f0">
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">Name</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">Type</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">DOB</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">Passport / Aadhaar</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">Expiry</th>
+            <th style="padding:10px 14px;text-align:left;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">Family Group</th>
+            <th style="padding:10px 14px;text-align:center;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;white-space:nowrap">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rl-tbody"></tbody>
+      </table>
+    </div>
+    <div id="rl-empty" style="display:none;text-align:center;padding:40px 20px;color:#94a3b8">
+      <div style="font-size:36px;margin-bottom:8px">🛏️</div>
+      <div style="font-weight:700;font-size:14px;color:#64748b">No passengers yet</div>
+      <div style="font-size:12px;margin-top:4px">Add manually or upload a Passport / Aadhaar image to auto-extract details.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROOMING: Upload & OCR Modal ══ -->
+<div id="rl-upload-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:480px;box-shadow:0 24px 60px rgba(0,0,0,0.18);overflow:hidden">
+    <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:#fff">📷 Upload Document</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px">Passport or Aadhaar — AI will extract details automatically</div>
+      </div>
+      <button onclick="closeRoomingUpload()" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="padding:22px">
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <button id="rl-doc-intl" onclick="setRoomingDocType('International')" style="flex:1;padding:10px;border:2px solid #0ea5e9;border-radius:10px;background:#eff6ff;color:#0369a1;font-weight:700;font-size:12px;cursor:pointer">🌍 Passport (International)</button>
+        <button id="rl-doc-dom" onclick="setRoomingDocType('Domestic')" style="flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;cursor:pointer">🇮🇳 Aadhaar (Domestic)</button>
+      </div>
+      <label style="display:block;border:2px dashed #cbd5e1;border-radius:12px;padding:28px;text-align:center;cursor:pointer;background:#f8fafc;transition:border-color .2s" id="rl-drop-zone" ondragover="event.preventDefault();this.style.borderColor='#0ea5e9'" ondragleave="this.style.borderColor='#cbd5e1'" ondrop="handleRoomingDrop(event)">
+        <input type="file" id="rl-file-input" accept="image/*" style="display:none" onchange="handleRoomingFile(this.files[0])"/>
+        <div style="font-size:32px;margin-bottom:8px">📤</div>
+        <div style="font-weight:700;color:#374151;font-size:13px">Click to upload or drag & drop</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">JPG, PNG, HEIC — max 10MB</div>
+        <div id="rl-file-name" style="margin-top:8px;font-size:12px;color:#0ea5e9;font-weight:600"></div>
+      </label>
+      <div id="rl-ocr-status" style="display:none;margin-top:14px;padding:10px 14px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;font-size:12px;color:#166534;font-weight:600;text-align:center">
+        ⏳ Extracting details with AI OCR...
+      </div>
+      <button id="rl-extract-btn" onclick="runRoomingOCR()" style="width:100%;margin-top:14px;padding:12px;background:#0ea5e9;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Extract Details →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROOMING: Passenger Form Modal ══ -->
+<div id="rl-form-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;padding:16px;overflow-y:auto">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:560px;box-shadow:0 24px 60px rgba(0,0,0,0.18);overflow:hidden;margin:auto">
+    <div style="background:linear-gradient(135deg,#f97316,#dc2626);padding:18px 22px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div id="rl-form-title" style="font-size:16px;font-weight:800;color:#fff">+ Add Passenger</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px">Review and confirm details before saving</div>
+      </div>
+      <button onclick="closeRoomingForm()" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div style="padding:22px">
+      <!-- Type selector -->
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <button id="rl-type-intl" onclick="setRoomingFormType('International')" style="flex:1;padding:8px;border:2px solid #f97316;border-radius:10px;background:#fff7ed;color:#ea580c;font-weight:700;font-size:12px;cursor:pointer">🌍 International</button>
+        <button id="rl-type-dom" onclick="setRoomingFormType('Domestic')" style="flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;cursor:pointer">🇮🇳 Domestic</button>
+      </div>
+      <input type="hidden" id="rl-edit-id"/>
+      <!-- Row 1 -->
+      <div class="form-grid">
+        <div class="fg" style="max-width:100px">
+          <label>Title</label>
+          <select id="rl-title" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px">
+            <option>Mr</option><option>Mrs</option><option>Ms</option><option>Miss</option><option>Dr</option><option>Master</option>
+          </select>
+        </div>
+        <div class="fg"><label>First Name <span style="color:#dc2626">*</span></label><input id="rl-fname" placeholder="First name"/></div>
+      </div>
+      <!-- Row 2 -->
+      <div class="form-grid">
+        <div class="fg"><label>Middle Name</label><input id="rl-mname" placeholder="Middle name (optional)"/></div>
+        <div class="fg"><label>Last Name <span style="color:#dc2626">*</span></label><input id="rl-lname" placeholder="Last name"/></div>
+      </div>
+      <!-- Row 3 -->
+      <div class="form-grid">
+        <div class="fg"><label>Date of Birth <span style="color:#dc2626">*</span></label><input type="date" id="rl-dob"/></div>
+        <div class="fg"><label>Nationality</label><input id="rl-nationality" placeholder="e.g. Indian"/></div>
+      </div>
+      <!-- International fields -->
+      <div id="rl-intl-fields">
+        <div style="font-size:11px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">🛂 Passport Details</div>
+        <div class="form-grid">
+          <div class="fg"><label>Passport Number <span style="color:#dc2626">*</span></label><input id="rl-passport-no" placeholder="e.g. Z1234567"/></div>
+          <div class="fg"><label>Date of Issue</label><input type="date" id="rl-doi"/></div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>Date of Expiry</label><input type="date" id="rl-doe"/></div>
+          <div class="fg"></div>
+        </div>
+      </div>
+      <!-- Domestic fields -->
+      <div id="rl-dom-fields" style="display:none">
+        <div style="font-size:11px;font-weight:700;color:#10b981;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 6px">🪪 Aadhaar Details</div>
+        <div class="form-grid">
+          <div class="fg"><label>Aadhaar Number <span style="color:#dc2626">*</span></label><input id="rl-aadhaar" placeholder="XXXX XXXX XXXX"/></div>
+          <div class="fg"></div>
+        </div>
+      </div>
+      <!-- Family Group -->
+      <div class="form-grid">
+        <div class="fg"><label>Family / Group Name</label><input id="rl-family" placeholder="e.g. Sharma Family, Group A"/></div>
+        <div class="fg"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button onclick="closeRoomingForm()" style="flex:1;padding:11px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;cursor:pointer;font-size:13px">Cancel</button>
+        <button onclick="saveRoomingPassenger()" style="flex:2;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-weight:800;cursor:pointer;font-size:13px">✅ Save Passenger</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROOMING: Select Passenger Modal (for Flight/Hotel booking) ══ -->
+<div id="rl-select-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:18px;width:100%;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,0.18)">
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2">
+      <div style="font-size:15px;font-weight:800;color:#fff">🛏️ Select from Rooming List</div>
+      <button onclick="closeRoomingSelect()" style="background:rgba(255,255,255,0.15);border:none;border-radius:8px;color:#fff;width:28px;height:28px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="padding:14px">
+      <input id="rl-select-search" placeholder="🔍 Search passenger..." oninput="renderRoomingSelect()"
+        style="width:100%;padding:8px 14px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;box-sizing:border-box;margin-bottom:12px"/>
+      <div id="rl-select-list"></div>
+    </div>
+  </div>
+</div>
+
 <div class="tab" id="tab-search">
       <div class="section-title">🔍 Search Results</div>
       <div id="search-results"></div>
@@ -1556,7 +1745,7 @@ const sBadge=s=>{const styles={"Active":"background:#eff6ff;color:#1d4ed8;border
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter"};
+const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -5299,6 +5488,10 @@ function updateBkForm() {
   if(!wrap) return;
 
   const paxFields = `<div class="fg" style="margin-bottom:12px"><label>Passenger Details</label>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <button type="button" onclick="openRoomingSelect('booking')" style="padding:5px 12px;background:#0f172a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🛏️ Add From Rooming List</button>
+      <span id="b-rooming-selected" style="font-size:11px;color:#10b981;font-weight:600"></span>
+    </div>
     <div class="pax-grid">
       <div class="pax-item"><div class="pax-label">Adults</div><input class="pax-input" type="number" id="b-adults" value="2" min="0"/></div>
       <div class="pax-item"><div class="pax-label">Child W/Bed</div><input class="pax-input" type="number" id="b-childbed" value="0" min="0"/></div>
@@ -13230,7 +13423,316 @@ function convertCurrency() {
     `1 <span style="vertical-align:middle">${CUR_FLAGS[fromCur]}</span> ${fromCur} = ₹${rate.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})} &nbsp;·&nbsp; `+
     `Rate from: ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}`;
 }
+// ════════════════════════════════════════════════════════════════
+// ROOMING LIST MODULE
+// ════════════════════════════════════════════════════════════════
 
+let _roomingList = [];
+let _roomingDocType = 'International';
+let _roomingFormType = 'International';
+let _roomingSelectCallback = null;
+let _roomingFile = null;
+
+function initRooming() {
+  if (!db) return;
+  db.collection('rooming_list').orderBy('createdAt','desc').onSnapshot(snap => {
+    _roomingList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderRoomingList();
+    updateRoomingStats();
+  });
+}
+
+function updateRoomingStats() {
+  const total = _roomingList.length;
+  const intl  = _roomingList.filter(p => p.type === 'International').length;
+  const dom   = _roomingList.filter(p => p.type === 'Domestic').length;
+  const soon  = _roomingList.filter(p => {
+    if (!p.passportDOE) return false;
+    const diff = (new Date(p.passportDOE) - new Date()) / (1000*60*60*24);
+    return diff >= 0 && diff <= 180;
+  }).length;
+  const s = id => document.getElementById(id);
+  if(s('rl-stat-total'))    s('rl-stat-total').textContent    = total;
+  if(s('rl-stat-intl'))     s('rl-stat-intl').textContent     = intl;
+  if(s('rl-stat-dom'))      s('rl-stat-dom').textContent      = dom;
+  if(s('rl-stat-expiring')) s('rl-stat-expiring').textContent = soon;
+}
+
+function renderRoomingList() {
+  const q    = (document.getElementById('rl-search')?.value || '').toLowerCase();
+  const type = document.getElementById('rl-filter-type')?.value || 'all';
+  let list   = _roomingList;
+  if (type !== 'all') list = list.filter(p => p.type === type);
+  if (q) list = list.filter(p =>
+    [p.firstName,p.lastName,p.middleName,p.passportNumber,p.aadhaarNumber,p.familyGroup]
+      .join(' ').toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById('rl-tbody');
+  const empty = document.getElementById('rl-empty');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+  tbody.innerHTML = list.map(p => {
+    const name   = [p.title,p.firstName,p.middleName,p.lastName].filter(Boolean).join(' ');
+    const docNo  = p.type === 'International' ? (p.passportNumber||'—') : (p.aadhaarNumber||'—');
+    const expiry = p.passportDOE || '—';
+    let expiryStyle = 'color:#374151';
+    if (p.passportDOE) {
+      const diff = (new Date(p.passportDOE) - new Date()) / (1000*60*60*24);
+      if (diff < 0)        expiryStyle = 'color:#dc2626;font-weight:700';
+      else if (diff < 180) expiryStyle = 'color:#f59e0b;font-weight:700';
+    }
+    const typeBadge = p.type === 'International'
+      ? '<span style="background:#eff6ff;color:#1d4ed8;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">🌍 Intl</span>'
+      : '<span style="background:#f0fdf4;color:#166534;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">🇮🇳 Dom</span>';
+    return `<tr style="border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <td style="padding:10px 14px;font-weight:600;color:#0f172a">${name}</td>
+      <td style="padding:10px 14px">${typeBadge}</td>
+      <td style="padding:10px 14px;color:#64748b;font-size:12px">${p.dob||'—'}</td>
+      <td style="padding:10px 14px;font-family:monospace;font-size:12px;color:#374151">${docNo}</td>
+      <td style="padding:10px 14px;font-size:12px;${expiryStyle}">${expiry}</td>
+      <td style="padding:10px 14px;font-size:12px;color:#64748b">${p.familyGroup||'—'}</td>
+      <td style="padding:10px 14px;text-align:center;white-space:nowrap">
+        <button onclick="openRoomingForm('${p.id}')" style="background:#f1f5f9;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;color:#374151;margin-right:4px">✏️ Edit</button>
+        <button onclick="deleteRoomingPassenger('${p.id}')" style="background:#fee2e2;border:none;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;color:#dc2626">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openRoomingUpload() {
+  _roomingFile = null;
+  document.getElementById('rl-file-name').textContent = '';
+  document.getElementById('rl-ocr-status').style.display = 'none';
+  document.getElementById('rl-file-input').value = '';
+  setRoomingDocType('International');
+  document.getElementById('rl-upload-overlay').style.display = 'flex';
+}
+function closeRoomingUpload() {
+  document.getElementById('rl-upload-overlay').style.display = 'none';
+}
+function setRoomingDocType(type) {
+  _roomingDocType = type;
+  const iBtn = document.getElementById('rl-doc-intl');
+  const dBtn = document.getElementById('rl-doc-dom');
+  if (type === 'International') {
+    iBtn.style.cssText = 'flex:1;padding:10px;border:2px solid #0ea5e9;border-radius:10px;background:#eff6ff;color:#0369a1;font-weight:700;font-size:12px;cursor:pointer';
+    dBtn.style.cssText = 'flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;cursor:pointer';
+  } else {
+    dBtn.style.cssText = 'flex:1;padding:10px;border:2px solid #10b981;border-radius:10px;background:#f0fdf4;color:#166534;font-weight:700;font-size:12px;cursor:pointer';
+    iBtn.style.cssText = 'flex:1;padding:10px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;cursor:pointer';
+  }
+}
+function handleRoomingDrop(e) {
+  e.preventDefault();
+  document.getElementById('rl-drop-zone').style.borderColor = '#cbd5e1';
+  const file = e.dataTransfer.files[0];
+  if (file) handleRoomingFile(file);
+}
+function handleRoomingFile(file) {
+  if (!file) return;
+  _roomingFile = file;
+  document.getElementById('rl-file-name').textContent = '\uD83D\uDCCE ' + file.name;
+}
+
+async function runRoomingOCR() {
+  if (!_roomingFile) { alert('Please select an image first.'); return; }
+  const status = document.getElementById('rl-ocr-status');
+  const btn    = document.getElementById('rl-extract-btn');
+  status.style.display    = 'block';
+  status.style.background = '#f0fdf4';
+  status.style.color      = '#166534';
+  status.textContent      = '\u23F3 Reading document with AI OCR...';
+  btn.disabled    = true;
+  btn.textContent = 'Extracting...';
+  try {
+    const b64  = await fileToBase64(_roomingFile);
+    const mime = _roomingFile.type || 'image/jpeg';
+    const docLabel = _roomingDocType === 'International' ? 'Indian Passport' : 'Indian Aadhaar Card';
+    const fields   = _roomingDocType === 'International'
+      ? 'title (Mr/Mrs/Ms/Miss/Dr/Master), firstName, middleName, lastName, dob (YYYY-MM-DD), passportNumber, passportDOI (date of issue YYYY-MM-DD), passportDOE (date of expiry YYYY-MM-DD), nationality'
+      : 'title (Mr/Mrs/Ms/Miss/Dr/Master), firstName, lastName, dob (YYYY-MM-DD), aadhaarNumber (12 digits formatted as "XXXX XXXX XXXX"), nationality';
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } },
+          { type: 'text', text: 'This is a ' + docLabel + '. Extract these fields and return ONLY a valid JSON object — no markdown, no backticks, no explanation:\n' + fields + '\nIf a field is not found use "". Format all dates as YYYY-MM-DD.' }
+        ]}]
+      })
+    });
+    const data      = await resp.json();
+    const raw       = data.content?.find(c => c.type === 'text')?.text || '{}';
+    const extracted = JSON.parse(raw.replace(/```json|```/g,'').trim());
+    status.textContent = '\u2705 Extracted! Review and confirm below.';
+    closeRoomingUpload();
+    openRoomingForm(null, { ...extracted, type: _roomingDocType });
+  } catch(err) {
+    status.textContent      = '\u274C Extraction failed. Fill manually.';
+    status.style.background = '#fee2e2';
+    status.style.color      = '#dc2626';
+    setTimeout(() => { closeRoomingUpload(); openRoomingForm(null, { type: _roomingDocType }); }, 1200);
+  }
+  btn.disabled    = false;
+  btn.textContent = 'Extract Details \u2192';
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Read failed'));
+    r.readAsDataURL(file);
+  });
+}
+
+function openRoomingForm(id, prefill) {
+  document.getElementById('rl-edit-id').value = id || '';
+  document.getElementById('rl-form-title').textContent = id ? '\u270F\uFE0F Edit Passenger' : '+ Add Passenger';
+  let data = prefill || {};
+  if (id) { const found = _roomingList.find(p => p.id === id); if (found) data = found; }
+  setRoomingFormType(data.type || 'International');
+  const set = (eid, val) => { const el = document.getElementById(eid); if(el) el.value = val||''; };
+  const titleEl = document.getElementById('rl-title');
+  if (titleEl) titleEl.value = data.title || 'Mr';
+  set('rl-fname',      data.firstName);
+  set('rl-mname',      data.middleName);
+  set('rl-lname',      data.lastName);
+  set('rl-dob',        data.dob);
+  set('rl-nationality',data.nationality || 'Indian');
+  set('rl-passport-no',data.passportNumber);
+  set('rl-doi',        data.passportDOI);
+  set('rl-doe',        data.passportDOE);
+  set('rl-aadhaar',    data.aadhaarNumber);
+  set('rl-family',     data.familyGroup);
+  document.getElementById('rl-form-overlay').style.display = 'flex';
+}
+function closeRoomingForm() {
+  document.getElementById('rl-form-overlay').style.display = 'none';
+}
+function setRoomingFormType(type) {
+  _roomingFormType = type;
+  const iBtn    = document.getElementById('rl-type-intl');
+  const dBtn    = document.getElementById('rl-type-dom');
+  const iFields = document.getElementById('rl-intl-fields');
+  const dFields = document.getElementById('rl-dom-fields');
+  if (type === 'International') {
+    if(iBtn) iBtn.style.cssText = 'flex:1;padding:8px;border:2px solid #f97316;border-radius:10px;background:#fff7ed;color:#ea580c;font-weight:700;font-size:12px;cursor:pointer';
+    if(dBtn) dBtn.style.cssText = 'flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;cursor:pointer';
+    if(iFields) iFields.style.display = 'block';
+    if(dFields) dFields.style.display = 'none';
+  } else {
+    if(dBtn) dBtn.style.cssText = 'flex:1;padding:8px;border:2px solid #10b981;border-radius:10px;background:#f0fdf4;color:#166534;font-weight:700;font-size:12px;cursor:pointer';
+    if(iBtn) iBtn.style.cssText = 'flex:1;padding:8px;border:2px solid #e2e8f0;border-radius:10px;background:#f8fafc;color:#64748b;font-weight:700;font-size:12px;cursor:pointer';
+    if(iFields) iFields.style.display = 'none';
+    if(dFields) dFields.style.display = 'block';
+  }
+}
+
+async function saveRoomingPassenger() {
+  const fname = document.getElementById('rl-fname')?.value.trim();
+  const lname = document.getElementById('rl-lname')?.value.trim();
+  if (!fname || !lname) { alert('First Name and Last Name are required.'); return; }
+  const payload = {
+    title:          document.getElementById('rl-title')?.value || '',
+    firstName:      fname,
+    middleName:     document.getElementById('rl-mname')?.value.trim() || '',
+    lastName:       lname,
+    dob:            document.getElementById('rl-dob')?.value || '',
+    nationality:    document.getElementById('rl-nationality')?.value.trim() || 'Indian',
+    type:           _roomingFormType,
+    passportNumber: document.getElementById('rl-passport-no')?.value.trim() || '',
+    passportDOI:    document.getElementById('rl-doi')?.value || '',
+    passportDOE:    document.getElementById('rl-doe')?.value || '',
+    aadhaarNumber:  document.getElementById('rl-aadhaar')?.value.trim() || '',
+    familyGroup:    document.getElementById('rl-family')?.value.trim() || '',
+    updatedAt:      firebase.firestore.FieldValue.serverTimestamp()
+  };
+  const editId = document.getElementById('rl-edit-id')?.value;
+  try {
+    if (editId) {
+      await db.collection('rooming_list').doc(editId).update(payload);
+    } else {
+      payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection('rooming_list').add(payload);
+    }
+    closeRoomingForm();
+  } catch(e) { alert('Error saving: ' + e.message); }
+}
+
+async function deleteRoomingPassenger(id) {
+  if (!confirm('Delete this passenger from Rooming List?')) return;
+  try { await db.collection('rooming_list').doc(id).delete(); }
+  catch(e) { alert('Error: ' + e.message); }
+}
+
+function openRoomingSelect(context) {
+  _roomingSelectCallback = context;
+  if(document.getElementById('rl-select-search')) document.getElementById('rl-select-search').value = '';
+  renderRoomingSelect();
+  document.getElementById('rl-select-overlay').style.display = 'flex';
+}
+function closeRoomingSelect() {
+  document.getElementById('rl-select-overlay').style.display = 'none';
+}
+function renderRoomingSelect() {
+  const q    = (document.getElementById('rl-select-search')?.value || '').toLowerCase();
+  let list   = _roomingList;
+  if (q) list = list.filter(p =>
+    [p.firstName,p.lastName,p.middleName,p.passportNumber,p.aadhaarNumber,p.familyGroup]
+      .join(' ').toLowerCase().includes(q)
+  );
+  const el = document.getElementById('rl-select-list');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">No passengers found. Add them in Rooming List first.</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => {
+    const name  = [p.title,p.firstName,p.middleName,p.lastName].filter(Boolean).join(' ');
+    const docNo = p.type === 'International' ? (p.passportNumber||'') : (p.aadhaarNumber||'');
+    const badge = p.type === 'International'
+      ? '<span style="background:#eff6ff;color:#1d4ed8;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700">🌍 Passport</span>'
+      : '<span style="background:#f0fdf4;color:#166534;border-radius:5px;padding:1px 6px;font-size:10px;font-weight:700">\uD83C\uDDEE\uD83C\uDDF3 Aadhaar</span>';
+    return '<div onclick="applyRoomingPassenger(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;border-radius:8px" onmouseover="this.style.background=\'#f8fafc\'" onmouseout="this.style.background=\'\'">'
+      + '<div>'
+      + '<div style="font-weight:700;font-size:13px;color:#0f172a">' + name + '</div>'
+      + '<div style="font-size:11px;color:#64748b;margin-top:2px">' + badge + (docNo ? ' \u00B7 '+docNo : '') + (p.dob ? ' \u00B7 DOB: '+p.dob : '') + '</div>'
+      + (p.familyGroup ? '<div style="font-size:10px;color:#94a3b8;margin-top:1px">\uD83D\uDC68\u200D\uD83D\uDC69\u200D\uD83D\uDC67 '+p.familyGroup+'</div>' : '')
+      + '</div>'
+      + '<div style="color:#f97316;font-size:18px">\u2192</div>'
+      + '</div>';
+  }).join('');
+}
+function applyRoomingPassenger(id) {
+  const p = _roomingList.find(x => x.id === id);
+  if (!p) return;
+  const name = [p.title,p.firstName,p.middleName,p.lastName].filter(Boolean).join(' ');
+  const sel  = document.getElementById('b-rooming-selected');
+  if (sel) sel.textContent = '\u2705 ' + name + ' selected';
+  const applicant  = document.getElementById('b-applicant');
+  if (applicant)   applicant.value = name;
+  const passportEl = document.getElementById('b-passport');
+  if (passportEl && p.passportNumber) passportEl.value = p.passportNumber;
+  closeRoomingSelect();
+}
+
+(function() {
+  const _orig = showTab;
+  showTab = function(tab, el) {
+    _orig(tab, el);
+    if (tab === 'rooming') initRooming();
+  };
+})();
+
+// ═══════════════ END ROOMING LIST MODULE ═══════════════════════
 
 </script>
 </body>
