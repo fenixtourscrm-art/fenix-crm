@@ -13575,30 +13575,63 @@ async function runRoomingOCR() {
 function parsePassportText(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const out = { title:'', firstName:'', middleName:'', lastName:'', dob:'', passportNumber:'', passportDOI:'', passportDOE:'', nationality:'Indian' };
-  const pnoMatch = text.match(/[A-Z][0-9]{7}/);
+
+  // Passport number: letter + 7 digits (from visual area)
+  const pnoMatch = text.match(/[A-Z]\d{7}/);
   if (pnoMatch) out.passportNumber = pnoMatch[0];
-  const dates = [...text.matchAll(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/g)].map(m => m[3]+'-'+m[2]+'-'+m[1]);
+
+  // Dates from visual area: DD/MM/YYYY
+  const dates = [...text.matchAll(/(\d{2})\/(\d{2})\/(\d{4})/g)].map(m => m[3]+'-'+m[2]+'-'+m[1]);
   if (dates[0]) out.dob = dates[0];
   if (dates[1]) out.passportDOI = dates[1];
   if (dates[2]) out.passportDOE = dates[2];
-  const mrzLines = lines.filter(l => /^[A-Z0-9<]{30,}$/.test(l.replace(/\s/g,'')));
+
+  // MRZ lines: 2 lines of 44 chars with only A-Z, 0-9, <
+  const mrzLines = lines.filter(l => /^[A-Z0-9<]{40,}$/.test(l.replace(/\s/g,'')));
   if (mrzLines.length >= 2) {
-    const mrz2 = mrzLines[mrzLines.length-1].replace(/\s/g,'');
     const mrz1 = mrzLines[mrzLines.length-2].replace(/\s/g,'');
+    const mrz2 = mrzLines[mrzLines.length-1].replace(/\s/g,'');
+
+    // MRZ Line 1: P<CCCSSSSSS<<FIRSTNAME<<MIDDLENAME<<<
+    // Passport number is in visual area - keep what we found
+    // Name section starts after P<CCC (5 chars)
+    const nameSection = mrz1.substring(5);
+    const doubleBracket = nameSection.indexOf('<<');
+    if (doubleBracket !== -1) {
+      out.lastName  = nameSection.substring(0, doubleBracket).replace(/</g,'');
+      const givenPart = nameSection.substring(doubleBracket+2).replace(/</g,' ').trim();
+      const givenNames = givenPart.split(/\s+/).filter(Boolean);
+      out.firstName  = givenNames[0] || '';
+      out.middleName = givenNames[1] || '';
+    }
+
+    // MRZ Line 2: PPPPPPPPCCCYYMMDDCYYMMDDC...
+    // DOB: positions 0-5 (YYMMDD)
     const mrzDob = mrz2.substring(0,6);
-    if (/^\d{6}$/.test(mrzDob)) { const y=parseInt(mrzDob.substring(0,2)); out.dob=`${y>30?'19':'20'}${mrzDob.substring(0,2)}-${mrzDob.substring(2,4)}-${mrzDob.substring(4,6)}`; }
+    if (/^\d{6}$/.test(mrzDob)) {
+      const y = parseInt(mrzDob.substring(0,2));
+      out.dob = `${y>30?'19':'20'}${mrzDob.substring(0,2)}-${mrzDob.substring(2,4)}-${mrzDob.substring(4,6)}`;
+    }
+    // Expiry: positions 8-13 (YYMMDD)
     const mrzExp = mrz2.substring(8,14);
-    if (/^\d{6}$/.test(mrzExp)) out.passportDOE=`20${mrzExp.substring(0,2)}-${mrzExp.substring(2,4)}-${mrzExp.substring(4,6)}`;
-    const mrzPno = mrz1.substring(5,14).replace(/</g,'');
-    if (mrzPno) out.passportNumber = mrzPno;
-    const namePart = mrz1.substring(14).replace(/</g,' ').trim();
-    const nameParts = namePart.split(/\s+/).filter(Boolean);
-    if (nameParts.length >= 1) { out.lastName=nameParts[0]; out.firstName=nameParts[1]||''; if(nameParts[2]) out.middleName=nameParts[2]; }
+    if (/^\d{6}$/.test(mrzExp)) {
+      out.passportDOE = `20${mrzExp.substring(0,2)}-${mrzExp.substring(2,4)}-${mrzExp.substring(4,6)}`;
+    }
+    // Passport number from MRZ line 2: positions 0 of line 1 after type = use visual match
+    // But if visual didn't find it, try MRZ line 2 pos 0-8
+    if (!out.passportNumber) {
+      const mrzPno = mrz2.substring(0,9).replace(/</g,'');
+      if (/^[A-Z]\d{7}/.test(mrzPno)) out.passportNumber = mrzPno.substring(0,8);
+    }
   }
-  if (/\bMR\b/i.test(text)) out.title='Mr';
+
+  // Title from sex field or text
+  if (/\bMR\b/i.test(text) || / M\b/.test(text)) out.title='Mr';
   else if (/\bMRS\b/i.test(text)) out.title='Mrs';
   else if (/\bMS\b/i.test(text)) out.title='Ms';
   else if (/\bDR\b/i.test(text)) out.title='Dr';
+  if (/FEMALE/i.test(text) && !out.title) out.title='Mrs';
+
   if (/INDIAN|INDIA/i.test(text)) out.nationality='Indian';
   return out;
 }
