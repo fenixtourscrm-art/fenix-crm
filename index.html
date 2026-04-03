@@ -144,6 +144,11 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 /* ── Client table responsive fix ── */
 /* ══ SHARED TABLE STYLES ══════════════════════════════════════════ */
 /* All three tables (Clients, Enquiries, Bookings) use same approach */
+/* Country code + mobile input combo */
+.mob-wrap{display:flex;gap:0;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff}
+.mob-wrap:focus-within{border-color:#f97316;box-shadow:0 0 0 2px rgba(249,115,22,.1)}
+.mob-cc{padding:8px 8px;background:#f8fafc;border:none;border-right:1.5px solid #e2e8f0;font-size:12px;font-weight:700;color:#374151;cursor:pointer;outline:none;min-width:72px}
+.mob-num{flex:1;padding:8px 10px;border:none;outline:none;font-size:13px;background:transparent;min-width:0}
 .tbl-scroll{
   overflow-x:scroll;
   overflow-y:clip;
@@ -2836,8 +2841,60 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Company Name <span style="font-size:10px;color:#94a3b8">(optional – for corporate clients)</span></label><input id="c-company" placeholder="e.g. ABC Pvt. Ltd."/></div></div>
     <div class="form-grid"><div class="fg"><label>Client Category <span style="color:#dc2626">*</span></label><select id="c-cat"><option value="Regular">Regular</option>${CLIENT_CATS.filter(x=>x!=="Regular").map(x=>`<option value="${x}">${x}</option>`).join("")}</select></div><div class="fg"></div></div>
     <div class="form-grid"><div class="fg"><label>First Name</label><input id="c-fn" placeholder="e.g. Rahul"/></div><div class="fg"><label>Last Name</label><input id="c-ln" placeholder="e.g. Sharma"/></div></div>
-    <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No <span style="color:#dc2626">*</span></label><input id="c-mob" placeholder="9876543210"/></div></div>
-    <div class="form-grid g1"><div class="fg"><label>Alternate Mobile <span style="font-size:10px;color:#94a3b8">(optional)</span></label><input id="c-altmob" placeholder="e.g. 9876500000"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Gender</label><select id="c-gen"><option>Male</option><option>Female</option><option>Other</option></select></div><div class="fg"><label>Mobile No <span style="color:#dc2626">*</span></label>
+      <div class="mob-wrap"><select class="mob-cc" id="c-mob-cc" onchange="_mobCCChange('c-mob-cc','c-mob')">
+        <option value="+91" data-digits="10">🇮🇳 +91</option>
+        <option value="+971" data-digits="9">🇦🇪 +971</option>
+        <option value="+1" data-digits="10">🇺🇸 +1</option>
+        <option value="+44" data-digits="10">🇬🇧 +44</option>
+        <option value="+65" data-digits="8">🇸🇬 +65</option>
+        <option value="+66" data-digits="9">🇹🇭 +66</option>
+        <option value="+81" data-digits="10">🇯🇵 +81</option>
+        <option value="+61" data-digits="9">🇦🇺 +61</option>
+        <option value="+1-CA" data-digits="10">🇨🇦 +1</option>
+        <option value="+41" data-digits="9">🇨🇭 +41</option>
+        <option value="+60" data-digits="9">🇲🇾 +60</option>
+        <option value="+27" data-digits="9">🇿🇦 +27</option>
+        <option value="+64" data-digits="9">🇳🇿 +64</option>
+        <option value="+852" data-digits="8">🇭🇰 +852</option>
+        <option value="+49" data-digits="10">🇩🇪 +49</option>
+        <option value="+33" data-digits="9">🇫🇷 +33</option>
+        <option value="+39" data-digits="10">🇮🇹 +39</option>
+        <option value="+7" data-digits="10">🇷🇺 +7</option>
+        <option value="+86" data-digits="11">🇨🇳 +86</option>
+        <option value="+82" data-digits="10">🇰🇷 +82</option>
+        <option value="+977" data-digits="10">🇳🇵 +977</option>
+        <option value="+94" data-digits="9">🇱🇰 +94</option>
+        <option value="+880" data-digits="10">🇧🇩 +880</option>
+        <option value="+92" data-digits="10">🇵🇰 +92</option>
+        <option value="+20" data-digits="10">🇪🇬 +20</option>
+        <option value="+966" data-digits="9">🇸🇦 +966</option>
+        <option value="+974" data-digits="8">🇶🇦 +974</option>
+        <option value="+968" data-digits="8">🇴🇲 +968</option>
+        <option value="+973" data-digits="8">🇧🇭 +973</option>
+        <option value="+965" data-digits="8">🇰🇼 +965</option>
+      </select>
+      <input class="mob-num" id="c-mob" placeholder="9876543210" inputmode="numeric"/></div>
+    </div></div>
+    <div class="form-grid g1"><div class="fg"><label>Alternate Mobile <span style="font-size:10px;color:#94a3b8">(optional)</span></label>
+      <div class="mob-wrap"><select class="mob-cc" id="c-altmob-cc" onchange="_mobCCChange('c-altmob-cc','c-altmob')">
+        <option value="+91" data-digits="10">🇮🇳 +91</option>
+        <option value="+971" data-digits="9">🇦🇪 +971</option>
+        <option value="+1" data-digits="10">🇺🇸 +1</option>
+        <option value="+44" data-digits="10">🇬🇧 +44</option>
+        <option value="+65" data-digits="8">🇸🇬 +65</option>
+        <option value="+66" data-digits="9">🇹🇭 +66</option>
+        <option value="+81" data-digits="10">🇯🇵 +81</option>
+        <option value="+61" data-digits="9">🇦🇺 +61</option>
+        <option value="+60" data-digits="9">🇲🇾 +60</option>
+        <option value="+966" data-digits="9">🇸🇦 +966</option>
+        <option value="+974" data-digits="8">🇶🇦 +974</option>
+        <option value="+968" data-digits="8">🇴🇲 +968</option>
+        <option value="+973" data-digits="8">🇧🇭 +973</option>
+        <option value="+965" data-digits="8">🇰🇼 +965</option>
+      </select>
+      <input class="mob-num" id="c-altmob" placeholder="e.g. 9876500000" inputmode="numeric"/></div>
+    </div></div>
     <div class="form-grid"><div class="fg"><label>Email ID</label><input id="c-email" placeholder="email@example.com"/></div><div class="fg"><label>Occupation</label><input id="c-occ" placeholder="e.g. Businessman"/></div></div>
     <div class="form-grid"><div class="fg"><label>Country</label><input id="c-country" value="India"/></div><div class="fg"><label>State</label><select id="c-state"><option value="">— Select State —</option>${IND_STATES.map(s=>`<option>${s}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>City</label><input id="c-city" placeholder="e.g. Ahmedabad"/></div><div class="fg"><label>Area</label><input id="c-area" placeholder="e.g. Navrangpura"/></div></div>
@@ -3929,18 +3986,26 @@ function generateProfileInsight(clientId, c, cEnqs, cBks, totalSpend, totalPaid)
 async function saveClient() {
   if(_saving) return;
   const fn = document.getElementById("c-fn").value.trim();
-  const mob = document.getElementById("c-mob").value.trim();
+  const mobRaw = document.getElementById("c-mob").value.trim();
+  const mobCC  = document.getElementById("c-mob-cc");
+  const mobCCVal = mobCC ? mobCC.value.replace('-CA','') : '+91';
+  const mobDigits = mobCC ? parseInt(mobCC.options[mobCC.selectedIndex]?.dataset.digits||'10') : 10;
   if(!fn) return alert("⚠️ First Name is required!");
-  if(!mob) return alert("⚠️ Mobile Number is required!");
-  const cleanMob = mob.replace(/\D/g,"");
-  if(cleanMob.length !== 10) return alert("⚠️ Mobile Number must be 10 digits!");
-  const duplicate = clients.find(x => x.mobile && x.mobile.replace(/\D/g,"") === cleanMob);
+  if(!mobRaw) return alert("⚠️ Mobile Number is required!");
+  const cleanMob = mobRaw.replace(/\D/g,"");
+  if(cleanMob.length !== mobDigits) return alert(`⚠️ Mobile Number must be ${mobDigits} digits for ${mobCCVal}!`);
+  const fullMob = mobCCVal + cleanMob;
+  const duplicate = clients.find(x => x.mobile && x.mobile.replace(/\D/g,"").slice(-mobDigits) === cleanMob);
   if(duplicate) return alert(`⚠️ Mobile number already exists for client: ${duplicate.firstName} ${duplicate.lastName}`);
+  const altMobRaw = document.getElementById("c-altmob")?.value.trim()||"";
+  const altMobCC  = document.getElementById("c-altmob-cc");
+  const altMobCCVal = altMobCC ? altMobCC.value.replace('-CA','') : '+91';
+  const fullAltMob = altMobRaw ? altMobCCVal + altMobRaw.replace(/\D/g,"") : "";
   const data = {
     firstName:toTitleCase(fn), lastName:toTitleCase(document.getElementById("c-ln").value.trim()),
     gender:document.getElementById("c-gen").value,
-    mobile:mob,
-    altMobile:document.getElementById("c-altmob")?.value.trim()||"",
+    mobile:fullMob,
+    altMobile:fullAltMob,
     email:document.getElementById("c-email").value.trim(),
     occupation:document.getElementById("c-occ").value.trim(),
     country:document.getElementById("c-country").value,
@@ -12870,6 +12935,27 @@ document.addEventListener('click', e => {
     _enqMoreOpenId = null;
   }
 });
+
+// Country code helpers for mobile fields
+function _mobCCChange(ccId, numId) {
+  const cc  = document.getElementById(ccId);
+  const num = document.getElementById(numId);
+  if(!cc || !num) return;
+  const digits = parseInt(cc.options[cc.selectedIndex]?.dataset.digits || '10');
+  num.placeholder = '0'.repeat(digits);
+  num.maxLength = digits;
+}
+
+// Build full international number from cc select + number input
+function _buildIntlNumber(ccId, numId) {
+  const cc  = document.getElementById(ccId);
+  const num = document.getElementById(numId);
+  if(!num) return '';
+  const ccVal  = cc ? cc.value.replace('-CA','') : '+91';
+  const digits = num.value.replace(/\D/g,'');
+  return digits ? ccVal + digits : '';
+}
+
 
 // ════════════════════════════════════════════════════════════════════
 //  CURRENCY CONVERTER
