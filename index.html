@@ -12864,6 +12864,7 @@ if('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       regs.forEach(r => { r.unregister(); console.log('[PWA] SW unregistered'); });
     });
+  });
 
   // Listen for messages FROM service worker
   navigator.serviceWorker.addEventListener('message', event => {
