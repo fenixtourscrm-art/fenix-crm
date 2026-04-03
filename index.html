@@ -13009,16 +13009,23 @@ async function initCurrencyTab() {
       renderCurrencyCards(stored);
       console.log('[Currency] Loaded from Firebase:', stored.updatedAt);
 
-      // Step 2 — Check if stored rates are older than 24 hours
-      const ageMs = Date.now() - new Date(stored.updatedAt).getTime();
-      const ageHours = ageMs / 3600000;
-      console.log(`[Currency] Rate age: ${ageHours.toFixed(1)} hours`);
+      // Step 2 — Check if stored rates need refreshing
+      // Condition 1: stored date is not today (different calendar day)
+      // Condition 2: age > 24 hours
+      const storedDate = (stored.date || stored.updatedAt || '').slice(0,10);
+      const today      = new Date().toISOString().slice(0,10);
+      const ageMs      = Date.now() - new Date(stored.updatedAt).getTime();
+      const ageHours   = ageMs / 3600000;
+      console.log(`[Currency] Stored date: ${storedDate} | Today: ${today} | Age: ${ageHours.toFixed(1)}h`);
 
-      if(ageHours >= 24) {
-        console.log('[Currency] Rates expired — auto-refreshing from API');
+      const isStaleDate = storedDate !== today;
+      const isStaleAge  = ageHours >= 24;
+
+      if(isStaleDate || isStaleAge) {
+        console.log(`[Currency] Rates stale (date mismatch: ${isStaleDate}, age>24h: ${isStaleAge}) — fetching from API`);
         await _curFetchFromAPI();
       } else {
-        console.log('[Currency] Rates are fresh — no API call needed');
+        console.log('[Currency] Rates are from today and fresh — using Firebase cache');
       }
     } else {
       // No stored data at all — must fetch from API
