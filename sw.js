@@ -1,8 +1,8 @@
-// FENIX CRM SERVICE WORKER v202603310611
+// FENIX CRM SERVICE WORKER v202604031200
 // Cache Strategy: HTML=Network-first | Assets=Cache-first
 
-const SW_VERSION = 'fenix-crm-202603310611';
-const CACHE_NAME = 'fenix-crm-cache-202603310611';
+const SW_VERSION = 'fenix-crm-202604031200';
+const CACHE_NAME = 'fenix-crm-cache-202604031200';
 const FIREBASE_PROJECT = 'fenix-tours-crm';
 const FIREBASE_API_KEY = 'AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k';
 const PING_INTERVAL_MS = 5 * 60 * 1000;
