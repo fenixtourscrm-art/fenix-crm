@@ -609,6 +609,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
   // Early stub so onclick="fbSignIn()" works before the main script block loads
   function fbSignIn() {
@@ -13543,43 +13544,89 @@ async function runRoomingOCR() {
   status.style.display    = 'block';
   status.style.background = '#f0fdf4';
   status.style.color      = '#166534';
-  status.textContent      = '\u23F3 Reading document with AI OCR...';
+  status.textContent      = '⏳ Reading document... this may take 10-20 seconds.';
   btn.disabled    = true;
   btn.textContent = 'Extracting...';
   try {
-    const b64  = await fileToBase64(_roomingFile);
-    const mime = _roomingFile.type || 'image/jpeg';
-    const docLabel = _roomingDocType === 'International' ? 'Indian Passport' : 'Indian Aadhaar Card';
-    const fields   = _roomingDocType === 'International'
-      ? 'title (Mr/Mrs/Ms/Miss/Dr/Master), firstName, middleName, lastName, dob (YYYY-MM-DD), passportNumber, passportDOI (date of issue YYYY-MM-DD), passportDOE (date of expiry YYYY-MM-DD), nationality'
-      : 'title (Mr/Mrs/Ms/Miss/Dr/Master), firstName, lastName, dob (YYYY-MM-DD), aadhaarNumber (12 digits formatted as "XXXX XXXX XXXX"), nationality';
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: [
-          { type: 'image', source: { type: 'base64', media_type: mime, data: b64 } },
-          { type: 'text', text: 'This is a ' + docLabel + '. Extract these fields and return ONLY a valid JSON object — no markdown, no backticks, no explanation:\n' + fields + '\nIf a field is not found use "". Format all dates as YYYY-MM-DD.' }
-        ]}]
-      })
+    const imageUrl = URL.createObjectURL(_roomingFile);
+    const result = await Tesseract.recognize(imageUrl, 'eng', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          status.textContent = '⏳ Reading... ' + Math.round(m.progress * 100) + '%';
+        }
+      }
     });
-    const data      = await resp.json();
-    const raw       = data.content?.find(c => c.type === 'text')?.text || '{}';
-    const extracted = JSON.parse(raw.replace(/```json|```/g,'').trim());
-    status.textContent = '\u2705 Extracted! Review and confirm below.';
-    closeRoomingUpload();
-    openRoomingForm(null, { ...extracted, type: _roomingDocType });
+    URL.revokeObjectURL(imageUrl);
+    const text = result.data.text;
+    const extracted = _roomingDocType === 'International' ? parsePassportText(text) : parseAadhaarText(text);
+    extracted.type = _roomingDocType;
+    status.textContent = '✅ Done! Review and confirm below.';
+    setTimeout(() => { closeRoomingUpload(); openRoomingForm(null, extracted); }, 800);
   } catch(err) {
-    status.textContent      = '\u274C Extraction failed. Fill manually.';
+    status.textContent      = '❌ Extraction failed. Fill manually.';
     status.style.background = '#fee2e2';
     status.style.color      = '#dc2626';
     setTimeout(() => { closeRoomingUpload(); openRoomingForm(null, { type: _roomingDocType }); }, 1200);
   }
   btn.disabled    = false;
-  btn.textContent = 'Extract Details \u2192';
+  btn.textContent = 'Extract Details →';
 }
+
+function parsePassportText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const out = { title:'', firstName:'', middleName:'', lastName:'', dob:'', passportNumber:'', passportDOI:'', passportDOE:'', nationality:'Indian' };
+  const pnoMatch = text.match(/[A-Z][0-9]{7}/);
+  if (pnoMatch) out.passportNumber = pnoMatch[0];
+  const dates = [...text.matchAll(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/g)].map(m => m[3]+'-'+m[2]+'-'+m[1]);
+  if (dates[0]) out.dob = dates[0];
+  if (dates[1]) out.passportDOI = dates[1];
+  if (dates[2]) out.passportDOE = dates[2];
+  const mrzLines = lines.filter(l => /^[A-Z0-9<]{30,}$/.test(l.replace(/\s/g,'')));
+  if (mrzLines.length >= 2) {
+    const mrz2 = mrzLines[mrzLines.length-1].replace(/\s/g,'');
+    const mrz1 = mrzLines[mrzLines.length-2].replace(/\s/g,'');
+    const mrzDob = mrz2.substring(0,6);
+    if (/^\d{6}$/.test(mrzDob)) { const y=parseInt(mrzDob.substring(0,2)); out.dob=`${y>30?'19':'20'}${mrzDob.substring(0,2)}-${mrzDob.substring(2,4)}-${mrzDob.substring(4,6)}`; }
+    const mrzExp = mrz2.substring(8,14);
+    if (/^\d{6}$/.test(mrzExp)) out.passportDOE=`20${mrzExp.substring(0,2)}-${mrzExp.substring(2,4)}-${mrzExp.substring(4,6)}`;
+    const mrzPno = mrz1.substring(5,14).replace(/</g,'');
+    if (mrzPno) out.passportNumber = mrzPno;
+    const namePart = mrz1.substring(14).replace(/</g,' ').trim();
+    const nameParts = namePart.split(/\s+/).filter(Boolean);
+    if (nameParts.length >= 1) { out.lastName=nameParts[0]; out.firstName=nameParts[1]||''; if(nameParts[2]) out.middleName=nameParts[2]; }
+  }
+  if (/\bMR\b/i.test(text)) out.title='Mr';
+  else if (/\bMRS\b/i.test(text)) out.title='Mrs';
+  else if (/\bMS\b/i.test(text)) out.title='Ms';
+  else if (/\bDR\b/i.test(text)) out.title='Dr';
+  if (/INDIAN|INDIA/i.test(text)) out.nationality='Indian';
+  return out;
+}
+
+function parseAadhaarText(text) {
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const out = { title:'', firstName:'', lastName:'', dob:'', aadhaarNumber:'', nationality:'Indian' };
+  const aMatch = text.match(/\d{4}\s?\d{4}\s?\d{4}/);
+  if (aMatch) out.aadhaarNumber = aMatch[0].replace(/\s/g,'').replace(/(\d{4})(\d{4})(\d{4})/, '$1 $2 $3');
+  const dobMatch = text.match(/(\d{2})[\/\-](\d{2})[\/\-](\d{4})/);
+  if (dobMatch) out.dob = dobMatch[3]+'-'+dobMatch[2]+'-'+dobMatch[1];
+  else { const yob = text.match(/DOB[:\s]*(\d{4})|Year[:\s]*(\d{4})/i); if(yob) out.dob=(yob[1]||yob[2])+'-01-01'; }
+  for (let i=0;i<lines.length;i++) {
+    if (/^name[:\s]/i.test(lines[i])) { const p=lines[i].replace(/^name[:\s]*/i,'').trim().split(/\s+/); out.firstName=p[0]||''; out.lastName=p.slice(1).join(' '); break; }
+  }
+  if (!out.firstName) {
+    for (const line of lines) {
+      if (/^[A-Za-z\s]{4,40}$/.test(line) && !/govt|india|uidai|unique|auth|male|female/i.test(line)) {
+        const p=line.trim().split(/\s+/); out.firstName=p[0]||''; out.lastName=p.slice(1).join(' '); break;
+      }
+    }
+  }
+  if (/\bMR\b/i.test(text)) out.title='Mr';
+  else if (/\bMRS\b/i.test(text)) out.title='Mrs';
+  else if (/\bMS\b/i.test(text)) out.title='Ms';
+  return out;
+}
+
 
 function fileToBase64(file) {
   return new Promise((res, rej) => {
