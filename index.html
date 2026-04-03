@@ -12990,81 +12990,113 @@ const CUR_NAMES = {
 };
 
 // Rates stored as: how many INR per 1 unit of currency (e.g. 1 USD = 83.5 INR)
-let _curRates = {}; // { USD: 83.5, EUR: 91.2, ... }
+let _curRates = {}; // { USD: 83.5, EUR: 91.2, ... } — with markup applied
 
-// Called when user opens the Currency tab
+// ── LOAD: Called when Currency tab opens ─────────────────────────────
 async function initCurrencyTab() {
   const cardsEl = document.getElementById('cur-rate-cards');
-  const updEl   = document.getElementById('cur-last-updated');
   if(!cardsEl) return;
+  cardsEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;font-size:13px">⏳ Loading rates...</div>';
 
   try {
-    // Check Firebase for today's rates first
+    // Step 1 — Load whatever is in Firebase first (fast, no API call)
     const snap = await db.collection('currencies').doc('latest').get();
-    const today = new Date().toISOString().slice(0,10);
+    const stored = snap.exists ? snap.data() : null;
 
-    if(snap.exists && snap.data().date === today && snap.data().rates) {
-      // Use cached rates from Firebase
-      _curRates = snap.data().rates;
-      renderCurrencyCards(snap.data());
+    if(stored && stored.rates && stored.updatedAt) {
+      // Show stored rates immediately while checking freshness
+      _curRates = stored.rates;
+      renderCurrencyCards(stored);
+      console.log('[Currency] Loaded from Firebase:', stored.updatedAt);
+
+      // Step 2 — Check if stored rates are older than 24 hours
+      const ageMs = Date.now() - new Date(stored.updatedAt).getTime();
+      const ageHours = ageMs / 3600000;
+      console.log(`[Currency] Rate age: ${ageHours.toFixed(1)} hours`);
+
+      if(ageHours >= 24) {
+        console.log('[Currency] Rates expired — auto-refreshing from API');
+        await _curFetchFromAPI();
+      } else {
+        console.log('[Currency] Rates are fresh — no API call needed');
+      }
     } else {
-      // Stale or missing — fetch fresh
-      await fetchAndSaveRates(false);
+      // No stored data at all — must fetch from API
+      console.log('[Currency] No Firebase data — fetching from API');
+      await _curFetchFromAPI();
     }
   } catch(e) {
-    // Firebase failed — try direct fetch
-    await fetchAndSaveRates(false);
+    console.warn('[Currency] Firebase load failed:', e.message);
+    // Firebase failed — go straight to API
+    await _curFetchFromAPI();
   }
 }
 
+// ── REFRESH: Called when Refresh button clicked ──────────────────────
 async function fetchAndSaveRates(manualRefresh) {
-  const btn    = document.getElementById('cur-refresh-btn');
-  const updEl  = document.getElementById('cur-last-updated');
-  const cardsEl= document.getElementById('cur-rate-cards');
+  console.log('[Currency] Manual refresh triggered');
+  await _curFetchFromAPI();
+}
+
+// ── CORE: Actual API fetch + Firebase save ───────────────────────────
+async function _curFetchFromAPI() {
+  const btn     = document.getElementById('cur-refresh-btn');
+  const updEl   = document.getElementById('cur-last-updated');
+  const cardsEl = document.getElementById('cur-rate-cards');
 
   if(btn) { btn.disabled = true; btn.textContent = '⏳ Fetching...'; }
-  if(cardsEl) cardsEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#94a3b8;font-size:13px">⏳ Fetching live rates...</div>';
+  if(updEl) updEl.textContent = 'Fetching live rates from API...';
+
+  const API_URL = 'https://open.er-api.com/v6/latest/INR';
+  console.log('[Currency] Calling API:', API_URL);
 
   try {
-    // Free endpoint — no API key needed, base USD, convert to INR base
-    // Using open.er-api.com free tier
-    const resp = await fetch('https://open.er-api.com/v6/latest/INR');
-    if(!resp.ok) throw new Error('API returned ' + resp.status);
+    const resp = await fetch(API_URL, { cache: 'no-store' }); // no-store bypasses browser cache
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const data = await resp.json();
+    console.log('[Currency] API response result:', data.result);
 
-    if(data.result !== 'success') throw new Error('API error: ' + data['error-type']);
+    if(data.result !== 'success') throw new Error('API error: ' + (data['error-type'] || 'unknown'));
 
-    // data.rates is { USD: 0.01198, EUR: 0.011, ... } (units per 1 INR)
-    // We want INR per 1 unit of currency, so invert
-    const rates = {};
-    CUR_CURRENCIES.forEach(cur => {
-      if(data.rates[cur]) rates[cur] = parseFloat((1 / data.rates[cur]).toFixed(4));
+    // data.rates = units per 1 INR, e.g. { USD: 0.01198 }
+    // We want INR per 1 foreign unit, so invert: 1/0.01198 = 83.47
+    const rawRates = {};
+    const allCodes = Object.keys(data.rates || {});
+    allCodes.forEach(cur => {
+      if(data.rates[cur] && data.rates[cur] > 0) {
+        rawRates[cur] = parseFloat((1 / data.rates[cur]).toFixed(4));
+      }
     });
+    console.log(`[Currency] Got ${allCodes.length} currencies. USD=${rawRates.USD}, EUR=${rawRates.EUR}`);
 
-    _curRates = rates;
     const now = new Date();
     const payload = {
-      rates,
-      date:      now.toISOString().slice(0,10),
-      updatedAt: now.toISOString(),
-      source:    'open.er-api.com',
+      rates:        rawRates,
+      baseCurrency: 'INR',
+      updatedAt:    now.toISOString(),
+      date:         now.toISOString().slice(0,10),
+      source:       'open.er-api.com',
     };
 
-    // Save to Firebase so all staff get same rates
+    // Save to Firebase — overwrite completely
     await db.collection('currencies').doc('latest').set(payload);
-    renderCurrencyCards(payload);
+    console.log('[Currency] Saved to Firebase at', payload.updatedAt);
 
-    if(btn)  { btn.disabled = false; btn.textContent = '🔄 Refresh Rates'; }
+    _curRates = rawRates;
+    renderCurrencyCards(payload);
+    if(btn) { btn.disabled = false; btn.textContent = '🔄 Refresh Rates'; }
 
   } catch(e) {
-    console.warn('[Currency] Fetch failed:', e.message);
-    if(cardsEl) cardsEl.innerHTML = `
-      <div style="grid-column:1/-1;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:14px;color:#dc2626;font-size:12px">
-        ⚠️ Could not fetch live rates: ${e.message}<br>
-        <span style="color:#64748b">Check internet connection and try again.</span>
-      </div>`;
+    console.error('[Currency] API fetch failed:', e.message);
+    if(cardsEl && !_curLastPayload) {
+      cardsEl.innerHTML = `
+        <div style="grid-column:1/-1;background:#fee2e2;border:1px solid #fca5a5;border-radius:10px;padding:14px;color:#dc2626;font-size:12px">
+          ⚠️ Could not fetch live rates: ${e.message}<br>
+          <span style="color:#64748b">Check internet connection and try Refresh again.</span>
+        </div>`;
+    }
+    if(updEl) updEl.textContent = 'API fetch failed — showing cached rates';
     if(btn) { btn.disabled = false; btn.textContent = '🔄 Retry'; }
-    if(updEl) updEl.textContent = 'Rates unavailable';
   }
 }
 
