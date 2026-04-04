@@ -6,12 +6,14 @@
 <title>Fenix Tours — Digital Card</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+html{background:#87CEEB;transition:background 2s ease}
+
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'DM Sans',sans-serif;background:#F0EDE6;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;position:relative;overflow-x:hidden;transition:background 2s ease}
+body{font-family:'DM Sans',sans-serif;background:transparent;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 16px;position:relative;overflow-x:hidden;transition:background 2s ease}
 
 /* PAGE SKY */
-.sky-page{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:background 2s ease}
-.sky-orb{position:fixed;border-radius:50%;transition:all 2s ease;z-index:0;max-width:80px;max-height:80px}
+.sky-page{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:background 2s ease;background:#87CEEB}
+.sky-orb{display:none}
 .sky-stars{position:fixed;inset:0;opacity:0;transition:opacity 2s ease;z-index:0}
 .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 2s ease-in-out infinite alternate}
 @keyframes twinkle{0%{opacity:0.2}100%{opacity:1}}
@@ -21,10 +23,12 @@ body{font-family:'DM Sans',sans-serif;background:#F0EDE6;min-height:100vh;displa
 .sc2{width:80px;height:22px;top:20%;left:55%;animation:drift 30s linear infinite reverse}
 .sc3{width:100px;height:26px;top:8%;left:35%;animation:drift 26s linear infinite}
 @keyframes drift{0%{transform:translateX(0)}50%{transform:translateX(40px)}100%{transform:translateX(0)}}
+/* AIRPLANE */
+
 @keyframes glow{0%,100%{box-shadow:0 0 40px 18px rgba(255,210,50,0.5)}50%{box-shadow:0 0 70px 30px rgba(255,210,50,0.85)}}
 @keyframes moonGlow{0%,100%{box-shadow:0 0 25px 10px rgba(200,225,255,0.35)}50%{box-shadow:0 0 45px 20px rgba(200,225,255,0.65)}}
 @keyframes sunRise{0%,100%{box-shadow:0 0 50px 20px rgba(255,150,20,0.55)}50%{box-shadow:0 0 80px 35px rgba(255,150,20,0.9)}}
-.wrap{position:relative;z-index:1}
+.wrap{position:relative;z-index:2}
 
 .wrap{width:100%;max-width:400px}
 
@@ -33,20 +37,20 @@ body{font-family:'DM Sans',sans-serif;background:#F0EDE6;min-height:100vh;displa
 
 /* FRONT */
 .front-top{padding:16px 18px 12px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid #f0f0f0}
-.ft-name{font-size:17px;font-weight:700;color:#E8540A}
+.ft-name{font-size:20px;font-weight:700;color:#E8540A}
 .ft-role{font-size:11px;color:#666;margin-top:3px}
-.ft-contacts{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
-.ft-row{display:flex;align-items:center;gap:5px;font-size:11px;color:#333}
+.ft-contacts{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.ft-row{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:#222}
 
 .logo-section{padding:16px 20px 12px;display:flex;justify-content:center;border-bottom:none}
 .logo-img{height:68px;width:auto;object-fit:contain}
 
 .red-line{height:3px;background:linear-gradient(to right,#E8540A,#B22222);margin:0 0 0}
 
-.front-bottom{display:grid;grid-template-columns:1fr auto;gap:8px;padding:12px 18px;background:#fafafa;border-top:1px solid #f0f0f0}
+.front-bottom{display:grid;grid-template-columns:1fr auto;gap:10px;padding:14px 18px;background:#fafafa;border-top:1px solid #f0f0f0}
 .addr{font-size:9.5px;color:#555;line-height:1.7}
 .office-contacts{display:flex;flex-direction:column;gap:4px;align-items:flex-end}
-.oc-row{display:flex;align-items:center;gap:4px;font-size:9.5px;color:#444}
+.oc-row{display:flex;align-items:center;gap:6px;font-size:11px;color:#222;font-weight:600}
 
 /* BACK */
 .back{border-top:3px solid #E8540A;margin-top:0}
@@ -136,7 +140,7 @@ body{font-family:'DM Sans',sans-serif;background:#F0EDE6;min-height:100vh;displa
 
 <!-- SKY BACKGROUND -->
 <div class="sky-page" id="sky-page">
-  <div class="sky-orb" id="sky-orb"></div>
+<div class="sky-orb" id="sky-orb"></div>
   <div class="sky-stars" id="sky-stars"></div>
   <div class="sky-clouds">
     <div class="sky-cloud sc1"></div>
@@ -156,11 +160,11 @@ body{font-family:'DM Sans',sans-serif;background:#F0EDE6;min-height:100vh;displa
       </div>
       <div class="ft-contacts">
         <div class="ft-row">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="#E8540A"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="#E8540A"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/></svg>
           <span id="c-mobile">+91 97233 30537</span>
         </div>
         <div class="ft-row">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E8540A" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E8540A" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
           <span id="c-email">inquiry@fenixtours.co.in</span>
         </div>
       </div>
@@ -362,10 +366,10 @@ function initSky(){
 
   if(h>=6 && h<10){
     // MORNING
-    pageBg='linear-gradient(160deg,#FFD580 0%,#FFB347 40%,#FF8C42 100%)';
-    bodyBg='#FFD580';
+    pageBg='linear-gradient(160deg,#FF8C00 0%,#FFB347 40%,#FFD580 100%)';
+    bodyBg='#FF8C00';
     orbBg='radial-gradient(circle,#FFF5A0 20%,#FFD700 50%,#FFA500 80%,transparent 100%)';
-    orbSize=70; orbTop=3; orbLeft=8;
+    orbSize=80; orbTop=3; orbLeft=8;
     orb.style.animation='sunRise 3s ease-in-out infinite';
   } else if(h>=10 && h<15){
     // AFTERNOON
@@ -409,11 +413,12 @@ function initSky(){
   }
 
   page.style.background = pageBg;
-  document.body.style.background = bodyBg;
+  document.body.style.background = 'transparent';
+  document.documentElement.style.background = pageBg;
   orb.style.width = orbSize+'px';
   orb.style.height = orbSize+'px';
-  orb.style.top = Math.min(orbTop, 12)+'vh';
-  orb.style.left = orbLeft+'%';
+  
+  
   orb.style.background = orbBg;
 
   if(showStars){
@@ -426,6 +431,27 @@ function initSky(){
     stars.innerHTML=html;
   }
   if(clouds) clouds.style.opacity = showClouds?'1':'0';
+
+  // Update plane color for night
+  var planeSvg = document.getElementById('plane-svg');
+  if(planeSvg){
+    var isNight = (h>=20 || h<6);
+    var isDusk = (h>=18 && h<20);
+    if(isNight){
+      planeSvg.querySelectorAll('path,ellipse').forEach(function(el){
+        el.setAttribute('fill', el.getAttribute('fill') && el.getAttribute('fill').includes('white') ? 'rgba(220,235,255,0.9)' : el.getAttribute('fill'));
+      });
+      // Add blinking light effect for night
+      var light = document.createElement('circle');
+      light.setAttribute('cx','90'); light.setAttribute('cy','17');
+      light.setAttribute('r','2'); light.setAttribute('fill','#FF4444');
+      light.style.animation='blink 1s ease-in-out infinite';
+      planeSvg.appendChild(light);
+      var style = document.createElement('style');
+      style.textContent='@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}';
+      document.head.appendChild(style);
+    }
+  }
 }
 initSky();
 
