@@ -384,6 +384,18 @@ setText('c-email', email);
 setHref('btn-call', 'tel:' + mobile.replace(/[\s+\-]/g,''));
 setHref('btn-wa', 'https://wa.me/' + mobile.replace(/[\s+\-]/g,''));
 
+function revealCard() {
+  addCls('card','visible');
+  addCls('c-name','in');
+  addCls('c-role','in');
+  addCls('ft-right','in');
+  addCls('front-logo-section','in');
+  addCls('front-divider','in');
+  addCls('front-bottom','in');
+  addCls('card-back','in');
+  addCls('actions','in');
+}
+
 function openEnvelope() {
   addCls('env-flap','open');
   addCls('seal','hidden');
@@ -392,19 +404,21 @@ function openEnvelope() {
   setTimeout(function(){
     setDisp('envelope-wrap','none');
     setDisp('full-view','block');
-    setTimeout(function(){
-      addCls('card','visible');
-      addCls('c-name','in');
-      addCls('c-role','in');
-      addCls('ft-right','in');
-      addCls('front-logo-section','in');
-      addCls('front-divider','in');
-      addCls('front-bottom','in');
-      addCls('card-back','in');
-      addCls('actions','in');
-    },100);
-  },900);
+    setTimeout(revealCard, 100);
+  }, 900);
 }
+
+// Check if envelope elements exist — if not, show card directly
+window.addEventListener('DOMContentLoaded', function(){
+  var envWrap = el('envelope-wrap');
+  var fullView = el('full-view');
+  if (!envWrap || envWrap.style.display === 'none') {
+    if(fullView) fullView.style.display = 'block';
+    setTimeout(revealCard, 200);
+  } else if (fullView && fullView.style.display === 'block') {
+    setTimeout(revealCard, 200);
+  }
+});
 
 function saveContact() {
   var vcard = ['BEGIN:VCARD','VERSION:3.0','FN:'+name,'ORG:Fenix Tours & Travels Pvt Ltd','TITLE:'+role,'TEL;TYPE=CELL:'+mobile,'TEL;TYPE=WORK:+919725252120','EMAIL:'+email,'ADR:;;601 D&C Dynasty Plaza;Ahmedabad;Gujarat;380009;India','URL:https://www.fenixtours.co.in','END:VCARD'].join('\n');
@@ -415,7 +429,7 @@ function saveContact() {
   a.click(); URL.revokeObjectURL(url);
 }
 
-var pc = document.getElementById('particles');
+var pc = el('particles');
 if(pc){
   for(var i=0;i<20;i++){
     var p=document.createElement('div'); p.className='p';
