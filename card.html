@@ -11,11 +11,11 @@ body{font-family:'DM Sans',sans-serif;background:#F0EDE6;min-height:100vh;displa
 
 /* PAGE SKY */
 .sky-page{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;transition:background 2s ease}
-.sky-orb{position:absolute;border-radius:50%;transition:all 2s ease}
-.sky-stars{position:absolute;inset:0;opacity:0;transition:opacity 2s ease}
+.sky-orb{position:fixed;border-radius:50%;transition:all 2s ease;z-index:0;max-width:80px;max-height:80px}
+.sky-stars{position:fixed;inset:0;opacity:0;transition:opacity 2s ease;z-index:0}
 .star{position:absolute;background:#fff;border-radius:50%;animation:twinkle 2s ease-in-out infinite alternate}
 @keyframes twinkle{0%{opacity:0.2}100%{opacity:1}}
-.sky-clouds{position:absolute;inset:0}
+.sky-clouds{position:fixed;inset:0;z-index:0}
 .sky-cloud{position:absolute;background:rgba(255,255,255,0.55);border-radius:60px}
 .sc1{width:120px;height:30px;top:12%;left:8%;animation:drift 22s linear infinite}
 .sc2{width:80px;height:22px;top:20%;left:55%;animation:drift 30s linear infinite reverse}
@@ -250,28 +250,28 @@ function initSky(){
     pageBg='linear-gradient(160deg,#FFD580 0%,#FFB347 40%,#FF8C42 100%)';
     bodyBg='#FFD580';
     orbBg='radial-gradient(circle,#FFF5A0 20%,#FFD700 50%,#FFA500 80%,transparent 100%)';
-    orbSize=80; orbTop=8; orbLeft=10;
+    orbSize=70; orbTop=3; orbLeft=8;
     orb.style.animation='sunRise 3s ease-in-out infinite';
   } else if(h>=10 && h<15){
     // AFTERNOON
     pageBg='linear-gradient(160deg,#56CCF2 0%,#87CEEB 40%,#B0E2FF 100%)';
     bodyBg='#87CEEB';
     orbBg='radial-gradient(circle,#FFFDE0 15%,#FFE500 45%,#FFB800 75%,transparent 100%)';
-    orbSize=90; orbTop=5; orbLeft=42;
+    orbSize=75; orbTop=2; orbLeft=40;
     orb.style.animation='glow 4s ease-in-out infinite';
   } else if(h>=15 && h<18){
     // LATE AFTERNOON
     pageBg='linear-gradient(160deg,#74B9D4 0%,#A8D8EA 50%,#C9EBF5 100%)';
     bodyBg='#A8D8EA';
     orbBg='radial-gradient(circle,#FFE566 15%,#FFD000 50%,#FF8C00 80%,transparent 100%)';
-    orbSize=85; orbTop=10; orbLeft=68;
+    orbSize=70; orbTop=3; orbLeft=65;
     orb.style.animation='glow 4s ease-in-out infinite';
   } else if(h>=18 && h<20){
     // SUNSET
     pageBg='linear-gradient(160deg,#0D0221 0%,#C1440E 25%,#FF6B35 55%,#FFB347 80%,#FFD580 100%)';
     bodyBg='#C1440E';
     orbBg='radial-gradient(circle,#FFE599 10%,#FF8C00 40%,#FF4500 70%,transparent 100%)';
-    orbSize=95; orbTop=30; orbLeft=78;
+    orbSize=75; orbTop=2; orbLeft=72;
     orb.style.animation='sunRise 3s ease-in-out infinite';
     showClouds=false;
   } else if(h>=20 && h<22){
@@ -279,7 +279,7 @@ function initSky(){
     pageBg='linear-gradient(160deg,#050A1A 0%,#0D1B3E 40%,#1A2B5E 100%)';
     bodyBg='#0D1B3E';
     orbBg='radial-gradient(circle,#FFFDE8 30%,#EDE0B0 60%,transparent 100%)';
-    orbSize=65; orbTop=10; orbLeft=72;
+    orbSize=58; orbTop=3; orbLeft=70;
     orb.style.animation='moonGlow 5s ease-in-out infinite';
     showStars=true; showClouds=false;
   } else {
@@ -287,7 +287,7 @@ function initSky(){
     pageBg='linear-gradient(160deg,#010510 0%,#050D22 50%,#080F28 100%)';
     bodyBg='#050D22';
     orbBg='radial-gradient(circle,#FFFEF5 35%,#EDE5C0 65%,transparent 100%)';
-    orbSize=60; orbTop=8; orbLeft=65;
+    orbSize=55; orbTop=3; orbLeft=65;
     orb.style.animation='moonGlow 6s ease-in-out infinite';
     showStars=true; showClouds=false;
     orb.innerHTML='<div style="position:absolute;width:10px;height:10px;border-radius:50%;background:rgba(0,0,0,0.1);top:8px;left:10px"></div><div style="position:absolute;width:7px;height:7px;border-radius:50%;background:rgba(0,0,0,0.08);top:20px;left:24px"></div>';
@@ -297,7 +297,7 @@ function initSky(){
   document.body.style.background = bodyBg;
   orb.style.width = orbSize+'px';
   orb.style.height = orbSize+'px';
-  orb.style.top = orbTop+'%';
+  orb.style.top = Math.min(orbTop, 12)+'vh';
   orb.style.left = orbLeft+'%';
   orb.style.background = orbBg;
 
