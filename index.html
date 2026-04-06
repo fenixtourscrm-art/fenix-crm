@@ -7948,7 +7948,7 @@ async function importClientExcel(event, importCategory) {
       if(!firstName && !lastName && !companyName) { skipped++; continue; }
 
       // Clean mobile
-      const cleanMobile = String(mobile||phone||"").replace(/\D/g,"").slice(-10);
+      const cleanMobile = String(mobile||"").replace(/\D/g,"").slice(-10);
 
       // Skip duplicate mobiles
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
