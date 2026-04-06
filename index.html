@@ -194,9 +194,6 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   scrollbar-width:auto;
   scrollbar-color:#94a3b8 #e8edf2;
   display:block;
-  position:sticky;
-  top:var(--sticky-header-h, 0px);
-  z-index:9;
 }
 /* Webkit top scrollbar */
 .tbl-top-scroll::-webkit-scrollbar{height:14px;display:block}
@@ -276,22 +273,13 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   top:0;
   z-index:3;
 }
-/* Hide original thead in tabs that use sticky mirror headers */
-#tab-data .tbl-base thead,
-#tab-enquiries .tbl-base thead,
-#tab-bookings .tbl-base thead{
-  visibility:hidden;
-  height:0;
-  line-height:0;
-}
+/* thead normal — sticky handled by tbl-scroll context */
 #tab-data .tbl-base thead th,
 #tab-enquiries .tbl-base thead th,
 #tab-bookings .tbl-base thead th{
-  padding:0 !important;
-  height:0 !important;
-  border:none !important;
-  font-size:0 !important;
-  line-height:0 !important;
+  position:sticky;
+  top:0;
+  z-index:3;
 }
 .sticky-tab-header{
   position:sticky;
@@ -311,17 +299,6 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   right:0;
   height:40px;
   background:#fff;
-}
-/* Sticky column header bar — sits below scrollbar, always visible */
-.sticky-col-headers{
-  position:sticky;
-  top:0;
-  z-index:8;
-  background:#f8fafc;
-  overflow:hidden;
-  border-bottom:2px solid #e2e8f0;
-  margin:0 -24px;
-  padding:0 24px;
 }
 .tbl-base tbody tr:hover td{background:#fafafa}
 .tbl-base tbody tr:last-child td{border-bottom:none}
@@ -13157,18 +13134,8 @@ function _tblScroll(scrollId, delta) {
     inner.style.width = scrollEl.scrollWidth + 'px';
     topBar.appendChild(inner);
 
-    // Insert BEFORE the tbl-wrap (between sticky header and table)
+    // Insert BEFORE the tbl-wrap
     wrapEl.parentNode.insertBefore(topBar, wrapEl);
-
-    // Set CSS var so scrollbar knows where to stick (below sticky header)
-    const tab = wrapEl.closest('.tab');
-    const stickyH = tab?.querySelector('.sticky-tab-header');
-    if(stickyH) {
-      requestAnimationFrame(() => {
-        const h = stickyH.offsetHeight;
-        topBar.style.top = h + 'px';
-      });
-    }
 
     let syncingFromTop = false;
     let syncingFromBottom = false;
@@ -13220,54 +13187,6 @@ function _tblScroll(scrollId, delta) {
     wrapEl.classList.toggle('scrolled-end', !hasOverflow);
   }
 
-  function buildStickyColHeaders(scrollEl, wrapEl) {
-    const tab = scrollEl.closest('.tab');
-    const stickyHeader = tab?.querySelector('.sticky-tab-header');
-    if(!stickyHeader) return;
-
-    // Get the thead from this table
-    const thead = scrollEl.querySelector('thead');
-    if(!thead) return;
-
-    // Create mirror container
-    const mirror = document.createElement('div');
-    mirror.className = 'sticky-col-headers';
-    mirror.style.cssText = 'position:sticky;top:0;z-index:8;overflow:hidden;background:#f8fafc;margin:0 -24px;';
-
-    // Create inner scroll div (same width as table scroll)
-    const inner = document.createElement('div');
-    inner.style.cssText = 'overflow:hidden;width:100%;';
-
-    // Clone the thead table
-    const mirrorTable = document.createElement('table');
-    mirrorTable.className = scrollEl.querySelector('table').className;
-    mirrorTable.style.cssText = 'width:' + scrollEl.querySelector('table').offsetWidth + 'px;border-collapse:separate;border-spacing:0;table-layout:fixed;';
-
-    // Clone colgroup if exists
-    const colgroup = scrollEl.querySelector('colgroup');
-    if(colgroup) mirrorTable.appendChild(colgroup.cloneNode(true));
-
-    // Clone thead
-    mirrorTable.appendChild(thead.cloneNode(true));
-    inner.appendChild(mirrorTable);
-    mirror.appendChild(inner);
-
-    // Insert after sticky header
-    stickyHeader.insertAdjacentElement('afterend', mirror);
-
-    // Sync horizontal scroll
-    scrollEl.addEventListener('scroll', () => {
-      inner.scrollLeft = scrollEl.scrollLeft;
-    }, { passive: true });
-
-    // Sync width on resize
-    const ro = new ResizeObserver(() => {
-      const tbl = scrollEl.querySelector('table');
-      if(tbl) mirrorTable.style.width = tbl.offsetWidth + 'px';
-    });
-    ro.observe(scrollEl);
-  }
-
   function initTableScrollUX() {
     TABLES.forEach(({ scroll: scrollId, wrap: wrapId, top: topId }) => {
       const scrollEl = document.getElementById(scrollId);
@@ -13275,8 +13194,6 @@ function _tblScroll(scrollId, delta) {
       if(!scrollEl || !wrapEl) return;
 
       buildTopScrollbar(scrollEl, wrapEl, topId);
-      buildStickyColHeaders(scrollEl, wrapEl);
-
       // Shift + wheel → horizontal scroll
       scrollEl.addEventListener('wheel', e => {
         if(e.shiftKey) { e.preventDefault(); scrollEl.scrollLeft += e.deltaY; }
