@@ -13248,15 +13248,18 @@ function _tblScroll(scrollId, delta) {
   const BOTTOM_PADDING = 24;
 
   function setTableHeights() {
-    // Client Data
     TABLE_IDS.forEach(id => {
       const el = document.getElementById(id);
       if(!el) return;
+      // Only set height when the tab is active and element is visible
+      const tab = el.closest('.tab');
+      if(tab && !tab.classList.contains('active')) return;
       const rect = el.getBoundingClientRect();
+      // rect.top === 0 means element is hidden — skip
+      if(rect.top < 50) return;
       const available = window.innerHeight - rect.top - BOTTOM_PADDING;
-      if(available > 100) el.style.maxHeight = available + 'px';
+      if(available > 150) el.style.maxHeight = available + 'px';
     });
-
   }
 
   // Run after data renders and on resize
