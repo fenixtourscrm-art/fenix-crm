@@ -160,11 +160,19 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   box-sizing:border-box;
 }
 /* Only these 3 tables scroll vertically — makes thead sticky work */
-#scroll-clients,
-#scroll-enq,
+#scroll-clients{
+  overflow-y:auto;
+  max-height:calc(100vh - 200px);
+}
+/* Enquiries has 2 filter rows — needs more offset */
+#scroll-enq{
+  overflow-y:auto;
+  max-height:calc(100vh - 240px);
+}
+/* Bookings has calendar above table — needs more offset */
 #scroll-bk{
   overflow-y:auto;
-  max-height:calc(100vh - 220px);
+  max-height:calc(100vh - 260px);
 }
 /* Hide bottom scrollbar in Webkit (Chrome/Edge/Safari) */
 .tbl-scroll::-webkit-scrollbar{display:none;height:0}
