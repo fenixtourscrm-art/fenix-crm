@@ -164,41 +164,16 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   overflow-y:auto;
   max-height:calc(100vh - 220px);
 }
-/* Enquiries — overflow-x scroll, overflow-y visible so scrollWidth reports correctly */
+/* Enquiries — same as clients, vertical scroll for sticky thead */
 #scroll-enq{
-  overflow-y:visible;
+  overflow-y:auto;
+  max-height:calc(100vh - 240px);
 }
 /* Bookings — no vertical scroll constraint, page scrolls naturally */
 #scroll-bk{
   overflow-y:clip;
 }
-/* Enquiries full-page scroll wrapper — contains filters + table */
-.enq-scroll-wrap{
-  height:calc(100vh - 130px);
-  overflow-y:auto;
-  overflow-x:clip;
-  position:relative;
-}
-/* Enquiries sticky filter bar — sticks inside enq-scroll-wrap */
-.enq-sticky-filters{
-  position:sticky;
-  top:0;
-  z-index:10;
-  background:#fff;
-  padding-bottom:8px;
-  border-bottom:2px solid #e2e8f0;
-  box-shadow:0 2px 8px rgba(0,0,0,0.06);
-  margin:0 -24px;
-  padding-left:24px;
-  padding-right:24px;
-}
-/* Enquiries thead — sticky inside #scroll-enq which is now inside enq-scroll-wrap */
-#tab-enquiries .tbl-base thead th{
-  position:sticky;
-  top:0;
-  z-index:3;
-  background:#f8fafc;
-}
+
 /* Hide bottom scrollbar in Webkit (Chrome/Edge/Safari) */
 .tbl-scroll::-webkit-scrollbar{display:none;height:0}
 /* Table wrapper — provides right-fade overlay and scroll hint */
@@ -911,8 +886,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
     <!-- ENQUIRIES -->
     <div class="tab" id="tab-enquiries">
-      <div class="enq-scroll-wrap">
-      <div class="enq-sticky-filters">
+      <div class="sticky-tab-header">
       <!-- Category filter buttons -->
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
         <button class="btn btn-ghost cat-filter active-filter" onclick="filterCat('all',this)">All Categories</button>
@@ -954,8 +928,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-primary" onclick="openModal('enquiry')">+ Add Enquiry</button>
         <button id="enq-backfill-btn" class="btn" style="display:none;background:#faf5ff;color:#7c3aed;border:1px solid #e9d5ff;font-size:11px" onclick="backfillEnquiryNumbers()" title="Assign ENQ numbers to old enquiries">🔢 Fix ENQ Nos</button>
       </div>
-      </div><!-- /enq-sticky-filters -->
-      <div class="card" style="padding:0;overflow:visible;position:relative">
+      </div><!-- /sticky-tab-header -->
+      <div class="card" style="padding:0;overflow:visible">
         <div class="tbl-wrap" id="wrap-enq">
           <button class="tbl-arrow tbl-arrow-left" id="arr-left-enq" onclick="_tblScroll('scroll-enq',-320)" aria-label="Scroll left">‹</button>
           <button class="tbl-arrow tbl-arrow-right" id="arr-right-enq" onclick="_tblScroll('scroll-enq',320)" aria-label="Scroll right">›</button>
@@ -980,7 +954,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
         </div><!-- /tbl-wrap -->
       </div>
-      </div><!-- /enq-scroll-wrap -->
     </div>
 
     <!-- BOOKINGS (merged: Tours + Tickets + Hotels + Insurance + Cruise + Visa) -->
@@ -13271,7 +13244,7 @@ function _tblScroll(scrollId, delta) {
 
 // ── Dynamic table scroll height — sets max-height based on actual position ──
 (function() {
-  const TABLE_IDS = ['scroll-clients'];
+  const TABLE_IDS = ['scroll-clients','scroll-enq'];
   const BOTTOM_PADDING = 24;
 
   function setTableHeights() {
@@ -13283,13 +13256,7 @@ function _tblScroll(scrollId, delta) {
       const available = window.innerHeight - rect.top - BOTTOM_PADDING;
       if(available > 100) el.style.maxHeight = available + 'px';
     });
-    // Enquiries scroll wrap
-    const enqWrap = document.querySelector('.enq-scroll-wrap');
-    if(enqWrap) {
-      const rect = enqWrap.getBoundingClientRect();
-      const available = window.innerHeight - rect.top - BOTTOM_PADDING;
-      if(available > 100) enqWrap.style.height = available + 'px';
-    }
+
   }
 
   // Run after data renders and on resize
