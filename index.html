@@ -324,8 +324,7 @@ thead .col-sticky-last{background:#f8fafc;z-index:3}
 /* colgroup widths */
 .clients-table col.c-cat    {width:110px}
 .clients-table col.c-company{width:130px}
-.clients-table col.c-fname  {width:130px}
-.clients-table col.c-lname  {width:110px}
+.clients-table col.c-fname  {width:200px}
 .clients-table col.c-gender {width:65px}
 .clients-table col.c-mobile {width:140px}
 .clients-table col.c-email  {width:165px}
@@ -824,7 +823,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
               <col class="c-cat"/>
               <col class="c-company"/>
               <col class="c-fname"/>
-              <col class="c-lname"/>
               <col class="c-gender"/>
               <col class="c-mobile"/>
               <col class="c-email"/>
@@ -838,8 +836,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
             <thead><tr>
               <th class="col-sticky-first">CATEGORY</th>
               <th>COMPANY</th>
-              <th>FIRST NAME</th>
-              <th>LAST NAME</th>
+              <th>NAME</th>
               <th>GENDER</th>
               <th>MOBILE / ALT</th>
               <th>EMAIL</th>
@@ -2076,11 +2073,10 @@ function renderClients(){
     <td style="font-size:11px;font-weight:700">${c.companyName?`<span style="font-weight:800;color:#0369a1">${c.companyName}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
     <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
       <div style="min-width:0;overflow:hidden">
-        <strong style="display:block;overflow:hidden;text-overflow:ellipsis">${c.firstName}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316">🔒</span>':""}
+        <strong style="display:block;overflow:hidden;text-overflow:ellipsis">${c.firstName||''} ${c.lastName||''}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316">🔒</span>':""}
         ${c.createdByName?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">By ${c.createdByName}</div>`:""}
       </div>
     </div></td>
-    <td><strong>${c.lastName||'—'}</strong></td>
     <td>${c.gender||'—'}</td>
     <td><div style="font-size:12px">${c.mobile||'—'}</div>${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:''}</td>
     <td style="font-size:11px">${c.email||'—'}</td>
@@ -2098,7 +2094,7 @@ function renderClients(){
       </div>
     </td>
   </tr>`;
-  }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
+  }).join("")||`<tr><td colspan="11" class="empty">No clients in this category</td></tr>`;
   // Recheck scroll arrows after data renders
   setTimeout(() => window._tblScrollUXRecheck?.(), 50);
 }
@@ -13122,8 +13118,14 @@ function _tblScroll(scrollId, delta) {
     inner.style.width = scrollEl.scrollWidth + 'px';
     topBar.appendChild(inner);
 
-    // Insert BEFORE the tbl-wrap
-    wrapEl.parentNode.insertBefore(topBar, wrapEl);
+    // Insert INSIDE sticky header if present, else before wrap
+    const stickyHeader = wrapEl.closest('.tab')?.querySelector('.sticky-tab-header');
+    if(stickyHeader) {
+      topBar.style.marginTop = '8px';
+      stickyHeader.appendChild(topBar);
+    } else {
+      wrapEl.parentNode.insertBefore(topBar, wrapEl);
+    }
 
     let syncingFromTop = false;
     let syncingFromBottom = false;
