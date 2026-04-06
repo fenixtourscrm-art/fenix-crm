@@ -194,6 +194,9 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   scrollbar-width:auto;
   scrollbar-color:#94a3b8 #e8edf2;
   display:block;
+  position:sticky;
+  top:var(--sticky-header-h, 0px);
+  z-index:9;
 }
 /* Webkit top scrollbar */
 .tbl-top-scroll::-webkit-scrollbar{height:14px;display:block}
@@ -273,13 +276,13 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   top:0;
   z-index:3;
 }
-/* Inside sticky-header tabs, disable thead stickiness — outer div handles it */
+/* thead stays sticky inside tbl-scroll — scrollbar is part of sticky header above */
 #tab-data .tbl-base thead th,
 #tab-enquiries .tbl-base thead th,
 #tab-bookings .tbl-base thead th{
-  position:relative;
-  top:auto;
-  z-index:1;
+  position:sticky;
+  top:0;
+  z-index:3;
 }
 .sticky-tab-header{
   position:sticky;
@@ -13135,13 +13138,17 @@ function _tblScroll(scrollId, delta) {
     inner.style.width = scrollEl.scrollWidth + 'px';
     topBar.appendChild(inner);
 
-    // Insert INSIDE sticky header if present, else before wrap
-    const stickyHeader = wrapEl.closest('.tab')?.querySelector('.sticky-tab-header');
-    if(stickyHeader) {
-      topBar.style.marginTop = '8px';
-      stickyHeader.appendChild(topBar);
-    } else {
-      wrapEl.parentNode.insertBefore(topBar, wrapEl);
+    // Insert BEFORE the tbl-wrap (between sticky header and table)
+    wrapEl.parentNode.insertBefore(topBar, wrapEl);
+
+    // Set CSS var so scrollbar knows where to stick (below sticky header)
+    const tab = wrapEl.closest('.tab');
+    const stickyH = tab?.querySelector('.sticky-tab-header');
+    if(stickyH) {
+      requestAnimationFrame(() => {
+        const h = stickyH.offsetHeight;
+        topBar.style.top = h + 'px';
+      });
     }
 
     let syncingFromTop = false;
