@@ -12488,6 +12488,27 @@ function _fmktInitRouteMap(visits, checkins, date) {
 
   if(!points.length) return;
 
+  // ── Apply spiral offset to markers that are too close ──
+  const OFFSET_THRESHOLD = 0.00015; // ~15 meters
+  const OFFSET_RADIUS    = 0.00012; // spread radius
+  function applyOffset(points) {
+    const used = [];
+    points.forEach(p => {
+      const nearby = used.filter(u =>
+        Math.abs(u.lat - p.lat) < OFFSET_THRESHOLD &&
+        Math.abs(u.lng - p.lng) < OFFSET_THRESHOLD
+      );
+      if (nearby.length > 0) {
+        const angle = (nearby.length * 137.5) * (Math.PI / 180); // golden angle spiral
+        const r     = OFFSET_RADIUS * (1 + nearby.length * 0.3);
+        p.lat = p.lat + r * Math.cos(angle);
+        p.lng = p.lng + r * Math.sin(angle);
+      }
+      used.push({lat: p.lat, lng: p.lng});
+    });
+  }
+  applyOffset(points);
+
   // Centre on first point
   const map = L.map("fmkt-visit-map", { closePopupOnClick: true })
     .setView([points[0].lat, points[0].lng], 14);
@@ -12500,8 +12521,13 @@ function _fmktInitRouteMap(visits, checkins, date) {
   // ── Draw route line through all points in order ──
   const latlngs = points.map(p=>[p.lat, p.lng]);
   if(latlngs.length > 1) {
+    // Shadow line (thicker, lighter)
     L.polyline(latlngs, {
-      color:"#6366f1", weight:3, opacity:.75, dashArray:"10,5"
+      color:"#6366f1", weight:6, opacity:.2
+    }).addTo(map);
+    // Main route line
+    L.polyline(latlngs, {
+      color:"#6366f1", weight:3, opacity:.85, dashArray:"8,4"
     }).addTo(map);
   }
 
@@ -12752,6 +12778,39 @@ function _fmktRefreshLiveLocation() {
 
       if(!_fmktLiveMap) return;
       const pos = [d.lat, d.lng];
+
+      // ── Draw live path from today's GPS pings ──
+      const todayStr = new Date().toISOString().slice(0,10);
+      db.collection('field_live_tracking')
+        .where('staffId','==', String(FMKT_STAFF_ID))
+        .where('date','==', todayStr)
+        .orderBy('timestamp','asc')
+        .get().then(snap => {
+          if(!_fmktLiveMap) return;
+          // Remove old path layers
+          _fmktLiveMap.eachLayer(l => {
+            if(l._isLivePath) _fmktLiveMap.removeLayer(l);
+          });
+          const pathPoints = snap.docs.map(d => [d.data().latitude, d.data().longitude]);
+          if(pathPoints.length > 1) {
+            // Shadow
+            const shadow = L.polyline(pathPoints, { color:'#10b981', weight:6, opacity:.15 });
+            shadow._isLivePath = true;
+            shadow.addTo(_fmktLiveMap);
+            // Main path
+            const path = L.polyline(pathPoints, { color:'#10b981', weight:3, opacity:.8, dashArray:'8,4' });
+            path._isLivePath = true;
+            path.addTo(_fmktLiveMap);
+            // Start marker (green flag)
+            const startIcon = L.divIcon({
+              html:`<div style="width:14px;height:14px;background:#10b981;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)"></div>`,
+              className:'', iconSize:[14,14], iconAnchor:[7,7]
+            });
+            const startM = L.marker(pathPoints[0], {icon:startIcon});
+            startM._isLivePath = true;
+            startM.addTo(_fmktLiveMap).bindTooltip('Start', {permanent:false});
+          }
+        }).catch(() => {});
 
       if(!_fmktLiveMarker) {
         // First load — create marker and set view
