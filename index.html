@@ -186,14 +186,13 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   overflow-x:scroll;
   overflow-y:hidden;
   width:100%;
-  height:14px;           /* thin but clearly visible */
-  background:#f1f5f9;
+  height:18px;
+  background:#fff;
+  border-top:1px solid #e2e8f0;
   border-bottom:1px solid #e2e8f0;
-  border-radius:12px 12px 0 0;
   box-sizing:border-box;
   scrollbar-width:auto;
-  scrollbar-color:#94a3b8 #e2e8f0;
-  /* Only show on desktop — hidden by JS on touch */
+  scrollbar-color:#94a3b8 #e8edf2;
   display:block;
 }
 /* Webkit top scrollbar */
@@ -274,15 +273,31 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   top:0;
   z-index:3;
 }
+/* When inside a tab with sticky header, thead must clear below the scrollbar */
+#tab-data .tbl-base thead th,
+#tab-enquiries .tbl-base thead th,
+#tab-bookings .tbl-base thead th{
+  top:0;
+}
 .sticky-tab-header{
   position:sticky;
   top:0;
   z-index:10;
-  background:#f8fafc;
-  padding:16px 24px 0;
+  background:#fff;
+  padding:16px 24px 8px;
   margin:-20px -24px 0;
-  border-bottom:1.5px solid #e2e8f0;
-  box-shadow:0 2px 8px rgba(0,0,0,0.06);
+  border-bottom:2px solid #e2e8f0;
+  box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+/* Fill the gap above sticky header so content doesn't show through */
+.sticky-tab-header::before{
+  content:'';
+  position:absolute;
+  top:-40px;
+  left:0;
+  right:0;
+  height:40px;
+  background:#fff;
 }
 .tbl-base tbody tr:hover td{background:#fafafa}
 .tbl-base tbody tr:last-child td{border-bottom:none}
