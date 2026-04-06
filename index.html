@@ -160,19 +160,12 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   box-sizing:border-box;
 }
 /* Only these 3 tables scroll vertically — makes thead sticky work */
-#scroll-clients{
-  overflow-y:auto;
-  max-height:calc(100vh - 200px);
-}
-/* Enquiries has 2 filter rows — needs more offset */
-#scroll-enq{
-  overflow-y:auto;
-  max-height:calc(100vh - 240px);
-}
-/* Bookings has calendar above table — needs more offset */
+#scroll-clients,
+#scroll-enq,
 #scroll-bk{
   overflow-y:auto;
-  max-height:calc(100vh - 260px);
+  /* max-height set dynamically by JS based on actual element positions */
+  max-height:calc(100vh - 220px);
 }
 /* Hide bottom scrollbar in Webkit (Chrome/Edge/Safari) */
 .tbl-scroll::-webkit-scrollbar{display:none;height:0}
@@ -13241,6 +13234,32 @@ function _tblScroll(scrollId, delta) {
   }
   setTimeout(() => window._tblScrollUXRecheck?.(), 1200);
   setTimeout(() => window._tblScrollUXRecheck?.(), 2800);
+})();
+
+// ── Dynamic table scroll height — sets max-height based on actual position ──
+(function() {
+  const TABLE_IDS = ['scroll-clients','scroll-enq','scroll-bk'];
+  const BOTTOM_PADDING = 24; // px gap at bottom
+
+  function setTableHeights() {
+    TABLE_IDS.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      const rect = el.getBoundingClientRect();
+      const available = window.innerHeight - rect.top - BOTTOM_PADDING;
+      if(available > 100) el.style.maxHeight = available + 'px';
+    });
+  }
+
+  // Run after data renders and on resize
+  ['DOMContentLoaded','resize'].forEach(ev =>
+    window.addEventListener(ev, setTableHeights, { passive: true })
+  );
+  // Run when tabs become active
+  document.addEventListener('click', () => setTimeout(setTableHeights, 80), { passive: true });
+  setTimeout(setTableHeights, 400);
+  setTimeout(setTableHeights, 1200);
+  setTimeout(setTableHeights, 2500);
 })();
 
 // ── Enquiry More Menu — portal (renders in body, escapes all overflow/stacking) ──
