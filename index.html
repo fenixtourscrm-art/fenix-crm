@@ -164,9 +164,9 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   overflow-y:auto;
   max-height:calc(100vh - 220px);
 }
-/* Enquiries — page scrolls naturally, thead sticky via .enq-table-wrap */
+/* Enquiries — overflow-x scroll, overflow-y visible so scrollWidth reports correctly */
 #scroll-enq{
-  overflow-y:clip;
+  overflow-y:visible;
 }
 /* Bookings — no vertical scroll constraint, page scrolls naturally */
 #scroll-bk{
@@ -204,15 +204,9 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 /* Table wrapper — provides right-fade overlay and scroll hint */
 .tbl-wrap{
   position:relative;
+  /* Extra bottom space so scrollbar is never obscured by card border-radius */
   padding-bottom:4px;
-  background:#fff;
-  display:flex;
-  align-items:flex-start;
-}
-/* tbl-scroll fills remaining space between arrows */
-.tbl-wrap .tbl-scroll{
-  flex:1;
-  min-width:0;
+  background:#fff; /* match card background */
 }
 .tbl-wrap::after{
   content:"";
@@ -257,12 +251,12 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
 /* Table scroll arrow buttons */
 .tbl-arrow{
   display:none;
-  position:sticky;
+  position:absolute;
   top:50%;
+  transform:translateY(-50%);
   z-index:10;
   width:36px;
   height:36px;
-  flex-shrink:0;
   border-radius:50%;
   background:rgba(15,23,42,0.55);
   color:#fff;
@@ -277,12 +271,10 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   box-shadow:0 2px 10px rgba(0,0,0,0.25);
   line-height:1;
   padding:0;
-  margin-top:-18px;
-  align-self:flex-start;
-  pointer-events:auto;
 }
 .tbl-arrow:hover{
   background:rgba(15,23,42,0.85);
+  transform:translateY(-50%) scale(1.08);
 }
 .tbl-arrow.visible{display:flex}
 .tbl-arrow-left{left:6px}
@@ -13224,8 +13216,10 @@ function _tblScroll(scrollId, delta) {
   }
 
   function updateArrows(scrollEl, wrapEl, scrollWidth) {
-    const hasOverflow = (scrollWidth || scrollEl.scrollWidth) > scrollEl.clientWidth + 4;
-    // Find arrow buttons inside wrapEl
+    // Check table width directly — more reliable than scrollWidth when overflow:clip
+    const tbl = scrollEl.querySelector('table');
+    const tblWidth = tbl ? tbl.offsetWidth : 0;
+    const hasOverflow = (scrollWidth || tblWidth || scrollEl.scrollWidth) > scrollEl.clientWidth + 4;
     const leftBtn  = wrapEl.querySelector('.tbl-arrow-left');
     const rightBtn = wrapEl.querySelector('.tbl-arrow-right');
     if(leftBtn)  leftBtn.classList.toggle('visible', hasOverflow);
