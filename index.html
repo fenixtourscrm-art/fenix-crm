@@ -273,11 +273,13 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   top:0;
   z-index:3;
 }
-/* When inside a tab with sticky header, thead must clear below the scrollbar */
+/* Inside sticky-header tabs, disable thead stickiness — outer div handles it */
 #tab-data .tbl-base thead th,
 #tab-enquiries .tbl-base thead th,
 #tab-bookings .tbl-base thead th{
-  top:0;
+  position:relative;
+  top:auto;
+  z-index:1;
 }
 .sticky-tab-header{
   position:sticky;
