@@ -125,7 +125,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 .page-title{font-size:20px;font-weight:800;font-family:"Playfair Display",serif;color:#0f172a}
 .topbar-right{display:flex;align-items:center;gap:10px}
 .topbar-date{font-size:11px;color:#94a3b8}
-.content{flex:1;overflow-y:auto;overflow-x:clip;padding:20px 24px;min-width:0}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;padding:20px 24px;min-width:0}
 .tab{display:none}.tab.active{display:block}
 /* KPI */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:12px;margin-bottom:20px}
@@ -153,6 +153,7 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   overflow-x:scroll;
   overflow-y:clip;
   width:100%;
+  max-width:100%;
   -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
   position:relative;
@@ -365,8 +366,8 @@ thead .col-sticky-last{background:#f8fafc;z-index:3}
 .clients-table col.c-family {width:120px}
 .clients-table col.c-actions{width:190px}
 
-/* ══ ENQUIRIES TABLE — min-width 1320px ══ */
-.enq-table{min-width:1320px}
+/* ══ ENQUIRIES TABLE — min-width 1400px ══ */
+.enq-table{min-width:1400px}
 .enq-table col.ec-no    {width:100px}
 .enq-table col.ec-type  {width:70px}
 .enq-table col.ec-client{width:150px}
