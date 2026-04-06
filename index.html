@@ -154,11 +154,17 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   overflow-y:clip;
   width:100%;
   -webkit-overflow-scrolling:touch;
-  /* Hide bottom scrollbar — top scrollbar handles it */
   scrollbar-width:none;
   position:relative;
   padding-bottom:0;
   box-sizing:border-box;
+}
+/* Only these 3 tables scroll vertically — makes thead sticky work */
+#scroll-clients,
+#scroll-enq,
+#scroll-bk{
+  overflow-y:auto;
+  max-height:calc(100vh - 220px);
 }
 /* Hide bottom scrollbar in Webkit (Chrome/Edge/Safari) */
 .tbl-scroll::-webkit-scrollbar{display:none;height:0}
