@@ -7081,51 +7081,55 @@ async function generateClientInsight(client) {
   const report = document.getElementById('insight-report');
   if(!report) return;
 
-  // Show loading
   report.innerHTML = `
     <div style="text-align:center;padding:50px 20px;color:#64748b">
       <div style="font-size:42px;margin-bottom:12px;animation:spin-slow 2s linear infinite">🧠</div>
       <div style="font-weight:700;font-size:14px;color:#0f172a">Analysing ${client.firstName} ${client.lastName}...</div>
-      <div style="font-size:12px;margin-top:6px">Reading booking history, enquiries, and patterns</div>
+      <div style="font-size:12px;margin-top:6px">Reading booking history, enquiries, and follow-up notes</div>
     </div>`;
 
-  // Gather all client data
   const clientEnquiries = enquiries.filter(e => e.clientId === client.id);
   const clientBookings  = allBookings.filter(b => b.clientId === client.id);
-
-  // Build data summary for AI
   const totalSpend = clientBookings.reduce((s, b) => s + (parseFloat(b.amount)||0), 0);
   const paidAmount = clientBookings.reduce((s, b) => s + (parseFloat(b.paid)||0), 0);
 
+  // Collect all follow-up notes from enquiries
+  const allNotes = [];
+  clientEnquiries.forEach(e => {
+    if(e.notes && e.notes.trim()) allNotes.push(`"${e.notes.trim()}"`);
+    if(e.followUpNotes && e.followUpNotes.trim()) allNotes.push(`"${e.followUpNotes.trim()}"`);
+  });
+
   const enqSummary = clientEnquiries.map(e =>
-    `- ${e.category||'General'}: ${e.destination||'Unknown'} | Status: ${e.status||'?'} | Budget: ${e.budget||'Not specified'} | Date: ${e.startDate||'?'} | Pax: ${e.pax||1}`
+    `- ${e.category||'General'}: ${e.destination||'Unknown'} | Status: ${e.status||'?'} | Budget: ${e.budget||'Not specified'} | Pax: ${e.pax||1}`
   ).join('\n');
 
   const bkSummary = clientBookings.map(b =>
-    `- ${b.category||'Booking'}: ${b.destination||'Unknown'} | Amount: ₹${b.amount||0} | Paid: ₹${b.paid||0} | Status: ${b.status||'?'} | Travel: ${b.travelDate||'?'}`
+    `- ${b.category||'Booking'}: ${b.destination||'Unknown'} | Amount: Rs.${b.amount||0} | Paid: Rs.${b.paid||0} | Status: ${b.status||'?'}`
   ).join('\n');
+
+  const notesSummary = allNotes.length ? allNotes.join('\n') : 'No notes recorded';
 
   const dataContext = `
 CLIENT PROFILE:
 Name: ${client.firstName} ${client.lastName}
-Mobile: ${client.mobile}
-City: ${client.city || 'N/A'}, ${client.state || ''}
-Occupation: ${client.occupation || 'N/A'}
-Category: ${client.clientCategory || 'Regular'}
-Company: ${client.companyName || 'N/A'}
-Added by: ${client.createdByName || 'N/A'}
+City: ${client.city||'N/A'}, ${client.state||''}
+Occupation: ${client.occupation||'N/A'}
+Category: ${client.clientCategory||'Regular'}
 
 ENQUIRY HISTORY (${clientEnquiries.length} total):
-${enqSummary || 'No enquiries'}
+${enqSummary||'No enquiries'}
 
 BOOKING HISTORY (${clientBookings.length} total):
-${bkSummary || 'No bookings'}
+${bkSummary||'No bookings'}
 
 FINANCIAL SUMMARY:
-Total booking value: ₹${totalSpend.toLocaleString('en-IN')}
-Total paid: ₹${paidAmount.toLocaleString('en-IN')}
-Total pending: ₹${(totalSpend - paidAmount).toLocaleString('en-IN')}
-  `.trim();
+Total value: Rs.${totalSpend.toLocaleString('en-IN')}
+Total paid: Rs.${paidAmount.toLocaleString('en-IN')}
+Pending: Rs.${(totalSpend-paidAmount).toLocaleString('en-IN')}
+
+STAFF FOLLOW-UP NOTES (read carefully for risk signals):
+${notesSummary}`.trim();
 
   const prompt = `You are a CRM analyst for Fenix Tours and Travels, a travel agency in Ahmedabad, India.
 
@@ -7140,9 +7144,9 @@ Provide a report with these EXACT sections (use **Section Name:** format):
 **Engagement Level:** How active/engaged this client is (active, dormant, high-value, etc).
 **Upsell Opportunities:** 2-3 specific products or destinations to pitch to this client.
 **Follow-up Recommendation:** What the sales team should do next with this client and when.
-**Risk Flags:** Any concerns (unpaid dues, lost enquiries, inactive period, etc). Write "None" if nothing notable.
+**Risk Flags:** IMPORTANT - Read the staff follow-up notes very carefully. If any note contains risk words like "other agent", "cheap rate", "risk", "cancel", "complaint", "book elsewhere", "competitor" etc - show it as: ⚠️ Staff noted: "[exact note text]". Also flag if pending payment is over Rs.5000 or if client has 3+ enquiries with 0 bookings. List each risk on a separate line. Write "None" only if truly nothing notable found.
 
-Keep each section concise — 2-4 sentences max. Be specific and practical for a travel agent.`;
+Keep each section concise. Be specific and practical for a travel agent.`;
 
   report.innerHTML = `<div style="color:#64748b;padding:20px;font-size:13px;text-align:center;animation:pulse 1.5s infinite">⏳ Generating AI Insight...</div>`;
   try {
@@ -7153,7 +7157,8 @@ Keep each section concise — 2-4 sentences max. Be specific and practical for a
   }
 }
 
-function renderInsightReport(client, aiText, enqs, bks, totalSpend, paidAmt) {
+
+function renderInsightReport(client, aiText, enqs, bks, totalSpend, paidAmt, manualRiskNotes) {
   const report = document.getElementById('insight-report');
   if(!report) return;
 
@@ -7223,12 +7228,27 @@ function renderInsightReport(client, aiText, enqs, bks, totalSpend, paidAmt) {
     <!-- AI Insight Sections -->
     <div style="display:flex;flex-direction:column;gap:10px">
       ${sections.map(s => {
-        const content = extractSection(aiText, s.key);
-        if(!content) return '';
+        let content = extractSection(aiText, s.key);
+
+        // For Risk Flags — prepend manual staff risk notes
+        if (s.key === 'Risk Flags' && manualRiskNotes && manualRiskNotes.length > 0) {
+          const manualBlock = manualRiskNotes.map(f => `⚠️ Staff noted: "${f.notes.trim()}"`).join('\n');
+          content = manualBlock + (content && content.toLowerCase() !== 'none' ? '\n' + content : '');
+        }
+
+        if(!content || content.toLowerCase() === 'none') {
+          if (s.key === 'Risk Flags') {
+            return `<div style="background:${s.bg};border:1px solid ${s.color}22;border-radius:12px;padding:14px">
+              <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${s.color};margin-bottom:6px;letter-spacing:.05em">${s.icon} ${s.key}</div>
+              <div style="font-size:13px;color:#64748b">✅ None identified</div>
+            </div>`;
+          }
+          return '';
+        }
         const lines = content.split('\n').filter(l => l.trim());
         return `<div style="background:${s.bg};border:1px solid ${s.color}22;border-radius:12px;padding:14px">
           <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:${s.color};margin-bottom:6px;letter-spacing:.05em">${s.icon} ${s.key}</div>
-          ${lines.map(l => `<div style="font-size:13px;color:#1e293b;line-height:1.6">${l.replace(/^[-•*]\s*/,'')}</div>`).join('')}
+          ${lines.map(l => `<div style="font-size:13px;color:#1e293b;line-height:1.6;margin-bottom:3px">${l.replace(/^[-•*]\s*/,'')}</div>`).join('')}
         </div>`;
       }).join('')}
     </div>
