@@ -159,13 +159,15 @@ td{padding:9px 14px;font-size:12px;border-bottom:1px solid #f1f5f9;color:#374151
   padding-bottom:0;
   box-sizing:border-box;
 }
-/* Only these 3 tables scroll vertically — makes thead sticky work */
+/* Client Data and Enquiries scroll vertically — makes thead sticky work */
 #scroll-clients,
-#scroll-enq,
-#scroll-bk{
+#scroll-enq{
   overflow-y:auto;
-  /* max-height set dynamically by JS based on actual element positions */
   max-height:calc(100vh - 220px);
+}
+/* Bookings — no vertical scroll constraint, page scrolls naturally */
+#scroll-bk{
+  overflow-y:clip;
 }
 /* Hide bottom scrollbar in Webkit (Chrome/Edge/Safari) */
 .tbl-scroll::-webkit-scrollbar{display:none;height:0}
@@ -954,7 +956,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <!-- Quick Access Cards -->
       <div class="bk-cards-grid" id="bk-cards"></div>
 
-      <div class="sticky-tab-header">
       <!-- Filters row -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -970,8 +971,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <button class="btn btn-ghost" onclick="nextMonth('book')">›</button>
         </div>
       </div>
-
-      </div><!-- /sticky-tab-header -->
       <!-- Calendar -->
       <div class="card" style="padding:14px;margin-bottom:16px">
         <div class="cal-grid" id="book-cal-names"></div>
@@ -13238,7 +13237,7 @@ function _tblScroll(scrollId, delta) {
 
 // ── Dynamic table scroll height — sets max-height based on actual position ──
 (function() {
-  const TABLE_IDS = ['scroll-clients','scroll-enq','scroll-bk'];
+  const TABLE_IDS = ['scroll-clients','scroll-enq'];
   const BOTTOM_PADDING = 24; // px gap at bottom
 
   function setTableHeights() {
