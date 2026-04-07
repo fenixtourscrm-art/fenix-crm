@@ -294,16 +294,46 @@ body{font-family:'DM Sans',sans-serif;background:transparent;min-height:100vh;di
 
 <script>
 var p = new URLSearchParams(window.location.search);
-var name = p.get('name') || 'Paresh Gajera';
-var role = p.get('role') || 'Marketing Executive';
+var name   = p.get('name')   || 'Paresh Gajera';
+var role   = p.get('role')   || 'Marketing Executive';
 var mobile = p.get('mobile') || '+91 97233 30537';
-var email = p.get('email') || 'inquiry@fenixtours.co.in';
+var email  = p.get('email')  || 'inquiry@fenixtours.co.in';
+var off1   = p.get('off1')   || '+91 97252 52120';
+var off2   = p.get('off2')   || '+91 98989 20537';
+var web    = p.get('web')    || 'fenixtours.co.in';
+var addr1  = p.get('addr1')  || '601 D & C, Dynasty Plaza, Nr. Pintoo Garment';
+var addr2  = p.get('addr2')  || 'Stadium Circle, Navrangpura, CG Road, Ahmedabad';
+var addr3  = p.get('addr3')  || 'Gujarat – 380009 – INDIA';
+var svcs   = [];
+for(var i=1;i<=12;i++) svcs.push(p.get('s'+i));
+var defaultSvcs = ['Air Ticket Booking','Visa Services','Group Tour','Hotel Booking','Travel Insurance','Individual Tour','Car Booking','Domestic Packages','Corporate Group Tour','Cruise Booking','Intl Packages','Incentive Group Tour'];
+svcs = svcs.map(function(s,i){ return s||defaultSvcs[i]; });
 
 document.title = 'Fenix Tours — ' + name;
-document.getElementById('c-name').textContent = name;
-document.getElementById('c-role').textContent = role;
-document.getElementById('c-mobile').textContent = mobile;
-document.getElementById('c-email').textContent = email;
+
+function setTxt(id,val){ var el=document.getElementById(id); if(el) el.textContent=val; }
+setTxt('c-name', name);
+setTxt('c-role', role);
+setTxt('c-mobile', mobile);
+setTxt('c-email', email);
+
+// Update address
+var addrEl = document.querySelector('.addr');
+if(addrEl) addrEl.innerHTML = addr1+'<br>'+addr2+'<br>'+addr3;
+
+// Update office contacts - find oc-row elements
+var ocRows = document.querySelectorAll('.oc-row');
+if(ocRows[0]) ocRows[0].lastChild.textContent = off1;
+if(ocRows[1]) ocRows[1].lastChild.textContent = off2;
+
+// Update website
+var webSpan = document.querySelector('.oc-row span[style]');
+if(webSpan) webSpan.textContent = web;
+
+// Update services
+var svcEls = document.querySelectorAll('.svc');
+svcEls.forEach(function(el,i){ if(svcs[i]) el.textContent=svcs[i]; });
+
 document.getElementById('btn-call').href = 'tel:' + mobile.replace(/[\s+\-]/g,'');
 
 var waMsg = 'Hello! I received the digital visiting card of *' + name + '*, ' + role + ' at Fenix Tours & Travels Pvt Ltd.\n\nI am interested in a tour package. Could you please share more details?';
