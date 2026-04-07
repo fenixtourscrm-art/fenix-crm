@@ -1174,6 +1174,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <button id="academy-quiz-btn" class="btn" onclick="setAcademyTab('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
           <button id="academy-fact-btn" class="btn" onclick="setAcademyTab('fact')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🌍 Travel Fact</button>
           <button id="academy-guess-btn" class="btn" onclick="setAcademyTab('guess')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🗺️ Guess Destination</button>
+          <button id="academy-training-btn" class="btn" onclick="setAcademyTab('training')" style="background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-size:12px;font-weight:700">🚀 Training Hub</button>
         </div>
       </div>
 
@@ -1230,6 +1231,43 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div id="academy-leaderboard-wrap" style="margin-top:24px">
         <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">🏆 Travel Academy Leaderboard — This Month</div>
         <div id="quiz-leaderboard"></div>
+      </div>
+
+      <!-- TRAINING HUB PANEL -->
+      <div id="training-hub-panel" style="display:none">
+        <!-- Progress Bar -->
+        <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:20px 24px;margin-bottom:20px;color:#fff">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-size:18px;font-weight:800">🚀 Travel Training Hub</div>
+              <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:3px">Real scenarios. Real skills. Fenix Tours style.</div>
+            </div>
+            <div style="text-align:right">
+              <div id="th-level-badge" style="background:rgba(249,115,22,0.3);border:1px solid #f97316;border-radius:99px;padding:4px 14px;font-size:11px;font-weight:700;color:#fed7aa">🌱 Beginner Agent</div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:4px"><span id="th-score">0</span> points earned</div>
+            </div>
+          </div>
+          <div style="margin-top:14px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.7);margin-bottom:5px">
+              <span>Overall Progress</span>
+              <span id="th-progress-pct">0%</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.15);border-radius:99px;height:8px">
+              <div id="th-progress-bar" style="background:linear-gradient(90deg,#f97316,#fbbf24);height:8px;border-radius:99px;width:0%;transition:width 0.5s ease"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section Tabs -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+          <button class="th-tab-btn active" onclick="setTrainingSection('scenarios')" id="th-tab-scenarios" style="padding:8px 16px;border-radius:99px;border:none;background:#f97316;color:#fff;font-size:12px;font-weight:700;cursor:pointer">🎭 Scenarios</button>
+          <button class="th-tab-btn" onclick="setTrainingSection('lessons')" id="th-tab-lessons" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">🧠 Quick Lessons</button>
+          <button class="th-tab-btn" onclick="setTrainingSection('workflow')" id="th-tab-workflow" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">🛠️ Workflow</button>
+          <button class="th-tab-btn" onclick="setTrainingSection('tips')" id="th-tab-tips" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">💡 Agent Tips</button>
+        </div>
+
+        <!-- Section Content -->
+        <div id="th-section-content"></div>
       </div>
     </div>
 
@@ -6188,6 +6226,426 @@ async function deleteFact(id) {
   } catch(e) { alert('Delete failed: ' + e.message); }
 }
 
+
+// ═══════════════════════════════════════════════
+//  TRAINING HUB MODULE
+// ═══════════════════════════════════════════════
+
+// ── Training Data ──
+const TH_SCENARIOS = [
+  {
+    id:'s1', category:'Client Handling',
+    situation: '📞 Client calls and says: "Bhai, Dubai jaana hai but budget thoda kam che. ₹30,000 ma ho jaye?"',
+    context: 'Client wants Dubai but budget is very tight. Dubai average package is ₹45,000+.',
+    options: [
+      { text: '"Sorry sir, Dubai ₹30k ma nahi thay."', correct: false, feedback: '❌ Never directly reject! Client will go to competitor.' },
+      { text: '"Sir, budget thoda adjust kariye — ₹35-38k ma ekdum mast package banave."', correct: true, feedback: '✅ Perfect! Always stretch the budget gently. Show value, not limitations.' },
+      { text: '"₹30k ma Dubai nai, Goa jaao."', correct: false, feedback: '❌ Never redirect without asking. Client came for Dubai, not Goa!' },
+      { text: '"Ek kaam karo — group ma jaao, sasta padse."', correct: false, feedback: '⚠️ Could work but too early. First understand their requirements properly.' }
+    ],
+    tip: '💡 Pro Tip: Always find a way YES bolva no. "Thoda adjust kariye" works better than "no".',
+    points: 20
+  },
+  {
+    id:'s2', category:'Follow-up Skills',
+    situation: '📱 You sent a package to a client 3 days ago. No reply yet. Client pe WhatsApp blue tick aavi gayu.',
+    context: 'Client has seen your message but not replied. What do you do?',
+    options: [
+      { text: 'Wait karo — reply aavse jyare aavse.', correct: false, feedback: '❌ Waiting = Losing! Travel business moves fast.' },
+      { text: '"Sir, package joi lidu? Koi sawaal hoy to batao 😊"', correct: true, feedback: '✅ Soft follow-up with emoji. Professional yet friendly.' },
+      { text: '"Sir, reply kayo nai kema?" (angry tone)', correct: false, feedback: '❌ Never sound desperate or angry. Client will block!' },
+      { text: 'Call karo atyare j.', correct: false, feedback: '⚠️ Calling without warning can annoy. WhatsApp message first.' }
+    ],
+    tip: '💡 Follow-up rule: "3 days = 1 soft follow-up. 6 days = 1 call." Never give up before 3 follow-ups.',
+    points: 20
+  },
+  {
+    id:'s3', category:'Booking Conversion',
+    situation: '💬 Client says: "Package ekdum saru che but booking thodi vaare karish. Avti kal confirm karis."',
+    context: '"Next day confirmation" is often code for going to check other agents. What do you do?',
+    options: [
+      { text: '"Ji sir, kal wait karis."', correct: false, feedback: '❌ By tomorrow, they'll book from someone else.' },
+      { text: '"Sir, aaje booking kariye to seats confirm rehe. Kal rate change thay sake che."', correct: true, feedback: '✅ Urgency + valid reason = conversion. Price/seats are genuine reasons.' },
+      { text: '"Sir, advance thi booking karo to discount malse."', correct: true, feedback: '✅ Also good! Incentive to book now works well.' },
+      { text: '"Thik che, kal confirm karo."', correct: false, feedback: '❌ Too passive. Always give a reason to decide now.' }
+    ],
+    tip: '💡 Golden rule: "Never let client sleep on it without urgency." Seats, price, season — always have a reason.',
+    points: 25
+  },
+  {
+    id:'s4', category:'Complaint Handling',
+    situation: '😠 Client is very angry: "Tame aapelo hotel ekdum kharab hatu! AC kaam nai karti, food kharab. Return karo pesa!"',
+    context: 'Client had a bad experience. They are upset and want refund. Hotel was 3-star budget.',
+    options: [
+      { text: '"Sir, hotel nahi tame booked kidu hatu." (blame client)', correct: false, feedback: '❌ Never blame client. Even if true, this destroys trust.' },
+      { text: '"Sorry sir, hotel thi thodi problem aavi. Hu abhi hotel ne contact karu chu. Aaj resolve karava nu pryas karish."', correct: true, feedback: '✅ Acknowledge, apologize, take action. This is professional handling.' },
+      { text: '"Sir, 3-star hotel ma 5-star expect nai thay."', correct: false, feedback: '❌ Rude and defensive. Client will never come back.' },
+      { text: '"Refund nai malse, policy che."', correct: false, feedback: '❌ Never say no refund directly. Check with supplier first.' }
+    ],
+    tip: '💡 Complaint formula: Listen → Apologize → Act → Update. Never argue, never blame.',
+    points: 25
+  },
+  {
+    id:'s5', category:'Upselling',
+    situation: '✈️ Client books Goa 3 nights. While confirming, you notice they have 5 days off from office.',
+    context: 'Client is booking 3N/4D Goa but has 5 days available. Opportunity!',
+    options: [
+      { text: 'Booking confirm karo jaldi.', correct: false, feedback: '❌ You missed an upsell opportunity worth ₹5,000+ extra business.' },
+      { text: '"Sir, 3 din ma Goa full enjoy nai thay. 4 din kariye? Beachside hotel, North + South Goa cover thase."', correct: true, feedback: '✅ Upsell with value. You gave a reason to upgrade.' },
+      { text: '"Sir, cruise add kariye? Thodi vadhare cost thase but experience ekdum alag."', correct: true, feedback: '✅ Also excellent! Activity upsell is very effective.' },
+      { text: '"Tamaru package ready che, payment karo."', correct: false, feedback: '❌ Too transactional. Always look for ways to enhance the trip.' }
+    ],
+    tip: '💡 Upsell Tip: "Always check the gap between what client books vs what they can afford." Extra day = ₹3-5k more revenue.',
+    points: 30
+  },
+  {
+    id:'s6', category:'New Enquiry',
+    situation: '📩 New client messages: "Shimla jaava nu che. Information aapso?"',
+    context: 'Fresh lead! You know nothing about them yet. What's your first response?',
+    options: [
+      { text: '"Shimla package ₹15,000 ma malse, 3N/4D."', correct: false, feedback: '❌ Never quote price without knowing requirements. You may underprice or lose them.' },
+      { text: '"Ji sir! Shimla ekdum mast che 😊 Keta members che? Budget su che? Kyathi aavava nu che?"', correct: true, feedback: '✅ Perfect opener! 3 key questions: group size, budget, departure city.' },
+      { text: '"Brochure moku chu, joi lejo."', correct: false, feedback: '❌ Sending brochure without engaging = low conversion.' },
+      { text: '"Kedi date ma jaava nu che?"', correct: false, feedback: '⚠️ Good question but incomplete. Ask all 3 questions together.' }
+    ],
+    tip: '💡 New lead formula: "Keta log? Budget su? Kyathi?" — 3 questions that qualify every lead in 30 seconds.',
+    points: 20
+  },
+  {
+    id:'s7', category:'Visa Query',
+    situation: '🛂 Client asks: "Dubai visa ketla divas ma aave? Emergency che, kal jaava nu che."',
+    context: 'Visa in 1 day is near impossible. Client has unrealistic expectation.',
+    options: [
+      { text: '"Kal to nai malse sir, impossible che."', correct: false, feedback: '❌ Too blunt. Always soften the reality.' },
+      { text: '"Sir, standard visa 3-4 days leve. Emergency express service hoy to 24-48 hrs thay — extra charges lage. Try kariye?"', correct: true, feedback: '✅ Honest + solution-oriented. You gave options, not excuses.' },
+      { text: '"Visa to hoi jase, filing karo."', correct: false, feedback: '❌ Never give false assurance. If visa doesn't come, client will blame you.' },
+      { text: '"Sorry, aavtu na hoy kal."', correct: false, feedback: '❌ Never just say sorry without offering alternatives.' }
+    ],
+    tip: '💡 Visa rule: "Always give realistic timeline + alternative solution." Never promise what you can't deliver.',
+    points: 25
+  }
+];
+
+const TH_LESSONS = [
+  { icon:'📋', title:'What is PNR?', content:'PNR (Passenger Name Record) = Tari booking no unique code. Airline, hotel, agent — badha aa code thi tari booking track kare che. Format: 6 letters/numbers. Example: AB1234. Aana thi check-in, seat selection, baggage — badhu thay.', time:'45 sec' },
+  { icon:'🛂', title:'Visa Types Explained', content:'Tourist Visa: Rakhava mate. Business Visa: Meeting/Conference mate. Transit Visa: Bija country ma roka vina pass thava. On-Arrival Visa: Airport pe j malti. E-Visa: Online apply thay. Fenix Tours tourist + business visa handle kare.', time:'60 sec' },
+  { icon:'✈️', title:'Dom vs Intl Flights', content:'Domestic: India ni ander. Check-in: 1 hour pehla. Baggage: 15-20kg. International: India thi bahar. Check-in: 3 hours pehla. Baggage: 20-30kg. Passport + Visa mandatory. Forex carry karo.', time:'45 sec' },
+  { icon:'💰', title:'How Packages Are Priced', content:'Package cost = Hotel + Flight + Transfer + Meals + Sightseeing + Visa + Markup. Markup = Taro profit. Standard markup: 8-15%. Fenix Tours nu markup confidential rakho. Client ne total price bolo, breakup nai.', time:'60 sec' },
+  { icon:'📱', title:'WhatsApp for Conversions', content:'Response time = Conversion rate. 5 min ander reply = 80% higher conversion. Use voice notes for complex queries. Send images first, price later. Always end with a question: "Kem lagyu sir?" Follow-up = 3 day rule.', time:'45 sec' },
+  { icon:'🏨', title:'Hotel Star Ratings', content:'3-Star: Budget. AC, basic facilities. Good for domestic. 4-Star: Mid-range. Better rooms, multiple dining. Most popular. 5-Star: Luxury. Pool, spa, premium service. International trips. Always match hotel to client budget.', time:'45 sec' }
+];
+
+const TH_WORKFLOW = [
+  { step:1, icon:'📩', title:'Enquiry Receive', desc:'Client thi message/call aave. CRM ma add karo immediately. Source note karo (WhatsApp/Walk-in/Reference).' },
+  { step:2, icon:'💬', title:'Qualify the Lead', desc:'3 questions pucho: Keta log? Budget? Date? Aa trine answer vina package na banavo.' },
+  { step:3, icon:'📦', title:'Package Create', desc:'Budget anusar best option choose karo. 2-3 options apo — never just one. Comparison easy thay.' },
+  { step:4, icon:'📤', title:'Send Proposal', desc:'WhatsApp pe images sathe proposal moko. Price + inclusions clearly likho. Deadline mention karo: "Aaj book karo to confirm seat."' },
+  { step:5, icon:'🔄', title:'Follow-up', desc:'3 days no reply? Soft follow-up karo. 6 days? Call karo. Never 3 thi vadhu follow-up vina result.' },
+  { step:6, icon:'✅', title:'Booking Confirm', desc:'Advance lyo. CRM ma booking create karo. Documents collect karo. Confirmation share karo.' },
+  { step:7, icon:'🌟', title:'Post-Trip Follow-up', desc:'Client trip thi aave pacchi 2-3 din ma puchho: "Kaisa rahi trip?" Happy client = referral source.' }
+];
+
+const TH_TIPS = [
+  { icon:'⚡', tip:'Reply within 5 minutes', detail:'Studies show 78% leads convert if replied within 5 mins. After 30 mins, conversion drops 60%.', color:'#ef4444' },
+  { icon:'📸', tip:'Images pehla, price baad ma', detail:'Package image/video moko pehla. Excitement create thay. Pachhi price bolo — perceived value vadhse.', color:'#f97316' },
+  { icon:'🤝', tip:'Reference = Gold', detail:'Every happy client = 3-5 referrals. Trip pacchi always puchho: "Tara koi friend/family ne recommend karish?"', color:'#10b981' },
+  { icon:'📊', tip:'Always 2-3 options apo', detail:'Single option = pressure. 3 options = choice + higher chance of booking. Always Good/Better/Best.', color:'#8b5cf6' },
+  { icon:'💬', tip:'Client nu naam use karo', detail:'"Sir" vs "Rameshbhai" — naam leva thi trust vadhse 40%. CRM ma naam note karo pehla j.', color:'#0ea5e9' },
+  { icon:'🎯', tip:'Urgency always create karo', detail:'"Seats limited che", "Rate aavti kal vadhse", "Season peak ma che" — genuine urgency = faster decision.', color:'#dc2626' },
+  { icon:'📱', tip:'Voice note use karo', detail:'Complex itinerary explain karvani jagage voice note moko. Personal + clear + time-saving.', color:'#059669' },
+  { icon:'✍️', tip:'CRM hamesha update rakhho', detail:'Every call, message, follow-up — CRM ma note karo. Memory pe depend mat karo. Data = money.', color:'#7c3aed' }
+];
+
+// ── Training Hub State ──
+let thState = {
+  section: 'scenarios',
+  scenarioIdx: 0,
+  answered: new Set(),
+  totalScore: 0,
+  completedScenarios: [],
+  completedLessons: new Set(),
+};
+
+function initTrainingHub() {
+  loadThProgress();
+  setTrainingSection('scenarios');
+  updateThHeader();
+}
+
+async function loadThProgress() {
+  try {
+    const doc = await db.collection('trainingProgress').doc(String(CURRENT_USER_ID || 'guest')).get();
+    if(doc.exists) {
+      const d = doc.data();
+      thState.totalScore        = d.totalScore || 0;
+      thState.completedScenarios = d.completedScenarios || [];
+      thState.completedLessons  = new Set(d.completedLessons || []);
+      thState.answered          = new Set(d.completedScenarios || []);
+      updateThHeader();
+    }
+  } catch(e) {}
+}
+
+async function saveThProgress() {
+  try {
+    await db.collection('trainingProgress').doc(String(CURRENT_USER_ID || 'guest')).set({
+      totalScore:          thState.totalScore,
+      completedScenarios:  thState.completedScenarios,
+      completedLessons:    [...thState.completedLessons],
+      updatedAt:           new Date().toISOString(),
+      staffName:           CURRENT_USER_NAME || 'Agent'
+    }, { merge: true });
+  } catch(e) {}
+}
+
+function updateThHeader() {
+  const total = TH_SCENARIOS.length;
+  const done  = thState.completedScenarios.length;
+  const pct   = Math.round((done / total) * 100);
+  const el    = document.getElementById('th-progress-bar');
+  const pctEl = document.getElementById('th-progress-pct');
+  const scoreEl = document.getElementById('th-score');
+  if(el) el.style.width = pct + '%';
+  if(pctEl) pctEl.textContent = pct + '%';
+  if(scoreEl) scoreEl.textContent = thState.totalScore;
+  // Level badge
+  const badge = document.getElementById('th-level-badge');
+  if(badge) {
+    if(pct >= 100)     { badge.textContent = '🏆 Expert Agent';    badge.style.background='rgba(251,191,36,0.3)'; }
+    else if(pct >= 60) { badge.textContent = '⭐ Senior Agent';    badge.style.background='rgba(16,185,129,0.3)'; }
+    else if(pct >= 30) { badge.textContent = '📈 Growing Agent';   badge.style.background='rgba(59,130,246,0.3)'; }
+    else               { badge.textContent = '🌱 Beginner Agent';   badge.style.background='rgba(249,115,22,0.3)'; }
+  }
+}
+
+function setTrainingSection(section) {
+  thState.section = section;
+  // Update tab button styles
+  ['scenarios','lessons','workflow','tips'].forEach(s => {
+    const btn = document.getElementById('th-tab-' + s);
+    if(!btn) return;
+    const active = s === section;
+    btn.style.background   = active ? '#f97316' : '#fff';
+    btn.style.color        = active ? '#fff' : '#64748b';
+    btn.style.border       = active ? 'none' : '1.5px solid #e2e8f0';
+  });
+  const el = document.getElementById('th-section-content');
+  if(!el) return;
+  if(section === 'scenarios')  renderThScenarios(el);
+  else if(section === 'lessons')   renderThLessons(el);
+  else if(section === 'workflow')  renderThWorkflow(el);
+  else if(section === 'tips')      renderThTips(el);
+}
+
+function renderThScenarios(el) {
+  const sc = TH_SCENARIOS;
+  const done = thState.completedScenarios;
+  let html = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;margin-bottom:20px">`;
+  sc.forEach((s, i) => {
+    const completed = done.includes(s.id);
+    html += `
+      <div onclick="openScenario(${i})" style="background:#fff;border:2px solid ${completed?'#10b981':'#e2e8f0'};border-radius:14px;padding:16px;cursor:pointer;transition:.2s;position:relative;overflow:hidden"
+           onmouseover="this.style.borderColor='#f97316';this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.borderColor='${completed?'#10b981':'#e2e8f0'}';this.style.transform='translateY(0)'">
+        ${completed ? '<div style="position:absolute;top:10px;right:10px;background:#10b981;color:#fff;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:700">✓ Done</div>' : ''}
+        <div style="font-size:11px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">${s.category}</div>
+        <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:8px;line-height:1.4">${s.situation.substring(0,80)}...</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:11px;color:#64748b">${s.options.length} options</span>
+          <span style="background:#fff7ed;color:#f97316;border-radius:99px;padding:2px 8px;font-size:11px;font-weight:700">+${s.points} pts</span>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+  // Show current/active scenario
+  html += `<div id="th-scenario-box"></div>`;
+  el.innerHTML = html;
+  // Auto open first uncompleted
+  const firstUndone = sc.findIndex(s => !done.includes(s.id));
+  if(firstUndone >= 0) openScenario(firstUndone);
+  else openScenario(0);
+}
+
+function openScenario(idx) {
+  thState.scenarioIdx = idx;
+  const sc = TH_SCENARIOS[idx];
+  const done = thState.completedScenarios.includes(sc.id);
+  const box = document.getElementById('th-scenario-box');
+  if(!box) return;
+
+  let optHtml = sc.options.map((o, i) => `
+    <button onclick="answerScenario(${idx},${i})" id="th-opt-${i}"
+      style="width:100%;text-align:left;padding:14px 16px;margin-bottom:8px;border:2px solid #e2e8f0;border-radius:12px;background:#fff;font-size:13px;cursor:pointer;transition:.15s;font-family:Inter,sans-serif"
+      onmouseover="this.style.borderColor='#f97316';this.style.background='#fff7ed'"
+      onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'"
+    >${String.fromCharCode(65+i)}. ${o.text}</button>`).join('');
+
+  box.innerHTML = `
+    <div style="background:#fff;border:2px solid #e2e8f0;border-radius:16px;overflow:hidden;margin-top:4px">
+      <div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);padding:20px 24px;border-bottom:2px solid #fde68a">
+        <div style="font-size:11px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">📍 Scenario ${idx+1} of ${TH_SCENARIOS.length} · ${sc.category}</div>
+        <div style="font-size:15px;font-weight:700;color:#0f172a;line-height:1.5;margin-bottom:8px">${sc.situation}</div>
+        <div style="font-size:12px;color:#78716c;background:rgba(255,255,255,0.6);border-radius:8px;padding:8px 12px">${sc.context}</div>
+      </div>
+      <div style="padding:20px 24px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:12px">Best response select karo:</div>
+        <div id="th-opts-${idx}">${optHtml}</div>
+        <div id="th-feedback-${idx}" style="display:none"></div>
+      </div>
+    </div>`;
+}
+
+function answerScenario(scIdx, optIdx) {
+  const sc = TH_SCENARIOS[scIdx];
+  const opt = sc.options[optIdx];
+  const feedbackEl = document.getElementById('th-feedback-' + scIdx);
+  const optsEl = document.getElementById('th-opts-' + scIdx);
+  if(!feedbackEl || !optsEl) return;
+
+  // Disable all buttons
+  optsEl.querySelectorAll('button').forEach((btn, i) => {
+    btn.disabled = true;
+    btn.style.cursor = 'default';
+    const o = sc.options[i];
+    if(o.correct) {
+      btn.style.borderColor = '#10b981';
+      btn.style.background = '#f0fdf4';
+      btn.style.color = '#166534';
+    } else if(i === optIdx && !o.correct) {
+      btn.style.borderColor = '#ef4444';
+      btn.style.background = '#fef2f2';
+      btn.style.color = '#dc2626';
+    }
+    btn.onmouseover = null;
+    btn.onmouseout = null;
+  });
+
+  // Show feedback
+  feedbackEl.style.display = 'block';
+  feedbackEl.innerHTML = `
+    <div style="background:${opt.correct?'#f0fdf4':'#fef2f2'};border:2px solid ${opt.correct?'#86efac':'#fca5a5'};border-radius:12px;padding:16px;margin-top:4px">
+      <div style="font-size:14px;font-weight:800;color:${opt.correct?'#166534':'#dc2626'};margin-bottom:6px">${opt.feedback}</div>
+      <div style="background:#fffbeb;border-left:3px solid #f97316;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#92400e;margin-top:10px">${sc.tip}</div>
+      ${opt.correct ? `<div style="margin-top:12px;text-align:right"><span style="background:#10b981;color:#fff;border-radius:99px;padding:4px 14px;font-size:12px;font-weight:700">+${sc.points} points earned! 🎉</span></div>` : ''}
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap">
+      ${scIdx < TH_SCENARIOS.length-1 ? `<button onclick="openScenario(${scIdx+1})" style="padding:10px 20px;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Next Scenario →</button>` : '<button onclick="showThCompletion()" style="padding:10px 20px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🏆 See Results!</button>'}
+      <button onclick="setTrainingSection('scenarios')" style="padding:10px 20px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">All Scenarios</button>
+    </div>`;
+
+  // Update score
+  if(opt.correct && !thState.completedScenarios.includes(sc.id)) {
+    thState.totalScore += sc.points;
+    thState.completedScenarios.push(sc.id);
+    thState.answered.add(sc.id);
+    updateThHeader();
+    saveThProgress();
+  }
+}
+
+function showThCompletion() {
+  const total = TH_SCENARIOS.reduce((s,sc) => s + sc.points, 0);
+  const pct = Math.round((thState.totalScore / total) * 100);
+  const box = document.getElementById('th-scenario-box');
+  if(!box) return;
+  box.innerHTML = `
+    <div style="background:linear-gradient(135deg,#0f172a,#1e3a5f);border-radius:16px;padding:40px 32px;text-align:center;color:#fff">
+      <div style="font-size:48px;margin-bottom:12px">${pct>=80?'🏆':pct>=50?'⭐':'💪'}</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:8px">${pct>=80?'Expert Agent!':pct>=50?'Good Job!':'Keep Practicing!'}</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-bottom:24px">${thState.totalScore} / ${total} points · ${pct}%</div>
+      <div style="background:rgba(255,255,255,0.1);border-radius:12px;padding:16px;margin-bottom:24px;font-size:13px;line-height:1.7;text-align:left">
+        ${pct>=80?'🎉 Tamara responses ekdum pro-level na che! Fenix Tours ane tamane garv che.':
+          pct>=50?'👍 Saro progress! Thoda scenarios repeat karo ane expert bano.':
+          '💡 Practice makes perfect. Scenarios pharthi try karo — result improve thase!'}
+      </div>
+      <button onclick="setTrainingSection('scenarios')" style="padding:12px 28px;background:#f97316;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">🔄 Pharthi Practice Karo</button>
+    </div>`;
+}
+
+function renderThLessons(el) {
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+      ${TH_LESSONS.map((l,i) => {
+        const done = thState.completedLessons.has(i);
+        return `<div style="background:#fff;border:2px solid ${done?'#10b981':'#e2e8f0'};border-radius:14px;padding:18px;cursor:pointer;transition:.2s"
+          onclick="openLesson(${i})"
+          onmouseover="this.style.borderColor='#8b5cf6';this.style.transform='translateY(-2px)'"
+          onmouseout="this.style.borderColor='${done?'#10b981':'#e2e8f0'}';this.style.transform='translateY(0)'">
+          <div style="font-size:28px;margin-bottom:10px">${l.icon}</div>
+          <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:4px">${l.title}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:11px;color:#64748b">⏱ ${l.time}</span>
+            ${done ? '<span style="color:#10b981;font-size:11px;font-weight:700">✓ Done</span>' : '<span style="color:#8b5cf6;font-size:11px;font-weight:700">→ Read</span>'}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div id="th-lesson-box" style="margin-top:16px"></div>`;
+}
+
+function openLesson(idx) {
+  const l = TH_LESSONS[idx];
+  thState.completedLessons.add(idx);
+  saveThProgress();
+  const box = document.getElementById('th-lesson-box');
+  if(!box) return;
+  box.innerHTML = `
+    <div style="background:#fff;border:2px solid #8b5cf6;border-radius:16px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);padding:16px 20px;color:#fff">
+        <div style="font-size:24px;margin-bottom:6px">${l.icon}</div>
+        <div style="font-size:15px;font-weight:800">${l.title}</div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:2px">⏱ ${l.time} read</div>
+      </div>
+      <div style="padding:20px 24px;font-size:14px;color:#374151;line-height:1.8">${l.content}</div>
+      <div style="padding:0 24px 20px;display:flex;gap:10px">
+        ${idx < TH_LESSONS.length-1 ? `<button onclick="openLesson(${idx+1})" style="padding:10px 20px;background:#8b5cf6;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Next Lesson →</button>` : ''}
+        <button onclick="setTrainingSection('lessons')" style="padding:10px 20px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">All Lessons</button>
+      </div>
+    </div>`;
+  box.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+function renderThWorkflow(el) {
+  el.innerHTML = `
+    <div style="background:#fff;border:2px solid #e2e8f0;border-radius:16px;overflow:hidden">
+      <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);padding:16px 20px;color:#fff">
+        <div style="font-size:14px;font-weight:800">🛠️ Enquiry to Booking — Complete Workflow</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:2px">Fenix Tours standard process follow karo</div>
+      </div>
+      <div style="padding:20px 24px">
+        ${TH_WORKFLOW.map((w,i) => `
+          <div style="display:flex;gap:16px;margin-bottom:${i<TH_WORKFLOW.length-1?'0':'0'};position:relative">
+            <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0">
+              <div style="width:44px;height:44px;background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">${w.icon}</div>
+              ${i<TH_WORKFLOW.length-1 ? '<div style="width:2px;flex:1;background:#e2e8f0;margin:4px 0;min-height:24px"></div>' : ''}
+            </div>
+            <div style="padding-bottom:${i<TH_WORKFLOW.length-1?'20':'0'}px">
+              <div style="font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.05em">Step ${w.step}</div>
+              <div style="font-size:14px;font-weight:700;color:#0f172a;margin:2px 0">${w.title}</div>
+              <div style="font-size:12px;color:#64748b;line-height:1.6">${w.desc}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function renderThTips(el) {
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      ${TH_TIPS.map(t => `
+        <div style="background:#fff;border-left:4px solid ${t.color};border-radius:0 14px 14px 0;padding:16px 18px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+            <span style="font-size:22px">${t.icon}</span>
+            <span style="font-size:13px;font-weight:800;color:#0f172a">${t.tip}</span>
+          </div>
+          <div style="font-size:12px;color:#64748b;line-height:1.6">${t.detail}</div>
+        </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════ END TRAINING HUB MODULE ═══════════════
+
+
 // ═══════════════════════════════════════════════
 //  TRAVEL ACADEMY — GUESS THE DESTINATION
 // ═══════════════════════════════════════════════
@@ -8672,13 +9130,19 @@ function setAcademyTab(tab) {
       btn.style.color      = t === tab ? '#fff'    : '#64748b';
     }
   });
+  // Training button special style
+  const tBtn = document.getElementById('academy-training-btn');
+  if(tBtn) {
+    tBtn.style.background = tab === 'training' ? 'linear-gradient(135deg,#dc2626,#b91c1c)' : 'linear-gradient(135deg,#f97316,#dc2626)';
+  }
   // Show/hide content panels
   const panels = {
-    quiz:  ['quiz-panel', 'quiz-stats-bar'],
-    fact:  ['fact-panel'],
-    guess: ['guess-panel'],
+    quiz:     ['quiz-panel', 'quiz-stats-bar'],
+    fact:     ['fact-panel'],
+    guess:    ['guess-panel'],
+    training: ['training-hub-panel'],
   };
-  ['quiz-panel','learn-panel','fact-panel','guess-panel','quiz-stats-bar'].forEach(id => {
+  ['quiz-panel','learn-panel','fact-panel','guess-panel','quiz-stats-bar','training-hub-panel'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'none';
   });
@@ -8686,9 +9150,11 @@ function setAcademyTab(tab) {
     const el = document.getElementById(id);
     if(el) el.style.display = '';
   });
-  // Leaderboard always visible on all tabs
+  // Hide leaderboard on training tab
   const lb = document.getElementById('academy-leaderboard-wrap');
-  if(lb) lb.style.display = '';
+  if(lb) lb.style.display = tab === 'training' ? 'none' : '';
+  // Init training hub
+  if(tab === 'training') initTrainingHub();
 
   if(tab === 'quiz') {
     setQuizMode('quiz');
