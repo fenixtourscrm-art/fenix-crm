@@ -6264,7 +6264,7 @@ const TH_SCENARIOS = [
     situation: '💬 Client says: "Package ekdum saru che but booking thodi vaare karish. Avti kal confirm karis."',
     context: '"Next day confirmation" is often code for going to check other agents. What do you do?',
     options: [
-      { text: '"Ji sir, kal wait karis."', correct: false, feedback: '❌ By tomorrow, they'll book from someone else.' },
+      { text: '"Ji sir, kal wait karis."', correct: false, feedback: '❌ By tomorrow, they will book from someone else.' },
       { text: '"Sir, aaje booking kariye to seats confirm rehe. Kal rate change thay sake che."', correct: true, feedback: '✅ Urgency + valid reason = conversion. Price/seats are genuine reasons.' },
       { text: '"Sir, advance thi booking karo to discount malse."', correct: true, feedback: '✅ Also good! Incentive to book now works well.' },
       { text: '"Thik che, kal confirm karo."', correct: false, feedback: '❌ Too passive. Always give a reason to decide now.' }
@@ -6301,7 +6301,7 @@ const TH_SCENARIOS = [
   {
     id:'s6', category:'New Enquiry',
     situation: '📩 New client messages: "Shimla jaava nu che. Information aapso?"',
-    context: 'Fresh lead! You know nothing about them yet. What's your first response?',
+    context: 'Fresh lead! You know nothing about them yet. What is your first response?',
     options: [
       { text: '"Shimla package ₹15,000 ma malse, 3N/4D."', correct: false, feedback: '❌ Never quote price without knowing requirements. You may underprice or lose them.' },
       { text: '"Ji sir! Shimla ekdum mast che 😊 Keta members che? Budget su che? Kyathi aavava nu che?"', correct: true, feedback: '✅ Perfect opener! 3 key questions: group size, budget, departure city.' },
@@ -6318,10 +6318,10 @@ const TH_SCENARIOS = [
     options: [
       { text: '"Kal to nai malse sir, impossible che."', correct: false, feedback: '❌ Too blunt. Always soften the reality.' },
       { text: '"Sir, standard visa 3-4 days leve. Emergency express service hoy to 24-48 hrs thay — extra charges lage. Try kariye?"', correct: true, feedback: '✅ Honest + solution-oriented. You gave options, not excuses.' },
-      { text: '"Visa to hoi jase, filing karo."', correct: false, feedback: '❌ Never give false assurance. If visa doesn't come, client will blame you.' },
+      { text: '"Visa to hoi jase, filing karo."', correct: false, feedback: '❌ Never give false assurance. If visa does not come, client will blame you.' },
       { text: '"Sorry, aavtu na hoy kal."', correct: false, feedback: '❌ Never just say sorry without offering alternatives.' }
     ],
-    tip: '💡 Visa rule: "Always give realistic timeline + alternative solution." Never promise what you can't deliver.',
+    tip: '💡 Visa rule: "Always give realistic timeline + alternative solution." Never promise what you cannot deliver.',
     points: 25
   }
 ];
