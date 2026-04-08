@@ -2093,20 +2093,26 @@ function bkRenderDropdown(filter) {
   const f = filter.toLowerCase().trim();
   const notSelected = _bkCityPool.filter(c => !_bkSelectedCities.includes(c));
   const filtered = f ? notSelected.filter(c => c.toLowerCase().includes(f)) : notSelected;
-
+  dd.innerHTML = '';
   if(!filtered.length && f) {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:10px 14px;font-size:12px;color:#059669;font-weight:700;cursor:pointer';
+    div.textContent = '+ Add "' + filter.trim() + '" as custom city';
+    div.addEventListener('click', () => bkAddCustomCity(filter.trim()));
+    dd.appendChild(div);
     dd.style.display = '';
-    dd.innerHTML = `<div onclick="bkAddCustomCity('${filter.trim().replace(/'/g,"\'")}' )" style="padding:10px 14px;font-size:12px;color:#059669;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
-      <span style="font-size:16px">+</span> Add "<b>${filter.trim()}</b>" as custom city</div>`;
     return;
   }
   dd.style.display = filtered.length ? '' : 'none';
-  dd.innerHTML = filtered.map(c => `
-    <div onclick="bkSelectCity('${c.replace(/'/g,"\'")}' )"
-      style="padding:9px 14px;font-size:13px;cursor:pointer;color:#0f172a"
-      onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
-      ${c}
-    </div>`).join('');
+  filtered.forEach(c => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:9px 14px;font-size:13px;cursor:pointer;color:#0f172a';
+    div.textContent = c;
+    div.addEventListener('mouseover', () => div.style.background = '#eff6ff');
+    div.addEventListener('mouseout',  () => div.style.background = '');
+    div.addEventListener('click',     () => bkSelectCity(c));
+    dd.appendChild(div);
+  });
 }
 
 function bkFilterCities(val) {
@@ -2199,13 +2205,26 @@ function eqRenderDropdown(filter) {
   const f = filter.toLowerCase().trim();
   const notSelected = _eqCityPool.filter(c => !_eqSelectedCities.includes(c));
   const filtered = f ? notSelected.filter(c => c.toLowerCase().includes(f)) : notSelected;
+  dd.innerHTML = '';
   if(!filtered.length && f) {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:10px 14px;font-size:12px;color:#059669;font-weight:700;cursor:pointer';
+    div.textContent = '+ Add "' + filter.trim() + '" as custom city';
+    div.addEventListener('click', () => eqAddCustomCity(filter.trim()));
+    dd.appendChild(div);
     dd.style.display = '';
-    dd.innerHTML = '<div onclick="eqAddCustomCity('' + filter.trim().replace(/'/g, "\'") + '')" style="padding:10px 14px;font-size:12px;color:#059669;font-weight:700;cursor:pointer">+ Add &quot;' + filter.trim() + '&quot; as custom city</div>';
     return;
   }
   dd.style.display = filtered.length ? '' : 'none';
-  dd.innerHTML = filtered.map(c => '<div onclick="eqSelectCity('' + c.replace(/'/g, "\'") + '')" style="padding:9px 14px;font-size:13px;cursor:pointer;color:#0f172a" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">' + c + '</div>').join('');
+  filtered.forEach(c => {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:9px 14px;font-size:13px;cursor:pointer;color:#0f172a';
+    div.textContent = c;
+    div.addEventListener('mouseover', () => div.style.background = '#eff6ff');
+    div.addEventListener('mouseout',  () => div.style.background = '');
+    div.addEventListener('click',     () => eqSelectCity(c));
+    dd.appendChild(div);
+  });
 }
 
 function eqFilterCities(val) { eqRenderDropdown(val); document.getElementById('eq-city-dropdown').style.display = ''; }
