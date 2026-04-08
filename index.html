@@ -2155,6 +2155,91 @@ document.addEventListener('click', e => {
   }
 });
 
+// ── Enquiry City Picker ────────────────────────────
+let _eqSelectedCities = [];
+let _eqCityPool = [];
+
+function eqLoadCities(type) {
+  const key = type === 'intl'
+    ? document.getElementById('eq-country')?.value
+    : document.getElementById('eq-state')?.value;
+  const col = document.getElementById('eq-city-col');
+  if(!col) return;
+  if(!key) { col.style.display = 'none'; return; }
+  col.style.display = '';
+  _eqSelectedCities = [];
+  _eqCityPool = type === 'intl' ? (BK_CITY_MAP[key] || []) : (BK_DOM_CITY_MAP[key] || []);
+  eqRenderTags();
+  eqRenderDropdown('');
+  const hidden = document.getElementById('e-dest-custom');
+  if(hidden) hidden.value = key;
+  document.getElementById('eq-city-search')?.focus();
+}
+
+function eqRenderTags() {
+  const tagsEl = document.getElementById('eq-city-tags');
+  const search = document.getElementById('eq-city-search');
+  if(!tagsEl || !search) return;
+  tagsEl.querySelectorAll('.eq-city-tag').forEach(t => t.remove());
+  _eqSelectedCities.forEach(city => {
+    const tag = document.createElement('div');
+    tag.className = 'eq-city-tag';
+    tag.style.cssText = 'display:flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap';
+    tag.innerHTML = city + '<span onclick="eqRemoveCity('' + city.replace(/'/g, "\'") + '')" style="cursor:pointer;font-size:14px;line-height:1;color:#6b7280;margin-left:2px">×</span>';
+    tagsEl.insertBefore(tag, search);
+  });
+  const hidden = document.getElementById('e-dest-custom');
+  const countryState = document.getElementById('eq-country')?.value || document.getElementById('eq-state')?.value || '';
+  if(hidden) hidden.value = _eqSelectedCities.length ? countryState + ' — ' + _eqSelectedCities.join(', ') : countryState;
+}
+
+function eqRenderDropdown(filter) {
+  const dd = document.getElementById('eq-city-dropdown');
+  if(!dd) return;
+  const f = filter.toLowerCase().trim();
+  const notSelected = _eqCityPool.filter(c => !_eqSelectedCities.includes(c));
+  const filtered = f ? notSelected.filter(c => c.toLowerCase().includes(f)) : notSelected;
+  if(!filtered.length && f) {
+    dd.style.display = '';
+    dd.innerHTML = '<div onclick="eqAddCustomCity('' + filter.trim().replace(/'/g, "\'") + '')" style="padding:10px 14px;font-size:12px;color:#059669;font-weight:700;cursor:pointer">+ Add &quot;' + filter.trim() + '&quot; as custom city</div>';
+    return;
+  }
+  dd.style.display = filtered.length ? '' : 'none';
+  dd.innerHTML = filtered.map(c => '<div onclick="eqSelectCity('' + c.replace(/'/g, "\'") + '')" style="padding:9px 14px;font-size:13px;cursor:pointer;color:#0f172a" onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">' + c + '</div>').join('');
+}
+
+function eqFilterCities(val) { eqRenderDropdown(val); document.getElementById('eq-city-dropdown').style.display = ''; }
+
+function eqSelectCity(city) {
+  if(!_eqSelectedCities.includes(city)) { _eqSelectedCities.push(city); eqRenderTags(); }
+  const s = document.getElementById('eq-city-search');
+  if(s) s.value = '';
+  eqRenderDropdown('');
+  document.getElementById('eq-city-dropdown').style.display = 'none';
+  s?.focus();
+}
+
+function eqAddCustomCity(city) {
+  if(city && !_eqSelectedCities.includes(city)) { _eqCityPool.push(city); eqSelectCity(city); }
+}
+
+function eqRemoveCity(city) { _eqSelectedCities = _eqSelectedCities.filter(c => c !== city); eqRenderTags(); }
+
+function eqCityKeydown(e) {
+  const val = e.target.value.trim();
+  if(e.key === 'Enter' && val) { e.preventDefault(); eqAddCustomCity(val); return; }
+  if(e.key === 'Backspace' && !val && _eqSelectedCities.length) { _eqSelectedCities.pop(); eqRenderTags(); }
+}
+
+document.addEventListener('click', e => {
+  if(!e.target.closest('#eq-city-picker')) {
+    const dd = document.getElementById('eq-city-dropdown');
+    if(dd) dd.style.display = 'none';
+  }
+});
+// ── End Enquiry City Picker ────────────────────────
+
+
 
 let clients=[];
 let enquiries=[];
@@ -5629,14 +5714,21 @@ function updateEnqForm(ex) {
       <div class="fg"><label>${endLabel}</label><input type="date" id="e-end" value="${ex?.endDate||""}"/></div>
     </div>`;
 
-  const intlCountrySel = (id="e-dest-custom", label="Destination Country", val="") => `
+  // ── Smart city picker helpers ──
+  const intlCountrySel = (destId, label) => `
     <div class="fg"><label>${label}</label>
-      <select id="${id}"><option value="">-- Select Country --</option><option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
+      <select id="eq-country" onchange="eqLoadCities('intl')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+        <option value="">-- Select Country --</option>
+        ${Object.keys(BK_CITY_MAP).sort().map(c=>'<option value="'+c+'">'+c+'</option>').join("")}
+      </select>
     </div>`;
 
-  const domDestSel = (id="e-dest-dom", label="Destination") => `
+  const domDestSel = (destId, label) => `
     <div class="fg"><label>${label}</label>
-      <select id="${id}"><option value="">-- Select --</option><option value="Ahmedabad">Ahmedabad</option><option value="Mumbai">Mumbai</option><option value="Delhi">Delhi</option><option value="Bangalore">Bangalore</option><option value="Chennai">Chennai</option><option value="Hyderabad">Hyderabad</option><option value="Kolkata">Kolkata</option><option value="Jaipur">Jaipur</option><option value="Agra">Agra</option><option value="Goa">Goa</option><option value="Kerala">Kerala</option><option value="Manali">Manali</option><option value="Shimla">Shimla</option><option value="Darjeeling">Darjeeling</option><option value="Varanasi">Varanasi</option><option value="Amritsar">Amritsar</option><option value="Udaipur">Udaipur</option><option value="Jodhpur">Jodhpur</option><option value="Rishikesh">Rishikesh</option><option value="Mysore">Mysore</option><option value="Ooty">Ooty</option><option value="Coorg">Coorg</option><option value="Andaman Islands">Andaman Islands</option><option value="Lakshadweep">Lakshadweep</option><option value="Rann of Kutch">Rann of Kutch</option><option value="Srinagar">Srinagar</option><option value="Leh Ladakh">Leh Ladakh</option><option value="Hampi">Hampi</option><option value="Khajuraho">Khajuraho</option><option value="Pondicherry">Pondicherry</option></select>
+      <select id="eq-state" onchange="eqLoadCities('dom')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+        <option value="">-- Select State --</option>
+        ${Object.keys(BK_DOM_CITY_MAP).sort().map(s=>'<option value="'+s+'">'+s+'</option>').join("")}
+      </select>
     </div>`;
 
   // ── INTERNATIONAL & DOMESTIC TOURS ──
@@ -5646,7 +5738,19 @@ function updateEnqForm(ex) {
       ${secHeader("✈️", cat, "#0369a1")}
       <div class="form-grid">
         ${isIntl ? intlCountrySel("e-dest-intl","Destination Country") : domDestSel("e-dest-dom","Destination")}
-        <div class="fg"><label>Custom / Other Destination</label><input id="e-dest-custom" placeholder="Type if not listed..." value="${ex?.destination||""}"/></div>
+        <div class="fg" id="eq-city-col" style="display:none">
+          <label>Cities / Places <span style="font-size:10px;color:#64748b;font-weight:400">(multi-select or type custom)</span></label>
+          <div id="eq-city-picker" style="border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;min-height:42px;padding:6px 8px;cursor:text;position:relative" onclick="document.getElementById('eq-city-search').focus()">
+            <div id="eq-city-tags" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+              <input id="eq-city-search" placeholder="Search or type city..." autocomplete="off"
+                oninput="eqFilterCities(this.value)"
+                onkeydown="eqCityKeydown(event)"
+                style="border:none;outline:none;font-size:13px;min-width:120px;flex:1;padding:2px 4px;background:transparent"/>
+            </div>
+            <div id="eq-city-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:9999;max-height:200px;overflow-y:auto;margin-top:2px"></div>
+          </div>
+          <input type="hidden" id="e-dest-custom"/>
+        </div>
       </div>
       ${dateBlock("Travel Start Date","Travel End Date")}
       <div class="form-grid">
@@ -5662,8 +5766,14 @@ function updateEnqForm(ex) {
       </div>
       ${paxBlock}`;
     setTimeout(()=>{
-      if(ex?.destination && document.getElementById("e-dest-intl")) document.getElementById("e-dest-intl").value=ex.destination;
-      if(ex?.destination && document.getElementById("e-dest-dom")) document.getElementById("e-dest-dom").value=ex.destination;
+      if(ex?.destination) {
+        const cs = document.getElementById('eq-country') || document.getElementById('eq-state');
+        const hiddenDest = document.getElementById('e-dest-custom');
+        if(hiddenDest) hiddenDest.value = ex.destination;
+        // Show city col if editing
+        const col = document.getElementById('eq-city-col');
+        if(col && ex.destination) { col.style.display = ''; }
+      }
       if(ex?.hotelPref) { const h=document.getElementById("e-hotel"); if(h) h.value=ex.hotelPref; }
     },10);
   }
