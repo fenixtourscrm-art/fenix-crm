@@ -69,6 +69,8 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 #fmkt-visit-map{height:280px;width:100%;border-radius:12px;border:1.5px solid #e2e8f0;margin-bottom:16px;box-sizing:border-box;max-height:60vw;min-height:220px}
 .fmkt-status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px}
 /* Popup styling */
+.dest-tooltip{background:#fff!important;border:1.5px solid #e2e8f0!important;border-radius:10px!important;padding:8px 12px!important;box-shadow:0 4px 16px rgba(0,0,0,0.12)!important;font-family:Inter,sans-serif!important}
+.dest-tooltip.leaflet-tooltip::before{border-top-color:#e2e8f0!important}
 .fmkt-leaflet-popup .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);border:1.5px solid #e2e8f0;padding:0;max-width:calc(100vw - 48px)!important}
 .fmkt-leaflet-popup .leaflet-popup-content{margin:14px 16px;font-size:13px}
 .fmkt-leaflet-popup .leaflet-popup-tip-container{margin-top:-1px}
@@ -1399,52 +1401,92 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     
     <!-- DESTINATION KNOWLEDGE MAP TAB -->
     <div class="tab" id="tab-destinations">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+
+      <!-- Header row -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
         <div>
           <div class="section-title" style="margin:0">🗺️ Destination Knowledge Map</div>
-          <div style="font-size:12px;color:#64748b;margin-top:3px">Click any country to explore visa info, best season, attractions & package costs</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px">Click any country to explore visa info, best season, attractions &amp; package costs</div>
         </div>
-        <div id="dest-owner-btns" style="display:none">
-          <button onclick="openDestModal()" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Destination</button>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <!-- Legend -->
+          <div style="display:flex;gap:10px;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:6px 12px">
+            <span style="font-size:11px;font-weight:600;color:#64748b">Visa:</span>
+            <span style="font-size:11px;font-weight:700;color:#16a34a">🟢 Easy</span>
+            <span style="font-size:11px;font-weight:700;color:#d97706">🟡 Medium</span>
+            <span style="font-size:11px;font-weight:700;color:#dc2626">🔴 Hard</span>
+          </div>
+          <div id="dest-owner-btns" style="display:none">
+            <button onclick="openDestModal()" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ Add Destination</button>
+          </div>
         </div>
       </div>
 
-      <!-- Search Bar -->
-      <div style="position:relative;margin-bottom:14px">
-        <input id="dest-search" type="text" placeholder="🔍  Search destination (e.g. Japan, Turkey, Bali)..."
-          oninput="destSearch(this.value)"
-          style="width:100%;padding:11px 16px 11px 40px;border:1.5px solid #e2e8f0;border-radius:12px;font-size:14px;color:#1e293b;background:#f8fafc;box-sizing:border-box;outline:none"
-          onfocus="this.style.borderColor='#0369a1'" onblur="this.style.borderColor='#e2e8f0'"/>
-        <div id="dest-search-results" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:999;display:none;max-height:240px;overflow-y:auto;margin-top:4px"></div>
+      <!-- Search + Filters -->
+      <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+        <div style="position:relative;flex:1;min-width:220px">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:14px">🔍</span>
+          <input id="dest-search" type="text" placeholder="Search destination (e.g. Japan, Turkey, Bali)..."
+            oninput="destSearch(this.value)"
+            style="width:100%;padding:10px 14px 10px 36px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;color:#1e293b;background:#fff;box-sizing:border-box;outline:none"
+            onfocus="this.style.borderColor='#0369a1'" onblur="this.style.borderColor='#e2e8f0'"/>
+          <div id="dest-search-results" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:999;display:none;max-height:240px;overflow-y:auto;margin-top:4px"></div>
+        </div>
+        <!-- Filter buttons -->
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button onclick="filterDestMap('all',this)" id="dmf-all" style="padding:7px 14px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🌍 All</button>
+          <button onclick="filterDestMap('easy',this)" id="dmf-easy" style="padding:7px 14px;background:#f0fdf4;color:#16a34a;border:1.5px solid #bbf7d0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🟢 Easy Visa</button>
+          <button onclick="filterDestMap('medium',this)" id="dmf-medium" style="padding:7px 14px;background:#fffbeb;color:#d97706;border:1.5px solid #fde68a;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🟡 Medium</button>
+          <button onclick="filterDestMap('hard',this)" id="dmf-hard" style="padding:7px 14px;background:#fef2f2;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔴 Hard Visa</button>
+          <button onclick="filterDestMap('bestselling',this)" id="dmf-bestselling" style="padding:7px 14px;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">🔥 Best Sellers</button>
+        </div>
       </div>
 
       <!-- Main Layout: Map + Info Panel -->
-      <div style="display:grid;grid-template-columns:1fr 380px;gap:16px;min-height:500px" id="dest-main-grid">
+      <div style="display:grid;grid-template-columns:1fr 360px;gap:14px;height:520px" id="dest-main-grid">
 
         <!-- LEFT: Map -->
-        <div style="background:#e8f4fd;border-radius:16px;overflow:hidden;position:relative;min-height:460px;border:1.5px solid #bae6fd">
-          <div id="dest-map" style="width:100%;height:100%;min-height:460px"></div>
-          <div id="dest-map-hint" style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.75);color:#fff;padding:6px 14px;border-radius:99px;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap">
+        <div style="border-radius:16px;overflow:hidden;position:relative;border:2px solid #e2e8f0;box-shadow:0 4px 20px rgba(0,0,0,0.08)">
+          <div id="dest-map" style="width:100%;height:100%"></div>
+          <!-- Floating hint -->
+          <div id="dest-map-hint" style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,0.8);color:#fff;padding:6px 16px;border-radius:99px;font-size:11px;font-weight:600;pointer-events:none;white-space:nowrap;z-index:500;backdrop-filter:blur(4px)">
             🖱️ Click any country to explore
+          </div>
+          <!-- Stats overlay -->
+          <div style="position:absolute;top:12px;left:12px;display:flex;gap:6px;z-index:500;flex-wrap:wrap">
+            <div id="dest-stat-total" style="background:rgba(255,255,255,0.95);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#0f172a;box-shadow:0 2px 8px rgba(0,0,0,0.1)">📍 0 destinations</div>
+            <div id="dest-stat-easy" style="background:rgba(240,253,244,0.95);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#16a34a;box-shadow:0 2px 8px rgba(0,0,0,0.1)">🟢 0 easy</div>
           </div>
         </div>
 
         <!-- RIGHT: Info Panel -->
-        <div id="dest-info-panel" style="background:#f8fafc;border-radius:16px;border:1.5px solid #e2e8f0;padding:20px;overflow-y:auto;max-height:500px">
+        <div id="dest-info-panel" style="background:#fff;border-radius:16px;border:2px solid #e2e8f0;overflow-y:auto;box-shadow:0 4px 20px rgba(0,0,0,0.06)">
           <div id="dest-info-content">
-            <div style="text-align:center;padding:40px 20px;color:#94a3b8">
-              <div style="font-size:48px;margin-bottom:12px">🌍</div>
-              <div style="font-size:14px;font-weight:600">Select a destination</div>
-              <div style="font-size:12px;margin-top:6px">Click a country on the map or search above to view travel information</div>
+            <div style="text-align:center;padding:50px 20px 40px;color:#94a3b8">
+              <div style="font-size:52px;margin-bottom:14px">🌍</div>
+              <div style="font-size:15px;font-weight:700;color:#374151;margin-bottom:6px">Select a destination</div>
+              <div style="font-size:12px;line-height:1.6">Click any colored country on the map<br>or search above to see full travel details</div>
+              <div style="margin-top:20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;font-size:11px">
+                <span style="background:#f0fdf4;color:#16a34a;padding:4px 10px;border-radius:99px;font-weight:700">🟢 Visa Free / On Arrival</span>
+                <span style="background:#fffbeb;color:#d97706;padding:4px 10px;border-radius:99px;font-weight:700">🟡 eVisa / Apply</span>
+                <span style="background:#fef2f2;color:#dc2626;padding:4px 10px;border-radius:99px;font-weight:700">🔴 Embassy Visa</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Destination Cards Grid (all saved destinations) -->
-      <div style="margin-top:20px">
-        <div style="font-weight:800;font-size:14px;color:#0f172a;margin-bottom:12px">📚 All Destinations in Database</div>
-        <div id="dest-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+      <!-- Bottom cards -->
+      <div style="margin-top:18px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div style="font-weight:800;font-size:14px;color:#0f172a">📚 All Destinations <span id="dest-cards-count" style="font-size:12px;color:#64748b;font-weight:500"></span></div>
+          <div style="display:flex;gap:6px">
+            <button onclick="destCardSort('alpha')" id="dcs-alpha" style="padding:5px 12px;background:#f1f5f9;color:#374151;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">A–Z</button>
+            <button onclick="destCardSort('price')" id="dcs-price" style="padding:5px 12px;background:#f1f5f9;color:#374151;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">💰 Price</button>
+            <button onclick="destCardSort('hot')" id="dcs-hot" style="padding:5px 12px;background:#f1f5f9;color:#374151;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">🔥 Hot</button>
+          </div>
+        </div>
+        <div id="dest-cards-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
           <div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;grid-column:1/-1">Loading destinations...</div>
         </div>
       </div>
@@ -7539,26 +7581,92 @@ const DEST_COORDS = {
   "Afghanistan":[33.9,67.7],"Albania":[41.2,20.2],"Algeria":[28.0,1.7],"Argentina":[-38.4,-63.6],"Armenia":[40.1,45.0],"Australia":[-25.3,133.8],"Austria":[47.5,14.6],"Azerbaijan":[40.1,47.6],"Bahrain":[26.0,50.6],"Bangladesh":[23.7,90.4],"Belgium":[50.8,4.5],"Bhutan":[27.5,90.4],"Brazil":[-14.2,-51.9],"Cambodia":[12.6,104.9],"Canada":[56.1,-106.3],"Chile":[-35.7,-71.5],"China":[35.9,104.2],"Colombia":[4.6,-74.3],"Croatia":[45.1,15.2],"Cuba":[21.5,-77.8],"Cyprus":[35.1,33.4],"Czech Republic":[50.0,15.5],"Denmark":[56.3,9.5],"Egypt":[26.8,30.8],"Estonia":[58.6,25.0],"Ethiopia":[9.1,40.5],"Finland":[61.9,25.7],"France":[46.6,2.3],"Georgia":[42.3,43.4],"Germany":[51.2,10.5],"Ghana":[7.9,-1.0],"Greece":[39.1,21.8],"Hungary":[47.2,19.5],"Iceland":[64.9,-18.0],"India":[20.6,79.0],"Indonesia":[-0.8,113.9],"Iran":[32.4,53.7],"Iraq":[33.2,43.7],"Ireland":[53.4,-8.2],"Israel":[31.0,35.0],"Italy":[41.9,12.6],"Jamaica":[18.1,-77.3],"Japan":[36.2,138.3],"Jordan":[30.6,36.1],"Kazakhstan":[48.0,68.0],"Kenya":[-0.0,37.9],"Kuwait":[29.3,47.5],"Kyrgyzstan":[41.2,74.8],"Laos":[18.2,103.9],"Latvia":[56.9,24.6],"Lebanon":[33.9,35.5],"Lithuania":[55.2,23.9],"Luxembourg":[49.8,6.1],"Malaysia":[4.2,108.0],"Maldives":[3.2,73.2],"Malta":[35.9,14.4],"Mexico":[23.6,-102.6],"Moldova":[47.4,28.4],"Mongolia":[46.9,103.8],"Morocco":[31.8,-7.1],"Mozambique":[-18.7,35.5],"Myanmar":[18.9,98.7],"Nepal":[28.4,84.1],"Netherlands":[52.3,5.3],"New Zealand":[-40.9,174.9],"Nigeria":[9.1,8.7],"Norway":[60.5,8.5],"Oman":[21.5,55.9],"Pakistan":[30.4,69.3],"Peru":[-9.2,-75.0],"Philippines":[12.9,122.0],"Poland":[51.9,19.1],"Portugal":[39.4,-8.2],"Qatar":[25.4,51.2],"Romania":[45.9,24.9],"Russia":[61.5,105.3],"Rwanda":[-1.9,29.9],"Saudi Arabia":[23.9,45.1],"Serbia":[44.0,21.0],"Singapore":[1.35,103.8],"Slovakia":[48.7,19.7],"Slovenia":[46.2,14.8],"South Africa":[-30.6,22.9],"South Korea":[35.9,127.8],"Spain":[40.5,-3.7],"Sri Lanka":[7.9,80.8],"Sweden":[60.1,18.6],"Switzerland":[46.8,8.2],"Taiwan":[23.7,120.9],"Tanzania":[-6.4,34.9],"Thailand":[15.9,100.9],"Tunisia":[33.9,9.6],"Turkey":[38.9,35.2],"Uganda":[1.4,32.3],"Ukraine":[48.4,31.2],"United Arab Emirates":[23.4,53.8],"United Kingdom":[55.4,-3.4],"United States":[37.1,-95.7],"Uruguay":[-32.5,-55.8],"Uzbekistan":[41.4,64.6],"Venezuela":[6.4,-66.6],"Vietnam":[14.1,108.3],"Zambia":[-13.1,27.9],"Zimbabwe":[-19.0,29.2],
 };
 
+let destPriceMarkers = [];
+let destCurrentFilter = 'all';
+let destCardSortMode = 'alpha';
+
 function initDestinations() {
   const isStaff = !!CURRENT_USER;
   const ownerBtns = document.getElementById('dest-owner-btns');
-  if(ownerBtns) ownerBtns.style.display = isStaff ? '' : 'none'; // All staff can add
+  if(ownerBtns) ownerBtns.style.display = isStaff ? '' : 'none';
 
   if(!destMap) {
     destMap = L.map('dest-map', {
       zoomControl: true,
-      scrollWheelZoom: false,
+      scrollWheelZoom: true,
       dragging: true,
       tap: false,
-    }).setView([20, 0], 2);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    }).setView([20, 20], 2);
+
+    // Clean light tile layer
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CartoDB', subdomains: 'abcd', maxZoom: 19
     }).addTo(destMap);
 
-    // Load GeoJSON country borders for reliable click detection
     loadGeoJSON();
   }
   loadDestinations();
+}
+
+function filterDestMap(type, btn) {
+  destCurrentFilter = type;
+  // Update button styles
+  ['all','easy','medium','hard','bestselling'].forEach(t => {
+    const b = document.getElementById('dmf-' + t);
+    if(!b) return;
+    const styles = {
+      all:         { bg:'#0369a1', color:'#fff',    border:'none' },
+      easy:        { bg:'#f0fdf4', color:'#16a34a', border:'1.5px solid #bbf7d0' },
+      medium:      { bg:'#fffbeb', color:'#d97706', border:'1.5px solid #fde68a' },
+      hard:        { bg:'#fef2f2', color:'#dc2626', border:'1.5px solid #fca5a5' },
+      bestselling: { bg:'#fff7ed', color:'#c2410c', border:'1.5px solid #fed7aa' },
+    };
+    const active = t === type;
+    const s = styles[t];
+    b.style.background = active ? (t==='all'?'#0369a1':'#0f172a') : s.bg;
+    b.style.color = active ? '#fff' : s.color;
+    b.style.border = active ? 'none' : s.border;
+  });
+  applyGeoJSONFilter();
+  renderDestCards();
+}
+
+function applyGeoJSONFilter() {
+  if(!destGeoLayer) return;
+  const all = [...destData, ...DEST_SEED];
+  destGeoLayer.eachLayer(layer => {
+    const name = layer.feature?.properties?.ADMIN || layer.feature?.properties?.name;
+    const match = all.find(d => d.country.toLowerCase() === (name||'').toLowerCase() ||
+      (name||'').toLowerCase().includes(d.country.toLowerCase()) ||
+      d.country.toLowerCase().includes((name||'').toLowerCase()));
+    if(!match) { layer.setStyle({ fillOpacity: 0.05, fillColor:'#e2e8f0' }); return; }
+    const show = destCurrentFilter === 'all' ||
+      (destCurrentFilter === 'easy' && match.visaDiff === 'Easy') ||
+      (destCurrentFilter === 'medium' && match.visaDiff === 'Medium') ||
+      (destCurrentFilter === 'hard' && match.visaDiff === 'Hard') ||
+      (destCurrentFilter === 'bestselling' && match.bestSelling);
+    if(show) {
+      const c = getVisaColor(match.visaDiff);
+      layer.setStyle({ fillColor: c.fill, fillOpacity: 0.55, color: c.border, weight: 1 });
+    } else {
+      layer.setStyle({ fillOpacity: 0.05, fillColor:'#e2e8f0', color:'#cbd5e1', weight: 0.5 });
+    }
+  });
+}
+
+function getVisaColor(diff) {
+  if(diff === 'Easy')   return { fill:'#86efac', border:'#16a34a' };
+  if(diff === 'Hard')   return { fill:'#fca5a5', border:'#dc2626' };
+  return { fill:'#fde68a', border:'#d97706' };
+}
+
+function destCardSort(mode) {
+  destCardSortMode = mode;
+  ['alpha','price','hot'].forEach(m => {
+    const b = document.getElementById('dcs-' + m);
+    if(b) { b.style.background = m===mode ? '#0369a1' : '#f1f5f9'; b.style.color = m===mode ? '#fff' : '#374151'; }
+  });
+  renderDestCards();
 }
 
 function loadGeoJSON() {
@@ -7566,15 +7674,36 @@ function loadGeoJSON() {
     .then(r => r.json())
     .then(data => {
       if(destGeoLayer) destGeoLayer.remove();
+      const all = [...DEST_SEED];
+
       destGeoLayer = L.geoJSON(data, {
-        style: { color: '#0369a1', weight: 0.5, fillColor: '#e8f4fd', fillOpacity: 0.4 },
+        style: function(feature) {
+          const name = feature.properties.ADMIN || feature.properties.name || '';
+          const match = all.find(d =>
+            d.country.toLowerCase() === name.toLowerCase() ||
+            name.toLowerCase().includes(d.country.toLowerCase()) ||
+            d.country.toLowerCase().includes(name.toLowerCase())
+          );
+          if(!match) return { color:'#cbd5e1', weight:0.5, fillColor:'#f1f5f9', fillOpacity:0.3 };
+          const c = getVisaColor(match.visaDiff);
+          return { color: c.border, weight: 0.8, fillColor: c.fill, fillOpacity: 0.55 };
+        },
         onEachFeature: function(feature, layer) {
-          const name = feature.properties.ADMIN || feature.properties.name;
+          const name = feature.properties.ADMIN || feature.properties.name || '';
+          const match = all.find(d =>
+            d.country.toLowerCase() === name.toLowerCase() ||
+            name.toLowerCase().includes(d.country.toLowerCase()) ||
+            d.country.toLowerCase().includes(name.toLowerCase())
+          );
+          const visaLabel = match ? (match.visaDiff==='Easy'?'🟢 Easy':match.visaDiff==='Hard'?'🔴 Hard':'🟡 Medium') : '';
+          const priceLabel = match?.packages?.budget ? ` · from ${match.packages.budget}` : '';
+
           layer.on({
             mouseover: function(e) {
-              e.target.setStyle({ fillColor: '#0369a1', fillOpacity: 0.6 });
+              e.target.setStyle({ fillOpacity: 0.85, weight: 2 });
+              e.target.bringToFront();
               const hint = document.getElementById('dest-map-hint');
-              if(hint) hint.textContent = '📍 ' + name;
+              if(hint) hint.textContent = (match ? match.flag + ' ' : '📍 ') + name + (visaLabel ? '  ' + visaLabel : '') + priceLabel;
             },
             mouseout: function(e) {
               destGeoLayer.resetStyle(e.target);
@@ -7582,19 +7711,25 @@ function loadGeoJSON() {
               if(hint) hint.textContent = '🖱️ Click any country to explore';
             },
             click: function(e) {
-              // Find best match in our data
-              const match = findCountryMatch(name);
-              showDestInfo(match || name);
-              const hint = document.getElementById('dest-map-hint');
-              if(hint) hint.textContent = '📍 ' + (match || name);
+              const matchName = findCountryMatch(name);
+              showDestInfo(matchName || name);
             }
           });
-          layer.bindTooltip(name, { permanent: false, direction: 'top', className: 'country-tooltip' });
+
+          // Tooltip with flag + price
+          const ttip = name + (match ? '\n' + visaLabel + priceLabel : '');
+          layer.bindTooltip(
+            `<div style="font-size:12px;font-weight:700">${match?.flag||'📍'} ${name}</div>${visaLabel ? `<div style="font-size:11px;margin-top:2px">${visaLabel}${priceLabel}</div>` : ''}`,
+            { permanent: false, direction: 'top', className: 'dest-tooltip' }
+          );
         }
       }).addTo(destMap);
+
+      // Add price markers for best-selling destinations
+      addBestSellerMarkers();
+      updateDestStats();
     })
     .catch(() => {
-      // GeoJSON failed — fallback to click handler
       destMap.on('click', async function(e) {
         const hint = document.getElementById('dest-map-hint');
         if(hint) hint.textContent = '🔍 Detecting...';
@@ -7609,6 +7744,39 @@ function loadGeoJSON() {
         }
       });
     });
+}
+
+function addBestSellerMarkers() {
+  // Remove old markers
+  destPriceMarkers.forEach(m => m.remove());
+  destPriceMarkers = [];
+  if(!destMap) return;
+
+  const bestSellers = DEST_SEED.filter(d => d.bestSelling && DEST_COORDS[d.country]);
+  bestSellers.forEach(d => {
+    const coords = DEST_COORDS[d.country];
+    const price = d.packages?.budget || '';
+    const icon = L.divIcon({
+      className: '',
+      html: `<div style="background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;padding:4px 8px;border-radius:8px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 3px 10px rgba(249,115,22,0.5);border:1.5px solid #fff;cursor:pointer">
+        ${d.flag} ${d.country.split(' ')[0]}<br><span style="font-size:9px;opacity:0.9">${price}</span>
+      </div>`,
+      iconSize: [80, 32],
+      iconAnchor: [40, 16]
+    });
+    const marker = L.marker(coords, { icon }).addTo(destMap);
+    marker.on('click', () => showDestInfo(d.country));
+    destPriceMarkers.push(marker);
+  });
+}
+
+function updateDestStats() {
+  const all = [...DEST_SEED, ...destData];
+  const easy = all.filter(d => d.visaDiff === 'Easy').length;
+  const el1 = document.getElementById('dest-stat-total');
+  const el2 = document.getElementById('dest-stat-easy');
+  if(el1) el1.textContent = '📍 ' + all.length + ' destinations';
+  if(el2) el2.textContent = '🟢 ' + easy + ' easy visa';
 }
 
 function findCountryMatch(geoName) {
@@ -7634,6 +7802,7 @@ async function loadDestinations() {
     destData = DEST_SEED.map((d, i) => ({ id: 'seed_'+i, ...d }));
   }
   renderDestCards();
+  updateDestStats();
 }
 
 function showDestInfo(countryName) {
@@ -7745,17 +7914,46 @@ function showDestInfo(countryName) {
 
 function renderDestCards() {
   const grid = document.getElementById('dest-cards-grid');
+  const countEl = document.getElementById('dest-cards-count');
   if(!grid) return;
-  const allDests = destData.length ? destData : DEST_SEED;
-  if(!allDests.length) { grid.innerHTML = '<div style="color:#94a3b8;font-size:13px;grid-column:1/-1;padding:20px;text-align:center">No destinations yet.</div>'; return; }
+  let allDests = destData.length ? destData : DEST_SEED;
+
+  // Apply filter
+  if(destCurrentFilter === 'easy')        allDests = allDests.filter(d => d.visaDiff === 'Easy');
+  else if(destCurrentFilter === 'medium') allDests = allDests.filter(d => d.visaDiff === 'Medium');
+  else if(destCurrentFilter === 'hard')   allDests = allDests.filter(d => d.visaDiff === 'Hard');
+  else if(destCurrentFilter === 'bestselling') allDests = allDests.filter(d => d.bestSelling);
+
+  // Apply sort
+  if(destCardSortMode === 'alpha') allDests = [...allDests].sort((a,b) => a.country.localeCompare(b.country));
+  else if(destCardSortMode === 'price') allDests = [...allDests].sort((a,b) => {
+    const pa = parseInt((a.packages?.budget||'0').replace(/[^0-9]/g,'')) || 0;
+    const pb = parseInt((b.packages?.budget||'0').replace(/[^0-9]/g,'')) || 0;
+    return pa - pb;
+  });
+  else if(destCardSortMode === 'hot') allDests = [...allDests].sort((a,b) => (b.bestSelling?1:0)-(a.bestSelling?1:0));
+
+  if(countEl) countEl.textContent = '(' + allDests.length + ')';
+
+  if(!allDests.length) {
+    grid.innerHTML = '<div style="color:#94a3b8;font-size:13px;grid-column:1/-1;padding:24px;text-align:center">No destinations match this filter.</div>';
+    return;
+  }
+
+  const visaBg = { Easy:'#f0fdf4', Medium:'#fffbeb', Hard:'#fef2f2' };
+  const visaColor = { Easy:'#16a34a', Medium:'#d97706', Hard:'#dc2626' };
+
   grid.innerHTML = allDests.map(d => `
-    <div onclick="showDestInfo('${d.country}')" style="background:#fff;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;cursor:pointer;transition:.15s;position:relative" onmouseover="this.style.borderColor='#0369a1';this.style.background='#f0f9ff'" onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
-      ${d.bestSelling ? '<div style="position:absolute;top:6px;right:6px;font-size:10px;background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:99px;font-weight:700">🔥</div>' : ''}
-      <div style="font-size:26px;margin-bottom:5px">${d.flag||'🌍'}</div>
-      <div style="font-weight:700;font-size:12px;color:#0f172a">${d.country}</div>
-      <div style="font-size:10px;color:#64748b;margin-top:1px">${d.continent||''}</div>
-      ${d.visaDiff ? `<div style="font-size:9px;margin-top:4px">${d.visaDiff==='Easy'?'🟢':d.visaDiff==='Hard'?'🔴':'🟡'} ${d.visaDiff} visa</div>` : ''}
-      <div style="font-size:10px;color:#059669;margin-top:3px;font-weight:600">${d.packages?.budget||d.price||''}</div>
+    <div onclick="showDestInfo('${d.country.replace(/'/g,"\'")}')"
+      style="background:#fff;border:2px solid ${d.bestSelling?'#fed7aa':'#e2e8f0'};border-radius:14px;padding:14px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden"
+      onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,0.1)';this.style.borderColor='#0369a1'"
+      onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='none';this.style.borderColor='${d.bestSelling?'#fed7aa':'#e2e8f0'}'">
+      ${d.bestSelling ? '<div style="position:absolute;top:0;right:0;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:0 14px 0 8px">🔥 HOT</div>' : ''}
+      <div style="font-size:30px;margin-bottom:8px;line-height:1">${d.flag||'🌍'}</div>
+      <div style="font-weight:800;font-size:13px;color:#0f172a;margin-bottom:2px">${d.country}</div>
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:6px">${d.continent||''}</div>
+      ${d.visaDiff ? `<div style="display:inline-block;background:${visaBg[d.visaDiff]||'#f1f5f9'};color:${visaColor[d.visaDiff]||'#64748b'};padding:2px 8px;border-radius:99px;font-size:9px;font-weight:700;margin-bottom:5px">${d.visaDiff==='Easy'?'🟢':d.visaDiff==='Hard'?'🔴':'🟡'} ${d.visaDiff}</div>` : ''}
+      <div style="font-size:11px;color:#059669;font-weight:700">${d.packages?.budget ? 'From ' + d.packages.budget : d.price||''}</div>
     </div>`).join('');
 }
 
