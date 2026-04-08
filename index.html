@@ -2076,7 +2076,7 @@ function bkRenderTags() {
     const tag = document.createElement('div');
     tag.className = 'bk-city-tag';
     tag.style.cssText = 'display:flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap';
-    tag.innerHTML = city + '<span onclick="bkRemoveCity('' + city.replace(/'/g,"\'") + '')" style="cursor:pointer;font-size:14px;line-height:1;color:#6b7280;margin-left:2px">×</span>';
+    tag.innerHTML = city + '<span onclick="bkRemoveCity(\'' + city.replace(/'/g,"\'") + '\')" style="cursor:pointer;font-size:14px;line-height:1;color:#6b7280;margin-left:2px">×</span>';
     tagsEl.insertBefore(tag, search);
   });
   // Update hidden dest value
