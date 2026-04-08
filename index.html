@@ -884,6 +884,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button id="ccf-SocialMedia"  class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Social Media',this)">📱 Social Media</button>
         <button id="ccf-Corporate"    class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Corporate',this)">🏢 Corporate</button>
         <button id="ccf-OldData"      class="btn btn-ghost client-cat-filter" onclick="filterClientCat('Old Data',this)">📦 Old Data</button>
+        <button id="ccf-GIDCData"     class="btn btn-ghost client-cat-filter" onclick="filterClientCat('GIDC Data',this)">🏭 GIDC Data</button>
         <div style="position:relative;display:inline-block">
           <button id="staff-filter-btn" class="btn btn-ghost client-cat-filter" onclick="toggleStaffFilterMenu(this)" style="display:flex;align-items:center;gap:5px">👨‍💼 Staff <span id="staff-filter-arrow">▾</span></button>
           <div id="staff-filter-menu" style="display:none;position:absolute;top:100%;left:0;z-index:999;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);min-width:200px;margin-top:4px;padding:6px 0">
@@ -1907,7 +1908,7 @@ const IND_STATES=["Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattis
 const RATINGS=["A+","A","B+","B","C"];
 const ENQ_TYPES=["New","Old","Repeated"];
 const INTENTIONS=["Domestic Tickets","Visa","Cruise","Car","Hotels","Travel Insurance","Passport","International Tour","Domestic Tour"];
-const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Inquired","Personal Visit","Social Media","Corporate","Old Data"];
+const CLIENT_CATS=["Platinum","Gold","Silver","Regular","Inquired","Personal Visit","Social Media","Corporate","Old Data","GIDC Data"];
 const SERVICE_CATS=["International Tours","Domestic Tours","International Tickets","Domestic Tickets","International Hotel","Domestic Hotel","Travel Insurance","Cruise","Visa","Passport"];
 const SOURCES=["Social Media – Facebook","Social Media – Instagram","Social Media – LinkedIn","Social Media – Twitter/X","Social Media – YouTube","Social Media – WhatsApp","Family Reference","Friends Reference","Customer Reference","Newspaper","Radio Mirchi","Flyer Distribution – Events","Personal Visit – Office","Field Marketing","Influencer Reference","Others"];
 const LOST_REASONS=["Budget issue","No response","Went to another agency","Trip cancelled","Other"];
@@ -2185,6 +2186,7 @@ const CLIENT_CAT_STYLES = {
   "Corporate":   {bg:"#eff6ff",color:"#1e40af",icon:"🏢"},
   "Inquired":    {bg:"#fef9c3",color:"#854d0e",icon:"🎯"},
   "Old Data":    {bg:"#f1f5f9",color:"#64748b",icon:"📦"},
+  "GIDC Data":   {bg:"#fef3c7",color:"#b45309",icon:"🏭"},
 };
 function renderClients(){
   // Show Fix Names button only for owner
@@ -2252,16 +2254,17 @@ function _updateClientCatCounts() {
     'Social Media':  clients.filter(c=>(c.clientCategory||"Regular")==="Social Media").length,
     'Corporate':     clients.filter(c=>(c.clientCategory||"Regular")==="Corporate").length,
     'Old Data':      clients.filter(c=>(c.clientCategory||"Regular")==="Old Data").length,
+    'GIDC Data':     clients.filter(c=>(c.clientCategory||"Regular")==="GIDC Data").length,
   };
   const idMap = {
     'all':'ccf-all','Platinum':'ccf-Platinum','Gold':'ccf-Gold','Silver':'ccf-Silver',
     'Regular':'ccf-Regular','Inquired':'ccf-Inquired','Personal Visit':'ccf-PersonalVisit',
-    'Social Media':'ccf-SocialMedia','Corporate':'ccf-Corporate','Old Data':'ccf-OldData',
+    'Social Media':'ccf-SocialMedia','Corporate':'ccf-Corporate','Old Data':'ccf-OldData','GIDC Data':'ccf-GIDCData',
   };
   const labels = {
     'all':'👥 All Clients','Platinum':'💎 Platinum','Gold':'🥇 Gold','Silver':'🥈 Silver',
     'Regular':'👤 Regular','Inquired':'🎯 Inquired','Personal Visit':'🚶 Personal Visit',
-    'Social Media':'📱 Social Media','Corporate':'🏢 Corporate','Old Data':'📦 Old Data',
+    'Social Media':'📱 Social Media','Corporate':'🏢 Corporate','Old Data':'📦 Old Data','GIDC Data':'🏭 GIDC Data',
   };
   Object.entries(cats).forEach(([cat, count]) => {
     const btn = document.getElementById(idMap[cat]);
