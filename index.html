@@ -1173,6 +1173,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button id="academy-quiz-btn" class="btn" onclick="setAcademyTab('quiz')" style="background:#8b5cf6;color:#fff;font-size:12px;font-weight:700">🎯 Daily Quiz</button>
+          <button id="academy-roleplay-btn" class="btn" onclick="setAcademyTab('roleplay')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🎬 Role Play</button>
           <button id="academy-fact-btn" class="btn" onclick="setAcademyTab('fact')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🌍 Travel Fact</button>
           <button id="academy-guess-btn" class="btn" onclick="setAcademyTab('guess')" style="background:#f1f5f9;color:#64748b;font-size:12px;font-weight:700">🗺️ Guess Destination</button>
           <button id="academy-training-btn" class="btn" onclick="setAcademyTab('training')" style="background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;font-size:12px;font-weight:700">🚀 Training Hub</button>
@@ -1180,24 +1181,24 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
 
       <!-- Personal Stats Bar -->
-      <div id="quiz-stats-bar" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:20px">
-        <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:12px;padding:14px;color:#fff;text-align:center">
+      <div id="quiz-stats-bar" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:20px">
+        <div style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);border-radius:12px;padding:12px 16px;color:#fff;text-align:center;flex:1;min-width:100px;max-width:160px">
           <div id="qs-today" style="font-size:22px;font-weight:800">—</div>
           <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">Today's Score</div>
         </div>
-        <div style="background:linear-gradient(135deg,#f97316,#dc2626);border-radius:12px;padding:14px;color:#fff;text-align:center">
+        <div style="background:linear-gradient(135deg,#f97316,#dc2626);border-radius:12px;padding:12px 16px;color:#fff;text-align:center;flex:1;min-width:100px;max-width:160px">
           <div id="qs-month" style="font-size:22px;font-weight:800">—</div>
           <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">This Month</div>
         </div>
-        <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:12px;padding:14px;color:#fff;text-align:center">
+        <div style="background:linear-gradient(135deg,#0ea5e9,#0369a1);border-radius:12px;padding:12px 16px;color:#fff;text-align:center;flex:1;min-width:100px;max-width:160px">
           <div id="qs-streak" style="font-size:22px;font-weight:800">—</div>
           <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">🔥 Streak</div>
         </div>
-        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:14px;color:#fff;text-align:center">
+        <div style="background:linear-gradient(135deg,#10b981,#059669);border-radius:12px;padding:12px 16px;color:#fff;text-align:center;flex:1;min-width:100px;max-width:160px">
           <div id="qs-rank" style="font-size:22px;font-weight:800">—</div>
           <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">🏆 Team Rank</div>
         </div>
-        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:14px;color:#fff;text-align:center">
+        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:12px 16px;color:#fff;text-align:center;flex:1;min-width:100px;max-width:160px">
           <div id="qs-total" style="font-size:22px;font-weight:800">—</div>
           <div style="font-size:10px;font-weight:600;opacity:.85;margin-top:2px">Total Points</div>
         </div>
@@ -1300,6 +1301,11 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
       </div>
     </div>
+
+      <!-- ROLE PLAY PANEL (top-level academy tab) -->
+      <div id="roleplay-panel" style="display:none">
+        <div id="rp-academy-area"></div>
+      </div>
 
     <!-- AI ASSISTANT TAB -->
     <div class="tab" id="tab-ai">
@@ -6878,6 +6884,20 @@ async function loadThContent() {
 //  ROLE PLAY MODULE
 // ═══════════════════════════════════════════════
 
+
+// ── Academy-level Role Play launcher ──
+function initAcademyRolePlay() {
+  const area = document.getElementById('rp-academy-area');
+  if(!area) return;
+  // Reuse existing renderThRolePlay which targets rp-game-area
+  area.innerHTML = '<div id="rp-game-area"></div>';
+  buildRPScenarios();
+  rpState.current = 0;
+  rpState.score = 0;
+  rpState.answered = false;
+  renderRPScene();
+}
+
 // ═══════════════════════════════════════════════
 //  ROLE PLAY MODULE — Staff vs Staff
 // ═══════════════════════════════════════════════
@@ -9693,7 +9713,7 @@ function initQuiz() {
 function setAcademyTab(tab) {
   academyTab = tab;
   // Update button styles
-  ['quiz','fact','guess'].forEach(t => {
+  ['quiz','roleplay','fact','guess'].forEach(t => {
     const btn = document.getElementById('academy-'+t+'-btn');
     if(btn) {
       btn.style.background = t === tab ? '#8b5cf6' : '#f1f5f9';
@@ -9708,11 +9728,12 @@ function setAcademyTab(tab) {
   // Show/hide content panels
   const panels = {
     quiz:     ['quiz-panel', 'quiz-stats-bar'],
+    roleplay: ['roleplay-panel'],
     fact:     ['fact-panel'],
     guess:    ['guess-panel'],
     training: ['training-hub-panel'],
   };
-  ['quiz-panel','learn-panel','fact-panel','guess-panel','quiz-stats-bar','training-hub-panel'].forEach(id => {
+  ['quiz-panel','learn-panel','fact-panel','guess-panel','quiz-stats-bar','training-hub-panel','roleplay-panel'].forEach(id => {
     const el = document.getElementById(id);
     if(el) el.style.display = 'none';
   });
@@ -9722,9 +9743,10 @@ function setAcademyTab(tab) {
   });
   // Hide leaderboard on training tab
   const lb = document.getElementById('academy-leaderboard-wrap');
-  if(lb) lb.style.display = tab === 'training' ? 'none' : '';
+  if(lb) lb.style.display = (tab === 'training' || tab === 'roleplay') ? 'none' : '';
   // Init training hub
   if(tab === 'training') initTrainingHub();
+  if(tab === 'roleplay') initAcademyRolePlay();
 
   if(tab === 'quiz') {
     setQuizMode('quiz');
