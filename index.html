@@ -6878,107 +6878,121 @@ async function loadThContent() {
 //  ROLE PLAY MODULE
 // ═══════════════════════════════════════════════
 
-const RP_SCENARIOS = [
+// ═══════════════════════════════════════════════
+//  ROLE PLAY MODULE — Staff vs Staff
+// ═══════════════════════════════════════════════
+
+// Scenario templates — {colleague} replaced with actual staff name/role
+const RP_TEMPLATES = [
   {
-    id: 'rp1',
-    clientName: 'Ramesh Patel',
-    clientType: 'Budget Traveller',
-    clientEmoji: '👨',
-    clientMood: 'curious',
-    message: 'Hello! I want to go to Dubai with my family of 4. We have a budget of ₹1,20,000 total. Is it possible?',
+    topic: 'Budget Query',
+    getMsg: (c) => `Hi! ${c.name} here. I have a client family of 4 wanting Dubai in ₹1.2 lakh total. They are asking me but I thought you handle packages better. Can we do it?`,
+    getStyle: (c) => c.role === 'Managing Director' ? 'boss' : c.role.includes('Sales') ? 'colleague' : 'curious',
     responses: [
-      { text: 'Sir, Dubai is expensive. It is not possible in that budget.', correct: false, feedback: 'Never say no directly. You lose the client immediately.' },
-      { text: 'Yes sir! ₹1,20,000 for 4 people — that is ₹30,000 per person. We can plan a great 4-night Dubai trip within this budget!', correct: true, feedback: 'Perfect! You gave confidence and broke it down clearly. Client feels heard.' },
-      { text: 'I will send you a brochure, please check and let me know.', correct: false, feedback: 'Never postpone. Engage the client immediately or they will go somewhere else.' },
-      { text: 'Sir, maybe Goa will be better for your budget.', correct: false, feedback: 'Never change the destination without asking. Client wants Dubai, give Dubai options first.' }
+      { text: 'That is too low, tell them Dubai is not possible.', correct: false, feedback: 'Never say no without trying. ₹30,000 per person for Dubai is tight but workable.' },
+      { text: 'Yes! ₹30,000 per person — we can do a great 4-night Dubai trip. Let me prepare options now.', correct: true, feedback: 'Perfect! Break it down per person and show confidence. Client will trust you.' },
+      { text: 'Send the client to me directly.', correct: false, feedback: 'Good instinct but always help your colleague first, do not just redirect.' },
+      { text: 'Ask them to increase budget to ₹1.5 lakh first.', correct: false, feedback: 'Never ask client to increase budget without offering value first. Show what ₹1.2L can give.' }
     ],
-    tip: 'Always break total budget into per-person cost. It sounds much more manageable!'
+    tip: 'Always break total budget into per-person cost. ₹1.2L for 4 = ₹30K each — sounds much more manageable!'
   },
   {
-    id: 'rp2',
-    clientName: 'Priya Sharma',
-    clientType: 'Honeymoon Couple',
-    clientEmoji: '👩',
-    clientMood: 'excited',
-    message: 'We are planning our honeymoon! Looking for something romantic, maybe Maldives or Bali. Budget around ₹1.5 lakh for 2. What do you suggest?',
+    topic: 'Visa Urgency',
+    getMsg: (c) => `${c.name} here! Client needs Dubai visa urgently — travel is in 3 days. Normal processing is 3–5 days. What do we tell them?`,
     responses: [
-      { text: 'Both are great! Let me prepare options for both and share with you.', correct: true, feedback: 'Excellent! Offering both gives choice and shows you are thorough. Follow up with actual packages.' },
-      { text: 'Maldives is better.', correct: false, feedback: 'Never give a one-word recommendation without asking about their preferences first.' },
-      { text: 'Sir that budget is too low for Maldives.', correct: false, feedback: 'Budget shaming kills the deal. Find a solution within their budget instead.' },
-      { text: 'Bali is much cheaper. Go there.', correct: false, feedback: 'Cheaper is not always what a honeymoon couple wants. Ask what matters most — experience or budget.' }
+      { text: 'Tell them it is not possible in 3 days.', correct: false, feedback: 'Never just say no. Always explore express options first.' },
+      { text: 'Apply for express visa today — 24–48 hour processing, extra charges apply. Confirm with client?', correct: true, feedback: 'Correct! Express service exists. Give the option with honest timeline and cost.' },
+      { text: 'Tell them to apply online themselves.', correct: false, feedback: 'That loses the booking. We handle it, that is our value.' },
+      { text: 'Push travel date to next week.', correct: false, feedback: 'Never change travel dates without client consent. Confirm first, then suggest options.' }
     ],
-    tip: 'For honeymoon clients, experience matters more than price. Always ask: What is most important — the location or the budget?'
+    tip: 'For urgent visas: express service = 24–48 hrs, higher cost. Always quote both options: normal + express.'
   },
   {
-    id: 'rp3',
-    clientName: 'Suresh Shah',
-    clientType: 'Corporate Client',
-    clientEmoji: '👨‍💼',
-    clientMood: 'busy',
-    message: 'I need 5 business class tickets to Singapore for our team. Travel next Friday. Can you handle it quickly? I am very busy.',
+    topic: 'Complaint Handling',
+    getMsg: (c) => `${c.name} calling! The client I booked last week is very angry — hotel AC was not working all night. They are blaming us. What should I say?`,
     responses: [
-      { text: 'Sure sir, let me check availability right now. Can I have the 5 passenger names and passport numbers? I will revert in 30 minutes.', correct: true, feedback: 'Perfect response! Acknowledged urgency, asked for exactly what is needed, gave a clear timeline.' },
-      { text: 'Sir next Friday is very soon, it will be difficult.', correct: false, feedback: 'Never show hesitation to a corporate client. They need confidence, not excuses.' },
-      { text: 'Please send me an email with all details.', correct: false, feedback: 'Corporate clients are busy. Asking them to do work = losing the booking.' },
-      { text: 'Business class is very expensive sir, are you sure?', correct: false, feedback: 'Never question a client's choice. They know what they want and can afford it.' }
+      { text: 'Tell them the hotel is responsible, not us.', correct: false, feedback: 'Blame shifting destroys client trust. We are responsible for their full experience.' },
+      { text: 'Apologize immediately, contact hotel, get compensation or room change, update client within 2 hours.', correct: true, feedback: 'Perfect process! Apologize → Act → Update. Client feels heard and supported.' },
+      { text: 'Offer a discount on next booking.', correct: false, feedback: 'Good idea but fix the current problem first before offering future discounts.' },
+      { text: 'Ask them to write a complaint email.', correct: false, feedback: 'Never make an angry client do paperwork. You handle it for them.' }
     ],
-    tip: 'Corporate clients value speed and reliability above everything. Always give a clear ETA for your reply.'
+    tip: 'Complaint formula: Sorry → Own it → Fix it → Update client. Never defend, never blame, always act.'
   },
   {
-    id: 'rp4',
-    clientName: 'Meena Ben',
-    clientType: 'Senior Traveller',
-    clientEmoji: '👵',
-    clientMood: 'nervous',
-    message: 'Beta, we are 3 senior citizens going to Vaishno Devi. We need comfortable travel, no rush. Can you help?',
+    topic: 'Upsell Opportunity',
+    getMsg: (c) => `Hey! ${c.name} here. Client booked 3 nights Goa — just confirmed. But I just noticed they have 5 days off from office. Should I call them back?`,
     responses: [
-      { text: 'Absolutely! For senior travellers we have comfortable train options with lower berths, a nice hotel near the base camp, and a pony or palki for the trek. Shall I plan it?', correct: true, feedback: 'Excellent! You showed empathy, addressed their specific concern (comfort), and offered solutions proactively.' },
-      { text: 'Yes we have packages, I will send details.', correct: false, feedback: 'Too generic. Senior clients need reassurance and personal attention, not just a package link.' },
-      { text: 'Vaishno Devi trek is difficult for seniors.', correct: false, feedback: 'Never discourage. There are many comfortable options like palki and helicopter. Offer those!' },
-      { text: 'Please call on weekdays, I am busy today.', correct: false, feedback: 'Never ask a client to call later unless absolutely necessary. You just lost a genuine booking.' }
+      { text: 'No need, booking is confirmed. Leave it.', correct: false, feedback: 'Missed revenue! One extra day = ₹3–5K more per person. Always check the gap.' },
+      { text: 'Yes! Call now — say seats are limited and offer 4-night option with North + South Goa covered.', correct: true, feedback: 'Excellent! Urgency + value = easy upsell. Client appreciates the suggestion.' },
+      { text: 'Send them a message asking if they want to extend.', correct: true, feedback: 'Also works! A WhatsApp message is softer and gives them time to decide.' },
+      { text: 'Wait for them to ask.', correct: false, feedback: 'Clients rarely ask to spend more. You need to plant the idea proactively.' }
     ],
-    tip: 'Senior travellers need extra reassurance. Always mention comfort-specific details: lower berth, elevator access, comfortable pace.'
+    tip: 'Upsell window = right after confirmation, client is already excited. That is the best time to upgrade.'
   },
   {
-    id: 'rp5',
-    clientName: 'Harsh Kapoor',
-    clientType: 'Angry Client',
-    clientEmoji: '😠',
-    clientMood: 'angry',
-    message: 'Your hotel was terrible! AC was not working, room smelled bad. I am never booking with you again. I want a refund!',
+    topic: 'New Lead Handling',
+    getMsg: (c) => `${c.name} here! New client just WhatsApped — "I want to go Shimla, information please." I am in a meeting. Can you handle the reply?`,
     responses: [
-      { text: 'I am really sorry to hear this sir. This should not have happened. Let me contact the hotel right now and find out what went wrong. I will get back to you within 2 hours with a resolution.', correct: true, feedback: 'Perfect! You apologized genuinely, took ownership, and gave a clear action + timeline. This saves the relationship.' },
-      { text: 'Sir the hotel was good, maybe you had bad luck.', correct: false, feedback: 'Never invalidate a complaint. This makes the client even more angry.' },
-      { text: 'Refund is not in our policy sir.', correct: false, feedback: 'Never say no to refund without investigating first. Check with supplier before giving any answer.' },
-      { text: 'I understand sir but this was the hotel's fault, not ours.', correct: false, feedback: 'Blame shifting destroys trust. As the agent, you are responsible for the full experience.' }
+      { text: 'Reply: Shimla package starts from ₹15,000.', correct: false, feedback: 'Never quote price without knowing group size, budget, and dates. You may lose them.' },
+      { text: 'Reply: Great choice! How many people, what is your budget, and which dates are you thinking? 😊', correct: true, feedback: 'Perfect opener! 3 qualifying questions — group, budget, dates. Gets you everything needed.' },
+      { text: 'Say you are busy and ask them to call tomorrow.', correct: false, feedback: 'New leads are hottest in the first 5 minutes. Delay = lost client.' },
+      { text: 'Send a Shimla brochure PDF.', correct: false, feedback: 'Sending material without engaging first gives 0 personal connection. Qualify first.' }
     ],
-    tip: 'Complaint formula: Sorry → Own it → Fix it → Update. Never defend, never blame. Always take ownership.'
+    tip: 'New lead formula: How many? Budget? Dates? These 3 questions qualify every lead in 30 seconds.'
   },
   {
-    id: 'rp6',
-    clientName: 'Nila Desai',
-    clientType: 'Indecisive Client',
-    clientEmoji: '🤔',
-    clientMood: 'confused',
-    message: 'I am thinking Thailand or Vietnam... or maybe Sri Lanka? I am not sure. Which one is best?',
+    topic: 'Payment Follow-up',
+    getMsg: (c) => `${c.name} here — awkward situation. Client confirmed the Bali package 2 days ago but still has not paid the advance. I do not want to seem pushy. What should I say?`,
     responses: [
-      { text: 'Great choices! Can I ask — do you prefer beaches, culture, or food? And how many days do you have? That will help me suggest the perfect one for you.', correct: true, feedback: 'Brilliant! You did not guess, you asked the right questions to understand preference. This builds trust.' },
-      { text: 'Thailand is the best, go there.', correct: false, feedback: 'Giving a strong recommendation without understanding preference can backfire if they do not enjoy it.' },
-      { text: 'All three are good, you decide.', correct: false, feedback: 'Never leave the decision to the client alone. They came to you for guidance. Guide them!' },
-      { text: 'Let me send brochures for all three.', correct: false, feedback: 'Sending too many options creates confusion. Narrow it down by asking smart questions first.' }
+      { text: 'Wait a few more days — do not pressure them.', correct: false, feedback: 'Waiting without following up = booking falls apart. Always follow up with a reason.' },
+      { text: 'Message: Sir, just a reminder — airline seats and hotel are being held for you. To confirm I need the advance by today. Shall I share payment details?', correct: true, feedback: 'Perfect! You created urgency with a real reason (seats being held) and made it easy to pay.' },
+      { text: 'Tell them the price will increase tomorrow.', correct: false, feedback: 'Do not bluff about price changes — only say it if it is true. False urgency breaks trust.' },
+      { text: 'Ask them if they are still interested in the booking.', correct: false, feedback: 'This sounds like doubt. Never question their interest. Just remind them of the next step.' }
     ],
-    tip: 'For indecisive clients, ask 2 questions: What type of experience? How many days? Then recommend ONE destination confidently.'
+    tip: 'Payment follow-up: Always link urgency to a real reason — seats, hotel hold, price validity. Make it easy to pay.'
   }
 ];
+
+// Avatar colors matching CRM staff colors
+const STAFF_COLORS = {
+  1: { bg:'#f97316', color:'#fff' }, // Rehana — orange
+  2: { bg:'#8b5cf6', color:'#fff' }, // Paresh — purple
+  3: { bg:'#0ea5e9', color:'#fff' }, // Nusaiba — blue
+  4: { bg:'#10b981', color:'#fff' }, // Ahyan — green
+  5: { bg:'#64748b', color:'#fff' }, // Taha — slate
+  6: { bg:'#f97316', color:'#fff' }, // Ayesha — orange
+  7: { bg:'#6366f1', color:'#fff' }, // Meghna — indigo
+};
 
 let rpState = {
   current: 0,
   score: 0,
   answered: false,
-  completed: []
+  colleagues: [], // staff list excluding current user
+  scenarios: []   // built dynamically
 };
 
+function buildRPScenarios() {
+  // Get all staff except current user
+  const myId = CURRENT_USER ? CURRENT_USER.id : 0;
+  const others = STAFF.filter(s => s.id !== myId);
+  rpState.colleagues = others;
+
+  // Build scenarios — assign one colleague per template
+  rpState.scenarios = RP_TEMPLATES.map((tmpl, i) => {
+    const colleague = others[i % others.length];
+    return {
+      colleague,
+      topic: tmpl.topic,
+      message: tmpl.getMsg(colleague),
+      responses: tmpl.responses,
+      tip: tmpl.tip
+    };
+  });
+}
+
 function renderThRolePlay(el) {
+  buildRPScenarios();
   rpState.current = 0;
   rpState.score = 0;
   rpState.answered = false;
@@ -6989,84 +7003,90 @@ function renderThRolePlay(el) {
 function renderRPScene() {
   const area = document.getElementById('rp-game-area');
   if(!area) return;
-  const sc = RP_SCENARIOS[rpState.current];
+  const sc = rpState.scenarios[rpState.current];
   if(!sc) { renderRPComplete(); return; }
   rpState.answered = false;
 
-  const moodColors = { curious:'#0ea5e9', excited:'#f97316', busy:'#6366f1', nervous:'#8b5cf6', angry:'#ef4444', confused:'#f59e0b' };
-  const moodColor = moodColors[sc.clientMood] || '#64748b';
-  const moodLabel = { curious:'Curious 🤔', excited:'Excited 😊', busy:'In a hurry ⚡', nervous:'Nervous 😟', angry:'Angry 😠', confused:'Confused 🤷' };
+  const col = STAFF_COLORS[sc.colleague.id] || { bg:'#64748b', color:'#fff' };
+  const total = rpState.scenarios.length;
 
   area.innerHTML = `
     <style>
-      @keyframes rp-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
-      @keyframes rp-bubble-in { 0%{opacity:0;transform:scale(.8) translateY(10px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
-      @keyframes rp-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-      @keyframes rp-bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
-      @keyframes rp-slide-up { 0%{opacity:0;transform:translateY(20px)} 100%{opacity:1;transform:translateY(0)} }
-      .rp-char { animation: rp-float 3s ease-in-out infinite; display:inline-block; }
-      .rp-char.angry { animation: rp-shake .4s ease-in-out 3; }
-      .rp-char.excited { animation: rp-bounce .5s ease-in-out 3; }
-      .rp-bubble { animation: rp-bubble-in .4s cubic-bezier(.34,1.56,.64,1) forwards; }
-      .rp-opt { transition: all .15s; }
-      .rp-opt:hover { transform: translateX(4px); border-color: #f97316 !important; }
-      .rp-scene { animation: rp-slide-up .4s ease forwards; }
+      @keyframes rp-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+      @keyframes rp-bubble-in{0%{opacity:0;transform:scale(.85) translateY(8px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+      @keyframes rp-slide-up{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+      @keyframes rp-ping{0%{transform:scale(1);opacity:1}75%,100%{transform:scale(1.8);opacity:0}}
+      .rp-avatar-wrap{animation:rp-float 3s ease-in-out infinite}
+      .rp-bubble{animation:rp-bubble-in .4s cubic-bezier(.34,1.56,.64,1) forwards}
+      .rp-opt{transition:all .15s;cursor:pointer}
+      .rp-opt:hover{transform:translateX(5px);border-color:#f97316!important;background:#fff7ed!important}
+      .rp-scene{animation:rp-slide-up .35s ease forwards}
+      .rp-ping{animation:rp-ping 1.2s ease-out infinite}
     </style>
 
     <div class="rp-scene">
-      <!-- Progress -->
+      <!-- Progress bar -->
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <div style="flex:1;background:#f1f5f9;border-radius:99px;height:6px">
-          <div style="width:${Math.round((rpState.current/RP_SCENARIOS.length)*100)}%;background:linear-gradient(90deg,#f97316,#fbbf24);height:6px;border-radius:99px;transition:width .5s"></div>
+        <div style="flex:1;background:#f1f5f9;border-radius:99px;height:6px;overflow:hidden">
+          <div style="width:${Math.round((rpState.current/total)*100)}%;background:linear-gradient(90deg,#f97316,#fbbf24);height:6px;border-radius:99px;transition:width .5s"></div>
         </div>
-        <span style="font-size:11px;color:#64748b;font-weight:700">Scene ${rpState.current+1} / ${RP_SCENARIOS.length}</span>
-        <span style="font-size:11px;background:#f0fdf4;color:#166534;border-radius:99px;padding:2px 10px;font-weight:700">⭐ ${rpState.score} pts</span>
+        <span style="font-size:11px;color:#64748b;font-weight:700;white-space:nowrap">Scene ${rpState.current+1} / ${total}</span>
+        <span style="font-size:11px;background:#fff7ed;color:#f97316;border-radius:99px;padding:2px 10px;font-weight:700;white-space:nowrap">⭐ ${rpState.score} pts</span>
       </div>
 
-      <!-- Scene Area -->
-      <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:20px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden">
-        <!-- Background decoration -->
-        <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:rgba(14,165,233,0.08);border-radius:50%"></div>
-        <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(249,115,22,0.06);border-radius:50%"></div>
+      <!-- Scene card -->
+      <div style="background:linear-gradient(135deg,#fafafa,#f0f9ff);border:2px solid #e2e8f0;border-radius:20px;padding:22px;margin-bottom:14px">
 
-        <!-- Client Row -->
-        <div style="display:flex;align-items:flex-end;gap:16px;position:relative;z-index:1">
-          <!-- Character -->
-          <div style="text-align:center;flex-shrink:0">
-            <div class="rp-char ${sc.clientMood}" style="font-size:64px;line-height:1;display:block">${sc.clientEmoji}</div>
-            <div style="margin-top:6px;font-size:11px;font-weight:700;color:#0f172a">${sc.clientName}</div>
-            <div style="font-size:10px;background:${moodColor}20;color:${moodColor};border-radius:99px;padding:2px 8px;font-weight:600;margin-top:2px">${moodLabel[sc.clientMood]}</div>
+        <!-- Topic badge -->
+        <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.06em;margin-bottom:14px">📍 ${sc.topic} Scenario</div>
+
+        <!-- Staff character + bubble -->
+        <div style="display:flex;align-items:flex-end;gap:14px">
+
+          <!-- Avatar -->
+          <div class="rp-avatar-wrap" style="text-align:center;flex-shrink:0">
+            <div style="position:relative;display:inline-block">
+              <!-- Online ping -->
+              <span class="rp-ping" style="position:absolute;top:0;right:0;width:12px;height:12px;background:#10b981;border-radius:50%;display:block"></span>
+              <!-- Avatar circle -->
+              <div style="width:60px;height:60px;border-radius:50%;background:${col.bg};color:${col.color};display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,0.15)">
+                ${sc.colleague.initials}
+              </div>
+            </div>
+            <div style="margin-top:7px;font-size:11px;font-weight:700;color:#0f172a;max-width:70px;text-align:center;line-height:1.3">${sc.colleague.name.replace('Ms. ','').replace('Mr. ','').split(' ')[0]}</div>
+            <div style="font-size:9px;color:#64748b;margin-top:1px;max-width:70px;text-align:center;line-height:1.3">${sc.colleague.role}</div>
           </div>
 
-          <!-- Speech Bubble -->
-          <div class="rp-bubble" style="background:#fff;border-radius:16px 16px 16px 4px;padding:16px 18px;box-shadow:0 4px 20px rgba(0,0,0,0.1);flex:1;position:relative">
-            <div style="position:absolute;bottom:12px;left:-10px;width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-right:10px solid #fff;filter:drop-shadow(-2px 0 2px rgba(0,0,0,0.05))"></div>
-            <div style="font-size:14px;color:#0f172a;line-height:1.6;font-weight:500">${sc.message}</div>
+          <!-- Speech bubble -->
+          <div class="rp-bubble" style="background:#fff;border-radius:16px 16px 16px 4px;padding:14px 16px;box-shadow:0 4px 16px rgba(0,0,0,0.08);flex:1;position:relative;border:1.5px solid #e2e8f0">
+            <!-- Tail -->
+            <div style="position:absolute;bottom:14px;left:-10px;width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-right:10px solid #fff"></div>
+            <div style="position:absolute;bottom:13px;left:-12px;width:0;height:0;border-top:9px solid transparent;border-bottom:9px solid transparent;border-right:11px solid #e2e8f0"></div>
+            <div style="font-size:13px;color:#0f172a;line-height:1.6;font-weight:500">${sc.message}</div>
           </div>
         </div>
 
-        <!-- Agent side label -->
-        <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px dashed rgba(14,165,233,0.3)">
-          <div style="font-size:28px">🧑‍💼</div>
+        <!-- You label -->
+        <div style="display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px dashed #e2e8f0">
+          <div style="width:36px;height:36px;border-radius:50%;background:${STAFF_COLORS[CURRENT_USER?.id]?.bg||'#f97316'};color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${CURRENT_USER?.initials||'ME'}</div>
           <div>
-            <div style="font-size:11px;font-weight:700;color:#0369a1">YOU — Travel Agent</div>
+            <div style="font-size:11px;font-weight:700;color:#0f172a">${CURRENT_USER?.name||'You'} — ${CURRENT_USER?.role||'Agent'}</div>
             <div style="font-size:11px;color:#64748b">How do you respond?</div>
           </div>
         </div>
       </div>
 
-      <!-- Response Options -->
-      <div id="rp-options" style="display:grid;gap:10px">
+      <!-- Options -->
+      <div id="rp-options" style="display:grid;gap:9px">
         ${sc.responses.map((r,i) => `
           <button class="rp-opt" onclick="selectRPResponse(${i})" id="rp-opt-${i}"
-            style="text-align:left;padding:14px 18px;border:2px solid #e2e8f0;border-radius:14px;background:#fff;font-size:13px;color:#374151;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;gap:12px;font-weight:500">
+            style="text-align:left;padding:13px 16px;border:2px solid #e2e8f0;border-radius:13px;background:#fff;font-size:13px;color:#374151;font-family:Inter,sans-serif;display:flex;align-items:center;gap:12px;font-weight:500;width:100%">
             <span style="min-width:26px;height:26px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#64748b;flex-shrink:0">${String.fromCharCode(65+i)}</span>
             <span>${r.text}</span>
           </button>`).join('')}
       </div>
 
-      <!-- Feedback area -->
-      <div id="rp-feedback" style="display:none;margin-top:14px"></div>
+      <div id="rp-feedback" style="display:none;margin-top:12px"></div>
     </div>`;
 }
 
@@ -7074,55 +7094,56 @@ function selectRPResponse(idx) {
   if(rpState.answered) return;
   rpState.answered = true;
 
-  const sc = RP_SCENARIOS[rpState.current];
+  const sc = rpState.scenarios[rpState.current];
   const chosen = sc.responses[idx];
   const isCorrect = chosen.correct;
 
-  // Animate character reaction
-  const char = document.querySelector('.rp-char');
-  if(char) {
-    char.textContent = isCorrect ? '😊' : '😕';
-    char.style.animation = isCorrect ? 'rp-bounce .5s ease-in-out 2' : 'rp-shake .4s ease-in-out 2';
-  }
-
-  // Color all buttons
+  // Lock + color buttons
   sc.responses.forEach((r, i) => {
     const btn = document.getElementById('rp-opt-' + i);
     if(!btn) return;
-    btn.style.cursor = 'default';
     btn.onclick = null;
     btn.classList.remove('rp-opt');
+    btn.style.cursor = 'default';
+    btn.style.transform = 'none';
     if(r.correct) {
       btn.style.background = '#f0fdf4';
       btn.style.borderColor = '#16a34a';
       btn.style.color = '#166534';
       const badge = btn.querySelector('span');
-      if(badge) { badge.style.background = '#16a34a'; badge.style.color = '#fff'; }
-    } else if(i === idx && !r.correct) {
+      if(badge) { badge.style.background='#16a34a'; badge.style.color='#fff'; }
+    } else if(i === idx) {
       btn.style.background = '#fef2f2';
       btn.style.borderColor = '#dc2626';
       btn.style.color = '#991b1b';
     }
   });
 
-  // Score
+  // Animate avatar reaction — change to emoji
+  const avatarWrap = document.querySelector('.rp-avatar-wrap');
+  if(avatarWrap) {
+    const avatarCircle = avatarWrap.querySelector('div > div');
+    if(avatarCircle) {
+      avatarCircle.textContent = isCorrect ? '😊' : '😕';
+      avatarWrap.style.animation = isCorrect ? 'rp-float 1s ease-in-out 2' : 'none';
+    }
+  }
+
   if(isCorrect) rpState.score += 20;
 
-  // Feedback
   const fb = document.getElementById('rp-feedback');
   if(fb) {
     fb.style.display = 'block';
     fb.innerHTML = `
       <div style="background:${isCorrect?'#f0fdf4':'#fff7ed'};border:2px solid ${isCorrect?'#86efac':'#fcd34d'};border-radius:14px;padding:16px 18px;animation:rp-slide-up .3s ease forwards">
-        <div style="font-size:15px;font-weight:800;color:${isCorrect?'#166534':'#92400e'};margin-bottom:6px">${isCorrect ? '✅ Great response!' : '❌ Not the best choice'}</div>
+        <div style="font-size:14px;font-weight:800;color:${isCorrect?'#166534':'#92400e'};margin-bottom:6px">${isCorrect?'✅ Great response!':'❌ Not the best choice'}</div>
         <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:10px">${chosen.feedback}</div>
-        <div style="background:#fffbeb;border-left:3px solid #f97316;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#92400e">💡 ${sc.tip}</div>
+        <div style="background:#fffbeb;border-left:3px solid #f97316;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#92400e;line-height:1.5">💡 ${sc.tip}</div>
         <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
-          ${rpState.current < RP_SCENARIOS.length - 1
-            ? `<button onclick="nextRPScene()" style="padding:10px 22px;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Next Client →</button>`
-            : `<button onclick="renderRPComplete()" style="padding:10px 22px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🏆 See Final Score!</button>`
-          }
-          <button onclick="replayRPScene()" style="padding:10px 18px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🔄 Try Again</button>
+          ${rpState.current < rpState.scenarios.length - 1
+            ? `<button onclick="nextRPScene()" style="padding:10px 22px;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Next →</button>`
+            : `<button onclick="renderRPComplete()" style="padding:10px 22px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🏆 See Score!</button>`}
+          <button onclick="replayRPScene()" style="padding:10px 16px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🔄 Retry</button>
         </div>
       </div>`;
   }
@@ -7130,18 +7151,13 @@ function selectRPResponse(idx) {
 
 function nextRPScene() {
   rpState.current++;
-  rpState.answered = false;
   const area = document.getElementById('rp-game-area');
-  if(area) {
-    area.style.opacity = '0';
-    area.style.transform = 'translateX(20px)';
-    area.style.transition = 'all .25s ease';
-    setTimeout(() => {
-      area.style.opacity = '1';
-      area.style.transform = 'translateX(0)';
-      renderRPScene();
-    }, 250);
-  }
+  if(!area) return;
+  area.style.cssText = 'opacity:0;transform:translateX(24px);transition:all .2s ease';
+  setTimeout(() => {
+    area.style.cssText = 'opacity:1;transform:translateX(0);transition:all .2s ease';
+    renderRPScene();
+  }, 200);
 }
 
 function replayRPScene() {
@@ -7152,34 +7168,51 @@ function replayRPScene() {
 function renderRPComplete() {
   const area = document.getElementById('rp-game-area');
   if(!area) return;
-  const total = RP_SCENARIOS.length * 20;
+  const total = rpState.scenarios.length * 20;
   const pct = Math.round((rpState.score / total) * 100);
-  const grade = pct >= 80 ? { label:'Expert Agent 🏆', color:'#f59e0b', msg:'Outstanding! You handled every client like a pro. Fenix Tours is proud of you!' }
-              : pct >= 60 ? { label:'Senior Agent ⭐', color:'#10b981', msg:'Good job! A few areas to polish. Try again to get a perfect score.' }
-              : pct >= 40 ? { label:'Growing Agent 📈', color:'#0ea5e9', msg:'Keep practising! Review the tips and try again — you will improve fast.' }
-              : { label:'Beginner Agent 🌱', color:'#6366f1', msg:'Every expert was once a beginner. Review the tips and give it another shot!' };
+  const grade = pct >= 80 ? { label:'Expert Agent 🏆', color:'#f59e0b', msg:'Outstanding! You handled every colleague scenario like a true professional.' }
+              : pct >= 60 ? { label:'Senior Agent ⭐', color:'#10b981', msg:'Great work! A few areas to sharpen. Try again for a perfect score.' }
+              : pct >= 40 ? { label:'Growing Agent 📈', color:'#0ea5e9', msg:'Keep practising! Review the tips and give it another shot.' }
+              : { label:'Beginner Agent 🌱', color:'#6366f1', msg:'Every expert starts somewhere. Review the tips and try again!' };
+
+  // Save to Firebase
+  try {
+    if(CURRENT_USER && db) {
+      db.collection('trainingProgress').doc(String(CURRENT_USER.id)).set({
+        rolePlayScore: rpState.score,
+        rolePlayPct: pct,
+        rolePlayDate: new Date().toISOString().slice(0,10),
+        staffName: CURRENT_USER.name
+      }, { merge: true });
+    }
+  } catch(e) {}
 
   area.innerHTML = `
-    <div style="background:#fff;border-radius:20px;border:2px solid #e2e8f0;padding:32px;text-align:center;animation:rp-slide-up .4s ease forwards">
-      <div style="font-size:56px;margin-bottom:12px">${pct>=80?'🏆':pct>=60?'⭐':pct>=40?'💪':'📚'}</div>
-      <div style="font-size:13px;font-weight:700;color:${grade.color};background:${grade.color}15;display:inline-block;padding:4px 16px;border-radius:99px;margin-bottom:12px">${grade.label}</div>
-      <div style="font-size:36px;font-weight:900;color:#0f172a;margin-bottom:4px">${rpState.score} / ${total}</div>
-      <div style="font-size:16px;color:#64748b;font-weight:600;margin-bottom:16px">${pct}% correct responses</div>
-      <div style="background:#f8fafc;border-radius:12px;padding:14px 18px;font-size:13px;color:#374151;line-height:1.6;margin-bottom:20px;text-align:left">${grade.msg}</div>
-      <div style="display:grid;grid-template-columns:repeat(${RP_SCENARIOS.length},1fr);gap:6px;margin-bottom:20px">
-        ${RP_SCENARIOS.map((sc,i) => `
-          <div style="text-align:center;font-size:22px;filter:${i<rpState.current+1?'none':'grayscale(1)'}">
-            ${sc.clientEmoji}
-          </div>`).join('')}
+    <div style="background:#fff;border-radius:20px;border:2px solid #e2e8f0;padding:28px;text-align:center;animation:rp-slide-up .4s ease forwards">
+      <div style="font-size:52px;margin-bottom:10px">${pct>=80?'🏆':pct>=60?'⭐':pct>=40?'💪':'📚'}</div>
+      <div style="font-size:12px;font-weight:700;color:${grade.color};background:${grade.color}15;display:inline-block;padding:4px 16px;border-radius:99px;margin-bottom:10px">${grade.label}</div>
+      <div style="font-size:34px;font-weight:900;color:#0f172a;margin-bottom:4px">${rpState.score} / ${total}</div>
+      <div style="font-size:15px;color:#64748b;margin-bottom:16px">${pct}% — ${pct>=80?'All responses correct!':'Review tips to improve'}</div>
+
+      <!-- Colleague faces -->
+      <div style="display:flex;justify-content:center;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+        ${rpState.colleagues.slice(0, rpState.scenarios.length).map(c => {
+          const cl = STAFF_COLORS[c.id] || {bg:'#64748b',color:'#fff'};
+          return `<div style="width:40px;height:40px;border-radius:50%;background:${cl.bg};color:${cl.color};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.1)">${c.initials}</div>`;
+        }).join('')}
       </div>
+
+      <div style="background:#f8fafc;border-radius:12px;padding:12px 16px;font-size:13px;color:#374151;line-height:1.6;margin-bottom:18px">${grade.msg}</div>
+
       <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-        <button onclick="rpState.current=0;rpState.score=0;renderRPScene()" style="padding:12px 28px;background:#f97316;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">🔄 Play Again</button>
-        <button onclick="setTrainingSection('scenarios')" style="padding:12px 20px;background:#f1f5f9;color:#374151;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Back to Scenarios</button>
+        <button onclick="rpState.current=0;rpState.score=0;buildRPScenarios();renderRPScene()" style="padding:11px 24px;background:#f97316;color:#fff;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">🔄 Play Again</button>
+        <button onclick="setTrainingSection('scenarios')" style="padding:11px 18px;background:#f1f5f9;color:#374151;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">Back</button>
       </div>
     </div>`;
 }
 
 // ═══════════════ END ROLE PLAY MODULE ═══════════════
+
 
 
 
