@@ -1262,6 +1262,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <!-- Section Tabs -->
         <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
           <button class="th-tab-btn active" onclick="setTrainingSection('scenarios')" id="th-tab-scenarios" style="padding:8px 16px;border-radius:99px;border:none;background:#f97316;color:#fff;font-size:12px;font-weight:700;cursor:pointer">🎭 Scenarios</button>
+          <button class="th-tab-btn" onclick="setTrainingSection('roleplay')" id="th-tab-roleplay" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">🎬 Role Play</button>
           <button class="th-tab-btn" onclick="setTrainingSection('lessons')" id="th-tab-lessons" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">🧠 Quick Lessons</button>
           <button class="th-tab-btn" onclick="setTrainingSection('workflow')" id="th-tab-workflow" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">🛠️ Workflow</button>
           <button class="th-tab-btn" onclick="setTrainingSection('tips')" id="th-tab-tips" style="padding:8px 16px;border-radius:99px;border:1.5px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;font-weight:700;cursor:pointer">💡 Agent Tips</button>
@@ -6459,7 +6460,7 @@ function updateThHeader() {
 function setTrainingSection(section) {
   thState.section = section;
   // Update tab button styles
-  ['scenarios','lessons','workflow','tips'].forEach(s => {
+  ['scenarios','roleplay','lessons','workflow','tips'].forEach(s => {
     const btn = document.getElementById('th-tab-' + s);
     if(!btn) return;
     const active = s === section;
@@ -6470,6 +6471,7 @@ function setTrainingSection(section) {
   const el = document.getElementById('th-section-content');
   if(!el) return;
   if(section === 'scenarios')  renderThScenarios(el);
+  else if(section === 'roleplay')  renderThRolePlay(el);
   else if(section === 'lessons')   renderThLessons(el);
   else if(section === 'workflow')  renderThWorkflow(el);
   else if(section === 'tips')      renderThTips(el);
@@ -6871,6 +6873,314 @@ async function loadThContent() {
 // ═══════════════ END TRAINING HUB EDITOR ═══════════════
 
 // ═══════════════ END TRAINING HUB MODULE ═══════════════
+
+// ═══════════════════════════════════════════════
+//  ROLE PLAY MODULE
+// ═══════════════════════════════════════════════
+
+const RP_SCENARIOS = [
+  {
+    id: 'rp1',
+    clientName: 'Ramesh Patel',
+    clientType: 'Budget Traveller',
+    clientEmoji: '👨',
+    clientMood: 'curious',
+    message: 'Hello! I want to go to Dubai with my family of 4. We have a budget of ₹1,20,000 total. Is it possible?',
+    responses: [
+      { text: 'Sir, Dubai is expensive. It is not possible in that budget.', correct: false, feedback: 'Never say no directly. You lose the client immediately.' },
+      { text: 'Yes sir! ₹1,20,000 for 4 people — that is ₹30,000 per person. We can plan a great 4-night Dubai trip within this budget!', correct: true, feedback: 'Perfect! You gave confidence and broke it down clearly. Client feels heard.' },
+      { text: 'I will send you a brochure, please check and let me know.', correct: false, feedback: 'Never postpone. Engage the client immediately or they will go somewhere else.' },
+      { text: 'Sir, maybe Goa will be better for your budget.', correct: false, feedback: 'Never change the destination without asking. Client wants Dubai, give Dubai options first.' }
+    ],
+    tip: 'Always break total budget into per-person cost. It sounds much more manageable!'
+  },
+  {
+    id: 'rp2',
+    clientName: 'Priya Sharma',
+    clientType: 'Honeymoon Couple',
+    clientEmoji: '👩',
+    clientMood: 'excited',
+    message: 'We are planning our honeymoon! Looking for something romantic, maybe Maldives or Bali. Budget around ₹1.5 lakh for 2. What do you suggest?',
+    responses: [
+      { text: 'Both are great! Let me prepare options for both and share with you.', correct: true, feedback: 'Excellent! Offering both gives choice and shows you are thorough. Follow up with actual packages.' },
+      { text: 'Maldives is better.', correct: false, feedback: 'Never give a one-word recommendation without asking about their preferences first.' },
+      { text: 'Sir that budget is too low for Maldives.', correct: false, feedback: 'Budget shaming kills the deal. Find a solution within their budget instead.' },
+      { text: 'Bali is much cheaper. Go there.', correct: false, feedback: 'Cheaper is not always what a honeymoon couple wants. Ask what matters most — experience or budget.' }
+    ],
+    tip: 'For honeymoon clients, experience matters more than price. Always ask: What is most important — the location or the budget?'
+  },
+  {
+    id: 'rp3',
+    clientName: 'Suresh Shah',
+    clientType: 'Corporate Client',
+    clientEmoji: '👨‍💼',
+    clientMood: 'busy',
+    message: 'I need 5 business class tickets to Singapore for our team. Travel next Friday. Can you handle it quickly? I am very busy.',
+    responses: [
+      { text: 'Sure sir, let me check availability right now. Can I have the 5 passenger names and passport numbers? I will revert in 30 minutes.', correct: true, feedback: 'Perfect response! Acknowledged urgency, asked for exactly what is needed, gave a clear timeline.' },
+      { text: 'Sir next Friday is very soon, it will be difficult.', correct: false, feedback: 'Never show hesitation to a corporate client. They need confidence, not excuses.' },
+      { text: 'Please send me an email with all details.', correct: false, feedback: 'Corporate clients are busy. Asking them to do work = losing the booking.' },
+      { text: 'Business class is very expensive sir, are you sure?', correct: false, feedback: 'Never question a client's choice. They know what they want and can afford it.' }
+    ],
+    tip: 'Corporate clients value speed and reliability above everything. Always give a clear ETA for your reply.'
+  },
+  {
+    id: 'rp4',
+    clientName: 'Meena Ben',
+    clientType: 'Senior Traveller',
+    clientEmoji: '👵',
+    clientMood: 'nervous',
+    message: 'Beta, we are 3 senior citizens going to Vaishno Devi. We need comfortable travel, no rush. Can you help?',
+    responses: [
+      { text: 'Absolutely! For senior travellers we have comfortable train options with lower berths, a nice hotel near the base camp, and a pony or palki for the trek. Shall I plan it?', correct: true, feedback: 'Excellent! You showed empathy, addressed their specific concern (comfort), and offered solutions proactively.' },
+      { text: 'Yes we have packages, I will send details.', correct: false, feedback: 'Too generic. Senior clients need reassurance and personal attention, not just a package link.' },
+      { text: 'Vaishno Devi trek is difficult for seniors.', correct: false, feedback: 'Never discourage. There are many comfortable options like palki and helicopter. Offer those!' },
+      { text: 'Please call on weekdays, I am busy today.', correct: false, feedback: 'Never ask a client to call later unless absolutely necessary. You just lost a genuine booking.' }
+    ],
+    tip: 'Senior travellers need extra reassurance. Always mention comfort-specific details: lower berth, elevator access, comfortable pace.'
+  },
+  {
+    id: 'rp5',
+    clientName: 'Harsh Kapoor',
+    clientType: 'Angry Client',
+    clientEmoji: '😠',
+    clientMood: 'angry',
+    message: 'Your hotel was terrible! AC was not working, room smelled bad. I am never booking with you again. I want a refund!',
+    responses: [
+      { text: 'I am really sorry to hear this sir. This should not have happened. Let me contact the hotel right now and find out what went wrong. I will get back to you within 2 hours with a resolution.', correct: true, feedback: 'Perfect! You apologized genuinely, took ownership, and gave a clear action + timeline. This saves the relationship.' },
+      { text: 'Sir the hotel was good, maybe you had bad luck.', correct: false, feedback: 'Never invalidate a complaint. This makes the client even more angry.' },
+      { text: 'Refund is not in our policy sir.', correct: false, feedback: 'Never say no to refund without investigating first. Check with supplier before giving any answer.' },
+      { text: 'I understand sir but this was the hotel's fault, not ours.', correct: false, feedback: 'Blame shifting destroys trust. As the agent, you are responsible for the full experience.' }
+    ],
+    tip: 'Complaint formula: Sorry → Own it → Fix it → Update. Never defend, never blame. Always take ownership.'
+  },
+  {
+    id: 'rp6',
+    clientName: 'Nila Desai',
+    clientType: 'Indecisive Client',
+    clientEmoji: '🤔',
+    clientMood: 'confused',
+    message: 'I am thinking Thailand or Vietnam... or maybe Sri Lanka? I am not sure. Which one is best?',
+    responses: [
+      { text: 'Great choices! Can I ask — do you prefer beaches, culture, or food? And how many days do you have? That will help me suggest the perfect one for you.', correct: true, feedback: 'Brilliant! You did not guess, you asked the right questions to understand preference. This builds trust.' },
+      { text: 'Thailand is the best, go there.', correct: false, feedback: 'Giving a strong recommendation without understanding preference can backfire if they do not enjoy it.' },
+      { text: 'All three are good, you decide.', correct: false, feedback: 'Never leave the decision to the client alone. They came to you for guidance. Guide them!' },
+      { text: 'Let me send brochures for all three.', correct: false, feedback: 'Sending too many options creates confusion. Narrow it down by asking smart questions first.' }
+    ],
+    tip: 'For indecisive clients, ask 2 questions: What type of experience? How many days? Then recommend ONE destination confidently.'
+  }
+];
+
+let rpState = {
+  current: 0,
+  score: 0,
+  answered: false,
+  completed: []
+};
+
+function renderThRolePlay(el) {
+  rpState.current = 0;
+  rpState.score = 0;
+  rpState.answered = false;
+  el.innerHTML = `<div id="rp-game-area"></div>`;
+  renderRPScene();
+}
+
+function renderRPScene() {
+  const area = document.getElementById('rp-game-area');
+  if(!area) return;
+  const sc = RP_SCENARIOS[rpState.current];
+  if(!sc) { renderRPComplete(); return; }
+  rpState.answered = false;
+
+  const moodColors = { curious:'#0ea5e9', excited:'#f97316', busy:'#6366f1', nervous:'#8b5cf6', angry:'#ef4444', confused:'#f59e0b' };
+  const moodColor = moodColors[sc.clientMood] || '#64748b';
+  const moodLabel = { curious:'Curious 🤔', excited:'Excited 😊', busy:'In a hurry ⚡', nervous:'Nervous 😟', angry:'Angry 😠', confused:'Confused 🤷' };
+
+  area.innerHTML = `
+    <style>
+      @keyframes rp-float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+      @keyframes rp-bubble-in { 0%{opacity:0;transform:scale(.8) translateY(10px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
+      @keyframes rp-shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+      @keyframes rp-bounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+      @keyframes rp-slide-up { 0%{opacity:0;transform:translateY(20px)} 100%{opacity:1;transform:translateY(0)} }
+      .rp-char { animation: rp-float 3s ease-in-out infinite; display:inline-block; }
+      .rp-char.angry { animation: rp-shake .4s ease-in-out 3; }
+      .rp-char.excited { animation: rp-bounce .5s ease-in-out 3; }
+      .rp-bubble { animation: rp-bubble-in .4s cubic-bezier(.34,1.56,.64,1) forwards; }
+      .rp-opt { transition: all .15s; }
+      .rp-opt:hover { transform: translateX(4px); border-color: #f97316 !important; }
+      .rp-scene { animation: rp-slide-up .4s ease forwards; }
+    </style>
+
+    <div class="rp-scene">
+      <!-- Progress -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="flex:1;background:#f1f5f9;border-radius:99px;height:6px">
+          <div style="width:${Math.round((rpState.current/RP_SCENARIOS.length)*100)}%;background:linear-gradient(90deg,#f97316,#fbbf24);height:6px;border-radius:99px;transition:width .5s"></div>
+        </div>
+        <span style="font-size:11px;color:#64748b;font-weight:700">Scene ${rpState.current+1} / ${RP_SCENARIOS.length}</span>
+        <span style="font-size:11px;background:#f0fdf4;color:#166534;border-radius:99px;padding:2px 10px;font-weight:700">⭐ ${rpState.score} pts</span>
+      </div>
+
+      <!-- Scene Area -->
+      <div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border-radius:20px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden">
+        <!-- Background decoration -->
+        <div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;background:rgba(14,165,233,0.08);border-radius:50%"></div>
+        <div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(249,115,22,0.06);border-radius:50%"></div>
+
+        <!-- Client Row -->
+        <div style="display:flex;align-items:flex-end;gap:16px;position:relative;z-index:1">
+          <!-- Character -->
+          <div style="text-align:center;flex-shrink:0">
+            <div class="rp-char ${sc.clientMood}" style="font-size:64px;line-height:1;display:block">${sc.clientEmoji}</div>
+            <div style="margin-top:6px;font-size:11px;font-weight:700;color:#0f172a">${sc.clientName}</div>
+            <div style="font-size:10px;background:${moodColor}20;color:${moodColor};border-radius:99px;padding:2px 8px;font-weight:600;margin-top:2px">${moodLabel[sc.clientMood]}</div>
+          </div>
+
+          <!-- Speech Bubble -->
+          <div class="rp-bubble" style="background:#fff;border-radius:16px 16px 16px 4px;padding:16px 18px;box-shadow:0 4px 20px rgba(0,0,0,0.1);flex:1;position:relative">
+            <div style="position:absolute;bottom:12px;left:-10px;width:0;height:0;border-top:8px solid transparent;border-bottom:8px solid transparent;border-right:10px solid #fff;filter:drop-shadow(-2px 0 2px rgba(0,0,0,0.05))"></div>
+            <div style="font-size:14px;color:#0f172a;line-height:1.6;font-weight:500">${sc.message}</div>
+          </div>
+        </div>
+
+        <!-- Agent side label -->
+        <div style="display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px dashed rgba(14,165,233,0.3)">
+          <div style="font-size:28px">🧑‍💼</div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#0369a1">YOU — Travel Agent</div>
+            <div style="font-size:11px;color:#64748b">How do you respond?</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Response Options -->
+      <div id="rp-options" style="display:grid;gap:10px">
+        ${sc.responses.map((r,i) => `
+          <button class="rp-opt" onclick="selectRPResponse(${i})" id="rp-opt-${i}"
+            style="text-align:left;padding:14px 18px;border:2px solid #e2e8f0;border-radius:14px;background:#fff;font-size:13px;color:#374151;cursor:pointer;font-family:Inter,sans-serif;display:flex;align-items:center;gap:12px;font-weight:500">
+            <span style="min-width:26px;height:26px;background:#f1f5f9;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#64748b;flex-shrink:0">${String.fromCharCode(65+i)}</span>
+            <span>${r.text}</span>
+          </button>`).join('')}
+      </div>
+
+      <!-- Feedback area -->
+      <div id="rp-feedback" style="display:none;margin-top:14px"></div>
+    </div>`;
+}
+
+function selectRPResponse(idx) {
+  if(rpState.answered) return;
+  rpState.answered = true;
+
+  const sc = RP_SCENARIOS[rpState.current];
+  const chosen = sc.responses[idx];
+  const isCorrect = chosen.correct;
+
+  // Animate character reaction
+  const char = document.querySelector('.rp-char');
+  if(char) {
+    char.textContent = isCorrect ? '😊' : '😕';
+    char.style.animation = isCorrect ? 'rp-bounce .5s ease-in-out 2' : 'rp-shake .4s ease-in-out 2';
+  }
+
+  // Color all buttons
+  sc.responses.forEach((r, i) => {
+    const btn = document.getElementById('rp-opt-' + i);
+    if(!btn) return;
+    btn.style.cursor = 'default';
+    btn.onclick = null;
+    btn.classList.remove('rp-opt');
+    if(r.correct) {
+      btn.style.background = '#f0fdf4';
+      btn.style.borderColor = '#16a34a';
+      btn.style.color = '#166534';
+      const badge = btn.querySelector('span');
+      if(badge) { badge.style.background = '#16a34a'; badge.style.color = '#fff'; }
+    } else if(i === idx && !r.correct) {
+      btn.style.background = '#fef2f2';
+      btn.style.borderColor = '#dc2626';
+      btn.style.color = '#991b1b';
+    }
+  });
+
+  // Score
+  if(isCorrect) rpState.score += 20;
+
+  // Feedback
+  const fb = document.getElementById('rp-feedback');
+  if(fb) {
+    fb.style.display = 'block';
+    fb.innerHTML = `
+      <div style="background:${isCorrect?'#f0fdf4':'#fff7ed'};border:2px solid ${isCorrect?'#86efac':'#fcd34d'};border-radius:14px;padding:16px 18px;animation:rp-slide-up .3s ease forwards">
+        <div style="font-size:15px;font-weight:800;color:${isCorrect?'#166534':'#92400e'};margin-bottom:6px">${isCorrect ? '✅ Great response!' : '❌ Not the best choice'}</div>
+        <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:10px">${chosen.feedback}</div>
+        <div style="background:#fffbeb;border-left:3px solid #f97316;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#92400e">💡 ${sc.tip}</div>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+          ${rpState.current < RP_SCENARIOS.length - 1
+            ? `<button onclick="nextRPScene()" style="padding:10px 22px;background:#f97316;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">Next Client →</button>`
+            : `<button onclick="renderRPComplete()" style="padding:10px 22px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🏆 See Final Score!</button>`
+          }
+          <button onclick="replayRPScene()" style="padding:10px 18px;background:#f1f5f9;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🔄 Try Again</button>
+        </div>
+      </div>`;
+  }
+}
+
+function nextRPScene() {
+  rpState.current++;
+  rpState.answered = false;
+  const area = document.getElementById('rp-game-area');
+  if(area) {
+    area.style.opacity = '0';
+    area.style.transform = 'translateX(20px)';
+    area.style.transition = 'all .25s ease';
+    setTimeout(() => {
+      area.style.opacity = '1';
+      area.style.transform = 'translateX(0)';
+      renderRPScene();
+    }, 250);
+  }
+}
+
+function replayRPScene() {
+  rpState.answered = false;
+  renderRPScene();
+}
+
+function renderRPComplete() {
+  const area = document.getElementById('rp-game-area');
+  if(!area) return;
+  const total = RP_SCENARIOS.length * 20;
+  const pct = Math.round((rpState.score / total) * 100);
+  const grade = pct >= 80 ? { label:'Expert Agent 🏆', color:'#f59e0b', msg:'Outstanding! You handled every client like a pro. Fenix Tours is proud of you!' }
+              : pct >= 60 ? { label:'Senior Agent ⭐', color:'#10b981', msg:'Good job! A few areas to polish. Try again to get a perfect score.' }
+              : pct >= 40 ? { label:'Growing Agent 📈', color:'#0ea5e9', msg:'Keep practising! Review the tips and try again — you will improve fast.' }
+              : { label:'Beginner Agent 🌱', color:'#6366f1', msg:'Every expert was once a beginner. Review the tips and give it another shot!' };
+
+  area.innerHTML = `
+    <div style="background:#fff;border-radius:20px;border:2px solid #e2e8f0;padding:32px;text-align:center;animation:rp-slide-up .4s ease forwards">
+      <div style="font-size:56px;margin-bottom:12px">${pct>=80?'🏆':pct>=60?'⭐':pct>=40?'💪':'📚'}</div>
+      <div style="font-size:13px;font-weight:700;color:${grade.color};background:${grade.color}15;display:inline-block;padding:4px 16px;border-radius:99px;margin-bottom:12px">${grade.label}</div>
+      <div style="font-size:36px;font-weight:900;color:#0f172a;margin-bottom:4px">${rpState.score} / ${total}</div>
+      <div style="font-size:16px;color:#64748b;font-weight:600;margin-bottom:16px">${pct}% correct responses</div>
+      <div style="background:#f8fafc;border-radius:12px;padding:14px 18px;font-size:13px;color:#374151;line-height:1.6;margin-bottom:20px;text-align:left">${grade.msg}</div>
+      <div style="display:grid;grid-template-columns:repeat(${RP_SCENARIOS.length},1fr);gap:6px;margin-bottom:20px">
+        ${RP_SCENARIOS.map((sc,i) => `
+          <div style="text-align:center;font-size:22px;filter:${i<rpState.current+1?'none':'grayscale(1)'}">
+            ${sc.clientEmoji}
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button onclick="rpState.current=0;rpState.score=0;renderRPScene()" style="padding:12px 28px;background:#f97316;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">🔄 Play Again</button>
+        <button onclick="setTrainingSection('scenarios')" style="padding:12px 20px;background:#f1f5f9;color:#374151;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Back to Scenarios</button>
+      </div>
+    </div>`;
+}
+
+// ═══════════════ END ROLE PLAY MODULE ═══════════════
+
 
 
 // ═══════════════════════════════════════════════
