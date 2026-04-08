@@ -1965,6 +1965,197 @@ const VISA_STATUS=["Pending","Submitted","Approved","Rejected"];
 const INTL_DESTINATIONS=["Dubai","Singapore","Thailand","Bali","Maldives","Malaysia","Sri Lanka","Hong Kong","Japan","Europe","USA","Canada","Australia","New Zealand","Mauritius","Switzerland","Turkey","Egypt","Nepal","Bhutan","Vietnam","Cambodia","South Korea","Other International"];
 const DOM_DESTINATIONS=["Goa","Kerala","Rajasthan","Himachal Pradesh","Uttarakhand","Kashmir","Andaman","Lakshadweep","Manali","Shimla","Ooty","Coorg","Munnar","Jaipur","Udaipur","Varanasi","Agra","Mumbai","Delhi","Chennai","Other Domestic"];
 
+// ── Booking City Maps ──────────────────────────────
+const BK_CITY_MAP = {
+  "Afghanistan":["Kabul","Kandahar","Mazar-i-Sharif"],"Albania":["Tirana","Berat","Gjirokastër"],"Algeria":["Algiers","Oran","Constantine"],
+  "Argentina":["Buenos Aires","Mendoza","Bariloche","Iguazu"],"Armenia":["Yerevan","Gyumri"],"Australia":["Sydney","Melbourne","Brisbane","Perth","Cairns","Gold Coast"],
+  "Austria":["Vienna","Salzburg","Innsbruck","Hallstatt"],"Azerbaijan":["Baku","Sheki","Ganja"],"Bahrain":["Manama","Muharraq"],
+  "Bangladesh":["Dhaka","Chittagong","Cox's Bazar"],"Belgium":["Brussels","Bruges","Ghent","Antwerp"],"Bhutan":["Thimphu","Paro","Punakha"],
+  "Brazil":["Rio de Janeiro","São Paulo","Iguazu","Salvador","Manaus"],"Cambodia":["Siem Reap","Phnom Penh","Sihanoukville"],
+  "Canada":["Toronto","Vancouver","Montreal","Banff","Quebec City","Calgary"],"Chile":["Santiago","Valparaíso","Atacama","Torres del Paine"],
+  "China":["Beijing","Shanghai","Xi'an","Guilin","Chengdu","Hong Kong"],"Colombia":["Bogotá","Medellín","Cartagena"],
+  "Croatia":["Dubrovnik","Split","Zagreb","Hvar"],"Cuba":["Havana","Trinidad","Varadero"],"Cyprus":["Nicosia","Limassol","Paphos"],
+  "Czech Republic":["Prague","Brno","Ceský Krumlov"],"Denmark":["Copenhagen","Aarhus","Odense"],
+  "Egypt":["Cairo","Luxor","Aswan","Hurghada","Alexandria","Sharm El Sheikh"],"Estonia":["Tallinn","Tartu"],
+  "Ethiopia":["Addis Ababa","Lalibela","Gondar"],"Finland":["Helsinki","Rovaniemi","Turku"],"France":["Paris","Nice","Lyon","Bordeaux","Strasbourg","Marseille"],
+  "Georgia":["Tbilisi","Batumi","Kazbegi","Kutaisi"],"Germany":["Berlin","Munich","Hamburg","Frankfurt","Cologne","Heidelberg"],
+  "Ghana":["Accra","Kumasi","Cape Coast"],"Greece":["Athens","Santorini","Mykonos","Crete","Rhodes","Thessaloniki"],
+  "Hungary":["Budapest","Pécs","Debrecen"],"Iceland":["Reykjavik","Akureyri","Vik"],"Indonesia":["Bali","Jakarta","Lombok","Yogyakarta","Komodo"],
+  "Iran":["Tehran","Isfahan","Shiraz","Yazd"],"Iraq":["Baghdad","Erbil"],"Ireland":["Dublin","Cork","Galway","Killarney"],
+  "Israel":["Tel Aviv","Jerusalem","Haifa","Eilat"],"Italy":["Rome","Venice","Florence","Milan","Naples","Amalfi","Cinque Terre"],
+  "Jamaica":["Kingston","Montego Bay","Ocho Rios","Negril"],"Japan":["Tokyo","Kyoto","Osaka","Hiroshima","Nara","Sapporo"],
+  "Jordan":["Amman","Petra","Wadi Rum","Aqaba"],"Kazakhstan":["Almaty","Astana","Shymkent"],
+  "Kenya":["Nairobi","Mombasa","Masai Mara","Amboseli"],"Kuwait":["Kuwait City"],"Kyrgyzstan":["Bishkek","Karakol"],
+  "Laos":["Vientiane","Luang Prabang","Vang Vieng"],"Latvia":["Riga","Jurmala"],"Lebanon":["Beirut","Byblos","Baalbek"],
+  "Lithuania":["Vilnius","Kaunas"],"Luxembourg":["Luxembourg City"],"Malaysia":["Kuala Lumpur","Penang","Langkawi","Malacca","Kota Kinabalu"],
+  "Maldives":["Malé","Maafushi","Baa Atoll","North Malé Atoll"],"Malta":["Valletta","Mdina","Gozo"],"Mexico":["Mexico City","Cancún","Tulum","Oaxaca"],
+  "Moldova":["Chișinău"],"Mongolia":["Ulaanbaatar","Gobi Desert"],"Morocco":["Marrakech","Fez","Casablanca","Chefchaouen","Merzouga"],
+  "Myanmar":["Yangon","Bagan","Mandalay","Inle Lake"],"Nepal":["Kathmandu","Pokhara","Chitwan","Lumbini"],
+  "Netherlands":["Amsterdam","Rotterdam","The Hague","Utrecht"],"New Zealand":["Auckland","Queenstown","Christchurch","Wellington"],
+  "Nigeria":["Lagos","Abuja"],"Norway":["Oslo","Bergen","Tromsø","Flåm"],"Oman":["Muscat","Salalah","Nizwa"],
+  "Pakistan":["Lahore","Islamabad","Karachi","Hunza"],"Peru":["Lima","Cusco","Machu Picchu","Puno"],
+  "Philippines":["Manila","Cebu","Palawan","Boracay","Davao"],"Poland":["Warsaw","Kraków","Gdańsk","Wrocław"],
+  "Portugal":["Lisbon","Porto","Algarve","Sintra"],"Qatar":["Doha"],"Romania":["Bucharest","Sibiu","Brasov"],
+  "Russia":["Moscow","St. Petersburg","Kazan","Sochi"],"Rwanda":["Kigali","Musanze"],"Saudi Arabia":["Riyadh","Jeddah","AlUla","Mecca"],
+  "Serbia":["Belgrade","Novi Sad"],"Singapore":["Singapore City","Sentosa","Marina Bay","Orchard","Chinatown"],
+  "Slovakia":["Bratislava","Košice"],"Slovenia":["Ljubljana","Bled","Piran"],"South Africa":["Cape Town","Johannesburg","Durban","Kruger"],
+  "South Korea":["Seoul","Busan","Jeju Island","Gyeongju"],"Spain":["Madrid","Barcelona","Seville","Granada","Ibiza","Mallorca"],
+  "Sri Lanka":["Colombo","Kandy","Galle","Sigiriya","Nuwara Eliya","Ella"],"Sweden":["Stockholm","Gothenburg","Malmö"],
+  "Switzerland":["Zurich","Geneva","Interlaken","Lucerne","Zermatt","Lausanne"],"Taiwan":["Taipei","Taichung","Hualien"],
+  "Tanzania":["Dar es Salaam","Arusha","Zanzibar","Serengeti"],"Thailand":["Bangkok","Phuket","Chiang Mai","Pattaya","Koh Samui","Krabi"],
+  "Tunisia":["Tunis","Sousse","Djerba"],"Turkey":["Istanbul","Cappadocia","Antalya","Bodrum","Pamukkale","Ephesus"],
+  "UAE":["Dubai","Abu Dhabi","Sharjah","Ajman","Ras Al Khaimah"],"Ukraine":["Kyiv","Lviv","Odessa"],
+  "United Kingdom":["London","Edinburgh","Manchester","Oxford","Bath","Liverpool","Cambridge"],
+  "United States":["New York","Los Angeles","Las Vegas","San Francisco","Miami","Chicago","Washington DC","Orlando"],
+  "Uruguay":["Montevideo","Punta del Este"],"Uzbekistan":["Tashkent","Samarkand","Bukhara","Khiva"],
+  "Venezuela":["Caracas","Angel Falls"],"Vietnam":["Hanoi","Ho Chi Minh City","Hoi An","Da Nang","Ha Long Bay"],
+  "Zambia":["Lusaka","Livingstone"],"Zimbabwe":["Harare","Victoria Falls"]
+};
+
+const BK_DOM_CITY_MAP = {
+  "Andhra Pradesh":["Visakhapatnam","Vijayawada","Tirupati","Araku Valley"],
+  "Arunachal Pradesh":["Tawang","Ziro","Itanagar","Along"],
+  "Assam":["Guwahati","Jorhat","Kaziranga","Majuli"],
+  "Bihar":["Patna","Bodh Gaya","Rajgir","Vaishali"],
+  "Chhattisgarh":["Raipur","Jagdalpur","Chitrakote"],
+  "Goa":["Panaji","North Goa","South Goa","Calangute","Baga","Vagator","Anjuna","Palolem"],
+  "Gujarat":["Ahmedabad","Surat","Vadodara","Rajkot","Dwarka","Somnath","Rann of Kutch","Gir","Saputara","Statue of Unity"],
+  "Haryana":["Gurgaon","Chandigarh","Kurukshetra","Faridabad"],
+  "Himachal Pradesh":["Shimla","Manali","Dharamshala","Kullu","Spiti Valley","Kasol","Dalhousie","Chail"],
+  "Jammu & Kashmir":["Srinagar","Gulmarg","Pahalgam","Sonmarg","Jammu","Ladakh","Leh"],
+  "Jharkhand":["Ranchi","Jamshedpur","Deoghar"],
+  "Karnataka":["Bangalore","Mysore","Coorg","Hampi","Mangalore","Chikmagalur","Dandeli","Sakleshpur"],
+  "Kerala":["Kochi","Munnar","Alleppey","Thekkady","Kovalam","Wayanad","Thrissur","Kozhikode","Varkala"],
+  "Ladakh":["Leh","Nubra Valley","Pangong Lake","Khardung La","Zanskar"],
+  "Lakshadweep":["Kavaratti","Agatti","Bangaram","Minicoy"],
+  "Madhya Pradesh":["Indore","Bhopal","Khajuraho","Orchha","Pachmarhi","Kanha","Bandhavgarh"],
+  "Maharashtra":["Mumbai","Pune","Nashik","Aurangabad","Lonavala","Mahabaleshwar","Shirdi","Alibaug"],
+  "Manipur":["Imphal","Loktak Lake"],"Meghalaya":["Shillong","Cherrapunji","Dawki"],
+  "Mizoram":["Aizawl"],"Nagaland":["Kohima","Hornbill Festival"],
+  "Odisha":["Bhubaneswar","Puri","Konark","Chilika Lake"],
+  "Punjab":["Amritsar","Chandigarh","Ludhiana","Anandpur Sahib"],
+  "Rajasthan":["Jaipur","Udaipur","Jodhpur","Jaisalmer","Pushkar","Ranthambore","Chittorgarh","Bikaner","Mount Abu"],
+  "Sikkim":["Gangtok","Pelling","Lachung","Namchi"],
+  "Tamil Nadu":["Chennai","Ooty","Kodaikanal","Madurai","Kanchipuram","Rameswaram","Coimbatore","Vellore"],
+  "Telangana":["Hyderabad","Warangal","Nagarjunasagar"],
+  "Tripura":["Agartala","Neermahal"],"Uttarakhand":["Dehradun","Haridwar","Rishikesh","Nainital","Mussoorie","Auli","Kedarnath","Badrinath","Corbett"],
+  "Uttar Pradesh":["Agra","Varanasi","Lucknow","Mathura","Vrindavan","Allahabad","Ayodhya"],
+  "West Bengal":["Kolkata","Darjeeling","Gangtok","Sundarbans","Digha"],
+  "Andaman & Nicobar":["Port Blair","Havelock Island","Neil Island","Baratang"],
+};
+
+// ── City Picker State ──────────────────────────────
+let _bkSelectedCities = [];
+let _bkCityPool = [];
+
+function bkLoadCities(type) {
+  const key = type === 'intl'
+    ? document.getElementById('b-dest-country')?.value
+    : document.getElementById('b-dest-state')?.value;
+  const row = document.getElementById('b-city-row');
+  if(!key || !row) return;
+  row.style.display = '';
+  _bkSelectedCities = [];
+  _bkCityPool = type === 'intl'
+    ? (BK_CITY_MAP[key] || [])
+    : (BK_DOM_CITY_MAP[key] || []);
+  bkRenderTags();
+  bkRenderDropdown('');
+  document.getElementById('b-dest').value = key;
+  document.getElementById('b-city-search')?.focus();
+}
+
+function bkRenderTags() {
+  const tagsEl = document.getElementById('b-city-tags');
+  const search = document.getElementById('b-city-search');
+  if(!tagsEl || !search) return;
+  // Remove old tags
+  tagsEl.querySelectorAll('.bk-city-tag').forEach(t => t.remove());
+  // Rebuild tags before search input
+  _bkSelectedCities.forEach(city => {
+    const tag = document.createElement('div');
+    tag.className = 'bk-city-tag';
+    tag.style.cssText = 'display:flex;align-items:center;gap:4px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600;white-space:nowrap';
+    tag.innerHTML = city + '<span onclick="bkRemoveCity('' + city.replace(/'/g,"\'") + '')" style="cursor:pointer;font-size:14px;line-height:1;color:#6b7280;margin-left:2px">×</span>';
+    tagsEl.insertBefore(tag, search);
+  });
+  // Update hidden dest value
+  const hidden = document.getElementById('b-dest');
+  const countryState = document.getElementById('b-dest-country')?.value || document.getElementById('b-dest-state')?.value || '';
+  if(hidden) hidden.value = _bkSelectedCities.length
+    ? countryState + ' — ' + _bkSelectedCities.join(', ')
+    : countryState;
+}
+
+function bkRenderDropdown(filter) {
+  const dd = document.getElementById('b-city-dropdown');
+  if(!dd) return;
+  const f = filter.toLowerCase().trim();
+  const notSelected = _bkCityPool.filter(c => !_bkSelectedCities.includes(c));
+  const filtered = f ? notSelected.filter(c => c.toLowerCase().includes(f)) : notSelected;
+
+  if(!filtered.length && f) {
+    dd.style.display = '';
+    dd.innerHTML = `<div onclick="bkAddCustomCity('${filter.trim().replace(/'/g,"\'")}' )" style="padding:10px 14px;font-size:12px;color:#059669;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+      <span style="font-size:16px">+</span> Add "<b>${filter.trim()}</b>" as custom city</div>`;
+    return;
+  }
+  dd.style.display = filtered.length ? '' : 'none';
+  dd.innerHTML = filtered.map(c => `
+    <div onclick="bkSelectCity('${c.replace(/'/g,"\'")}' )"
+      style="padding:9px 14px;font-size:13px;cursor:pointer;color:#0f172a"
+      onmouseover="this.style.background='#eff6ff'" onmouseout="this.style.background=''">
+      ${c}
+    </div>`).join('');
+}
+
+function bkFilterCities(val) {
+  bkRenderDropdown(val);
+  document.getElementById('b-city-dropdown').style.display = '';
+}
+
+function bkSelectCity(city) {
+  if(!_bkSelectedCities.includes(city)) {
+    _bkSelectedCities.push(city);
+    bkRenderTags();
+  }
+  const search = document.getElementById('b-city-search');
+  if(search) { search.value = ''; }
+  bkRenderDropdown('');
+  document.getElementById('b-city-dropdown').style.display = 'none';
+  search?.focus();
+}
+
+function bkAddCustomCity(city) {
+  if(city && !_bkSelectedCities.includes(city)) {
+    _bkCityPool.push(city);
+    bkSelectCity(city);
+  }
+}
+
+function bkRemoveCity(city) {
+  _bkSelectedCities = _bkSelectedCities.filter(c => c !== city);
+  bkRenderTags();
+}
+
+function bkCityKeydown(e) {
+  const val = e.target.value.trim();
+  if(e.key === 'Enter' && val) { e.preventDefault(); bkAddCustomCity(val); return; }
+  if(e.key === 'Backspace' && !val && _bkSelectedCities.length) {
+    _bkSelectedCities.pop();
+    bkRenderTags();
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', e => {
+  if(!e.target.closest('#b-city-picker')) {
+    const dd = document.getElementById('b-city-dropdown');
+    if(dd) dd.style.display = 'none';
+  }
+});
+
+
 let clients=[];
 let enquiries=[];
 let bookings=[];
@@ -5743,13 +5934,53 @@ function updateBkForm() {
 
   const amtFields = `<div class="form-grid"><div class="fg"><label>Total Amount (₹)</label><input type="number" id="b-amt" placeholder="Total"/></div><div class="fg"><label>Amount Paid (₹)</label><input type="number" id="b-paid" value="0"/></div></div>`;
 
-  const intlDest = `<div class="form-grid"><div class="fg"><label>Country / Destination</label>
-    <select id="b-dest"><option value="">Select Country...</option>$<option value="Afghanistan">Afghanistan</option><option value="Albania">Albania</option><option value="Algeria">Algeria</option><option value="Andorra">Andorra</option><option value="Angola">Angola</option><option value="Argentina">Argentina</option><option value="Armenia">Armenia</option><option value="Australia">Australia</option><option value="Austria">Austria</option><option value="Azerbaijan">Azerbaijan</option><option value="Bahrain">Bahrain</option><option value="Bangladesh">Bangladesh</option><option value="Belgium">Belgium</option><option value="Bhutan">Bhutan</option><option value="Bolivia">Bolivia</option><option value="Brazil">Brazil</option><option value="Brunei">Brunei</option><option value="Bulgaria">Bulgaria</option><option value="Cambodia">Cambodia</option><option value="Canada">Canada</option><option value="Chile">Chile</option><option value="China">China</option><option value="Colombia">Colombia</option><option value="Croatia">Croatia</option><option value="Cuba">Cuba</option><option value="Cyprus">Cyprus</option><option value="Czech Republic">Czech Republic</option><option value="Denmark">Denmark</option><option value="Egypt">Egypt</option><option value="Estonia">Estonia</option><option value="Ethiopia">Ethiopia</option><option value="Fiji">Fiji</option><option value="Finland">Finland</option><option value="France">France</option><option value="Georgia">Georgia</option><option value="Germany">Germany</option><option value="Ghana">Ghana</option><option value="Greece">Greece</option><option value="Guatemala">Guatemala</option><option value="Hungary">Hungary</option><option value="Iceland">Iceland</option><option value="India">India</option><option value="Indonesia">Indonesia</option><option value="Iran">Iran</option><option value="Iraq">Iraq</option><option value="Ireland">Ireland</option><option value="Israel">Israel</option><option value="Italy">Italy</option><option value="Jamaica">Jamaica</option><option value="Japan">Japan</option><option value="Jordan">Jordan</option><option value="Kazakhstan">Kazakhstan</option><option value="Kenya">Kenya</option><option value="Kuwait">Kuwait</option><option value="Kyrgyzstan">Kyrgyzstan</option><option value="Laos">Laos</option><option value="Latvia">Latvia</option><option value="Lebanon">Lebanon</option><option value="Lithuania">Lithuania</option><option value="Luxembourg">Luxembourg</option><option value="Malaysia">Malaysia</option><option value="Maldives">Maldives</option><option value="Malta">Malta</option><option value="Mexico">Mexico</option><option value="Moldova">Moldova</option><option value="Monaco">Monaco</option><option value="Mongolia">Mongolia</option><option value="Morocco">Morocco</option><option value="Myanmar">Myanmar</option><option value="Nepal">Nepal</option><option value="Netherlands">Netherlands</option><option value="New Zealand">New Zealand</option><option value="Nigeria">Nigeria</option><option value="Norway">Norway</option><option value="Oman">Oman</option><option value="Pakistan">Pakistan</option><option value="Palestine">Palestine</option><option value="Panama">Panama</option><option value="Peru">Peru</option><option value="Philippines">Philippines</option><option value="Poland">Poland</option><option value="Portugal">Portugal</option><option value="Qatar">Qatar</option><option value="Romania">Romania</option><option value="Russia">Russia</option><option value="Saudi Arabia">Saudi Arabia</option><option value="Serbia">Serbia</option><option value="Singapore">Singapore</option><option value="Slovakia">Slovakia</option><option value="Slovenia">Slovenia</option><option value="South Africa">South Africa</option><option value="South Korea">South Korea</option><option value="Spain">Spain</option><option value="Sri Lanka">Sri Lanka</option><option value="Sudan">Sudan</option><option value="Sweden">Sweden</option><option value="Switzerland">Switzerland</option><option value="Syria">Syria</option><option value="Taiwan">Taiwan</option><option value="Thailand">Thailand</option><option value="Tunisia">Tunisia</option><option value="Turkey">Turkey</option><option value="UAE">UAE</option><option value="Ukraine">Ukraine</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Uruguay">Uruguay</option><option value="Uzbekistan">Uzbekistan</option><option value="Venezuela">Venezuela</option><option value="Vietnam">Vietnam</option><option value="Yemen">Yemen</option><option value="Zimbabwe">Zimbabwe</option></select>
-  </div><div class="fg"><label>Travel Date</label><input type="date" id="b-date"/></div></div>`;
+  const intlDest = `<div class="form-grid">
+    <div class="fg"><label>Country / Destination</label>
+      <select id="b-dest-country" onchange="bkLoadCities('intl')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+        <option value="">Select Country...</option>
+        ${Object.keys(BK_CITY_MAP).sort().map(c=>`<option value="${c}">${c}</option>`).join("")}
+      </select>
+    </div>
+    <div class="fg"><label>Travel Date</label><input type="date" id="b-date"/></div>
+  </div>
+  <div class="form-grid" id="b-city-row" style="display:none">
+    <div class="fg"><label>Cities / Places <span style="font-size:10px;color:#64748b;font-weight:400">(select multiple or type custom)</span></label>
+      <div id="b-city-picker" style="border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;min-height:42px;padding:6px 8px;cursor:text;position:relative" onclick="document.getElementById('b-city-search').focus()">
+        <div id="b-city-tags" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+          <input id="b-city-search" placeholder="Search or type city..." autocomplete="off"
+            oninput="bkFilterCities(this.value)"
+            onkeydown="bkCityKeydown(event)"
+            style="border:none;outline:none;font-size:13px;min-width:120px;flex:1;padding:2px 4px;background:transparent"/>
+        </div>
+        <div id="b-city-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:9999;max-height:200px;overflow-y:auto;margin-top:2px"></div>
+      </div>
+      <input type="hidden" id="b-dest"/>
+    </div>
+  </div>\``;
 
-  const domDest = `<div class="form-grid"><div class="fg"><label>Domestic Destination</label>
-    <select id="b-dest"><option value="">Select...</option>${DOM_DESTINATIONS.map(d=>`<option>${d}</option>`).join("")}</select>
-  </div><div class="fg"><label>Travel Date</label><input type="date" id="b-date"/></div></div>`;
+  const domDest = `<div class="form-grid">
+    <div class="fg"><label>State</label>
+      <select id="b-dest-state" onchange="bkLoadCities('dom')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+        <option value="">Select State...</option>
+        ${Object.keys(BK_DOM_CITY_MAP).sort().map(s=>`<option value="${s}">${s}</option>`).join("")}
+      </select>
+    </div>
+    <div class="fg"><label>Travel Date</label><input type="date" id="b-date"/></div>
+  </div>
+  <div class="form-grid" id="b-city-row" style="display:none">
+    <div class="fg"><label>Cities / Places <span style="font-size:10px;color:#64748b;font-weight:400">(select multiple or type custom)</span></label>
+      <div id="b-city-picker" style="border:1.5px solid #e2e8f0;border-radius:8px;background:#fff;min-height:42px;padding:6px 8px;cursor:text;position:relative" onclick="document.getElementById('b-city-search').focus()">
+        <div id="b-city-tags" style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+          <input id="b-city-search" placeholder="Search or type city..." autocomplete="off"
+            oninput="bkFilterCities(this.value)"
+            onkeydown="bkCityKeydown(event)"
+            style="border:none;outline:none;font-size:13px;min-width:120px;flex:1;padding:2px 4px;background:transparent"/>
+        </div>
+        <div id="b-city-dropdown" style="display:none;position:absolute;left:0;right:0;top:100%;background:#fff;border:1.5px solid #e2e8f0;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:9999;max-height:200px;overflow-y:auto;margin-top:2px"></div>
+      </div>
+      <input type="hidden" id="b-dest"/>
+    </div>
+  </div>\``;
 
   if(cat==="International Tours") {
     wrap.innerHTML = intlDest + `
