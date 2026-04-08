@@ -1234,7 +1234,15 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <!-- LEADERBOARD (always visible below) -->
       <!-- ROLE PLAY PANEL (top-level academy tab) -->
       <div id="roleplay-panel" style="display:none">
+        <!-- Mode tabs -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+          <button onclick="setRPMode('play')" id="rpm-play" style="padding:8px 18px;background:#f97316;color:#fff;border:none;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer">🎬 Play Scenarios</button>
+          <button onclick="setRPMode('custom')" id="rpm-custom" style="padding:8px 18px;background:#fff;color:#64748b;border:1.5px solid #e2e8f0;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer">✏️ Custom Questions</button>
+          <button onclick="setRPMode('inbox')" id="rpm-inbox" style="padding:8px 18px;background:#fff;color:#64748b;border:1.5px solid #e2e8f0;border-radius:99px;font-size:12px;font-weight:700;cursor:pointer">📬 Inbox <span id="rp-inbox-badge" style="display:none;background:#ef4444;color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:4px">0</span></button>
+        </div>
         <div id="rp-academy-area"></div>
+        <div id="rp-custom-area" style="display:none"></div>
+        <div id="rp-inbox-area" style="display:none"></div>
       </div>
 
       <div id="academy-leaderboard-wrap" style="margin-top:24px">
@@ -7291,13 +7299,14 @@ async function loadThContent() {
 function initAcademyRolePlay() {
   const area = document.getElementById('rp-academy-area');
   if(!area) return;
-  // Reuse existing renderThRolePlay which targets rp-game-area
   area.innerHTML = '<div id="rp-game-area"></div>';
   buildRPScenarios();
   rpState.current = 0;
   rpState.score = 0;
   rpState.answered = false;
   renderRPScene();
+  setRPMode('play');
+  updateRPInboxBadge();
 }
 
 // ═══════════════════════════════════════════════
@@ -7634,6 +7643,323 @@ function renderRPComplete() {
 }
 
 // ═══════════════ END ROLE PLAY MODULE ═══════════════
+
+// ═══════════════════════════════════════════════
+//  ROLE PLAY — CUSTOM QUESTIONS SYSTEM
+// ═══════════════════════════════════════════════
+
+function setRPMode(mode) {
+  ['play','custom','inbox'].forEach(m => {
+    const btn = document.getElementById('rpm-' + m);
+    if(!btn) return;
+    btn.style.background = m === mode ? '#f97316' : '#fff';
+    btn.style.color      = m === mode ? '#fff'    : '#64748b';
+    btn.style.border     = m === mode ? 'none'    : '1.5px solid #e2e8f0';
+  });
+  document.getElementById('rp-academy-area').style.display  = mode === 'play'   ? '' : 'none';
+  document.getElementById('rp-custom-area').style.display   = mode === 'custom' ? '' : 'none';
+  document.getElementById('rp-inbox-area').style.display    = mode === 'inbox'  ? '' : 'none';
+
+  if(mode === 'custom') renderRPCustomForm();
+  if(mode === 'inbox')  renderRPInbox();
+  if(mode === 'play') {
+    buildRPScenarios();
+    rpState.current = 0; rpState.score = 0; rpState.answered = false;
+    renderRPScene();
+  }
+}
+
+function renderRPCustomForm() {
+  const el = document.getElementById('rp-custom-area');
+  if(!el) return;
+
+  const others = STAFF.filter(s => s.id !== (CURRENT_USER?.id || 0));
+  const staffOptions = others.map(s => {
+    const cl = STAFF_COLORS[s.id] || {bg:'#64748b',color:'#fff'};
+    return `<option value="${s.id}">${s.name} (${s.role})</option>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+      <!-- LEFT: Create Question -->
+      <div style="background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:20px">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">✏️ Create a Question</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:16px">Challenge a colleague with a real scenario</div>
+
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Send To</label>
+          <select id="rp-to-staff" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+            <option value="">-- Select Staff --</option>
+            ${staffOptions}
+          </select>
+        </div>
+
+        <div style="margin-bottom:12px">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Scenario / Question</label>
+          <textarea id="rp-q-situation" rows="3" placeholder="e.g. A client is angry about hotel quality and demanding a full refund. How do you respond?"
+            style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:Inter,sans-serif;resize:vertical;box-sizing:border-box;outline:none"></textarea>
+        </div>
+
+        <div style="margin-bottom:4px">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Answer Options (mark correct with ✓)</label>
+        </div>
+
+        ${[0,1,2,3].map(i => `
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <input type="checkbox" id="rp-correct-${i}" title="Mark as correct answer" style="flex-shrink:0;width:16px;height:16px;accent-color:#10b981">
+            <input id="rp-opt-${i}" placeholder="Option ${String.fromCharCode(65+i)}"
+              style="flex:1;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box">
+          </div>`).join('')}
+
+        <div style="margin-top:12px;margin-bottom:12px">
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Pro Tip (shown after answer)</label>
+          <input id="rp-q-tip" placeholder="e.g. Always apologize first, then take action."
+            style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box">
+        </div>
+
+        <button onclick="sendRPQuestion()" style="width:100%;padding:11px;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">
+          🚀 Send Question
+        </button>
+      </div>
+
+      <!-- RIGHT: My Sent Questions -->
+      <div style="background:#fff;border:2px solid #e2e8f0;border-radius:16px;padding:20px">
+        <div style="font-size:14px;font-weight:800;color:#0f172a;margin-bottom:4px">📤 Questions I Sent</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:14px">Track who answered and how</div>
+        <div id="rp-sent-list">
+          <div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Loading...</div>
+        </div>
+      </div>
+    </div>`;
+
+  loadRPSentQuestions();
+}
+
+async function sendRPQuestion() {
+  const toId   = parseInt(document.getElementById('rp-to-staff')?.value);
+  const sit    = document.getElementById('rp-q-situation')?.value.trim();
+  const tip    = document.getElementById('rp-q-tip')?.value.trim();
+  const opts   = [0,1,2,3].map(i => ({
+    text:    document.getElementById('rp-opt-'+i)?.value.trim(),
+    correct: document.getElementById('rp-correct-'+i)?.checked || false,
+    feedback: document.getElementById('rp-correct-'+i)?.checked
+      ? '✅ Correct! Great response.'
+      : '❌ Not the best choice. Review the tip.'
+  })).filter(o => o.text);
+
+  if(!toId)  return alert('Please select a staff member to send to.');
+  if(!sit)   return alert('Please write a scenario / question.');
+  if(opts.length < 2) return alert('Please add at least 2 answer options.');
+  if(!opts.some(o => o.correct)) return alert('Please mark at least one correct answer.');
+
+  const toStaff = STAFF.find(s => s.id === toId);
+  const fromStaff = CURRENT_USER;
+
+  const doc = {
+    fromId:    fromStaff.id,
+    fromName:  fromStaff.name,
+    fromInit:  fromStaff.initials,
+    toId:      toId,
+    toName:    toStaff?.name || '',
+    situation: sit,
+    options:   opts,
+    tip:       tip || '',
+    sentAt:    new Date().toISOString(),
+    answered:  false,
+    answeredCorrect: null,
+    answeredAt: null,
+  };
+
+  try {
+    await db.collection('rpQuestions').add(doc);
+    // Clear form
+    document.getElementById('rp-q-situation').value = '';
+    document.getElementById('rp-q-tip').value = '';
+    [0,1,2,3].forEach(i => {
+      document.getElementById('rp-opt-'+i).value = '';
+      document.getElementById('rp-correct-'+i).checked = false;
+    });
+    document.getElementById('rp-to-staff').value = '';
+    alert('✅ Question sent to ' + toStaff?.name + '!');
+    loadRPSentQuestions();
+    updateRPInboxBadge();
+  } catch(e) {
+    alert('❌ Failed to send. Try again.');
+  }
+}
+
+async function loadRPSentQuestions() {
+  const el = document.getElementById('rp-sent-list');
+  if(!el || !CURRENT_USER) return;
+  try {
+    const snap = await db.collection('rpQuestions')
+      .where('fromId','==', CURRENT_USER.id)
+      .orderBy('sentAt','desc').limit(20).get();
+
+    if(snap.empty) {
+      el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">No questions sent yet.<br>Create one on the left!</div>';
+      return;
+    }
+
+    el.innerHTML = snap.docs.map(doc => {
+      const d = doc.data();
+      const toStaff = STAFF.find(s => s.id === d.toId);
+      const cl = STAFF_COLORS[d.toId] || {bg:'#64748b',color:'#fff'};
+      const status = d.answered
+        ? (d.answeredCorrect ? '<span style="color:#10b981;font-weight:700">✅ Answered correctly</span>' : '<span style="color:#ef4444;font-weight:700">❌ Answered wrong</span>')
+        : '<span style="color:#f59e0b;font-weight:700">⏳ Pending</span>';
+
+      return `<div style="border:1.5px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="width:30px;height:30px;border-radius:50%;background:${cl.bg};color:${cl.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0">${toStaff?.initials||'?'}</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#0f172a">To: ${d.toName}</div>
+            <div style="font-size:10px;color:#94a3b8">${new Date(d.sentAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+          </div>
+          <div style="margin-left:auto;font-size:11px">${status}</div>
+        </div>
+        <div style="font-size:12px;color:#374151;line-height:1.5;background:#f8fafc;border-radius:8px;padding:8px">${d.situation.substring(0,100)}${d.situation.length>100?'...':''}</div>
+        <button onclick="deleteRPQuestion('${doc.id}')" style="margin-top:8px;padding:4px 10px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer">🗑 Delete</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ef4444;font-size:12px;padding:12px">Error loading. Try again.</div>';
+  }
+}
+
+async function deleteRPQuestion(docId) {
+  if(!confirm('Delete this question?')) return;
+  try {
+    await db.collection('rpQuestions').doc(docId).delete();
+    loadRPSentQuestions();
+  } catch(e) { alert('Delete failed.'); }
+}
+
+async function renderRPInbox() {
+  const el = document.getElementById('rp-inbox-area');
+  if(!el || !CURRENT_USER) return;
+  el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Loading inbox...</div>';
+
+  try {
+    const snap = await db.collection('rpQuestions')
+      .where('toId','==', CURRENT_USER.id)
+      .orderBy('sentAt','desc').limit(30).get();
+
+    if(snap.empty) {
+      el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#94a3b8">
+        <div style="font-size:36px;margin-bottom:12px">📬</div>
+        <div style="font-size:14px;font-weight:600">No questions yet</div>
+        <div style="font-size:12px;margin-top:6px">When a colleague sends you a scenario, it will appear here.</div>
+      </div>`;
+      return;
+    }
+
+    const pending = snap.docs.filter(d => !d.data().answered);
+    const done    = snap.docs.filter(d =>  d.data().answered);
+
+    let html = '';
+
+    if(pending.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:#f97316;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">⏳ ${pending.length} Pending</div>`;
+      html += pending.map(doc => renderInboxCard(doc, false)).join('');
+    }
+
+    if(done.length) {
+      html += `<div style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:16px 0 10px">✅ Answered (${done.length})</div>`;
+      html += done.map(doc => renderInboxCard(doc, true)).join('');
+    }
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:#ef4444;font-size:12px;padding:12px">Error loading inbox.</div>';
+  }
+}
+
+function renderInboxCard(doc, answered) {
+  const d = doc.data();
+  const fromStaff = STAFF.find(s => s.id === d.fromId);
+  const cl = STAFF_COLORS[d.fromId] || {bg:'#64748b',color:'#fff'};
+
+  const optsHtml = answered
+    ? d.options.map((o,i) => `
+        <div style="padding:10px 14px;border:2px solid ${o.correct?'#16a34a':'#e2e8f0'};border-radius:10px;font-size:12px;margin-bottom:6px;background:${o.correct?'#f0fdf4':'#fff'};color:${o.correct?'#166534':'#374151'}">
+          ${String.fromCharCode(65+i)}. ${o.text} ${o.correct?'✓':''}
+        </div>`).join('')
+    : d.options.map((o,i) => `
+        <button onclick="answerRPInbox('${doc.id}',${i})"
+          style="display:block;width:100%;text-align:left;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:12px;margin-bottom:6px;background:#fff;cursor:pointer;font-family:Inter,sans-serif"
+          onmouseover="this.style.borderColor='#f97316';this.style.background='#fff7ed'"
+          onmouseout="this.style.borderColor='#e2e8f0';this.style.background='#fff'">
+          ${String.fromCharCode(65+i)}. ${o.text}
+        </button>`).join('');
+
+  const resultBadge = answered
+    ? (d.answeredCorrect
+        ? '<span style="background:#f0fdf4;color:#166534;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">✅ You got it right!</span>'
+        : '<span style="background:#fef2f2;color:#dc2626;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">❌ Incorrect</span>')
+    : '';
+
+  return `<div style="background:#fff;border:2px solid ${answered?'#e2e8f0':'#fed7aa'};border-radius:16px;padding:18px;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:36px;height:36px;border-radius:50%;background:${cl.bg};color:${cl.color};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${fromStaff?.initials||'?'}</div>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#0f172a">${d.fromName} sent you a scenario</div>
+        <div style="font-size:10px;color:#94a3b8">${new Date(d.sentAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+      </div>
+      ${resultBadge ? '<div style="margin-left:auto">'+resultBadge+'</div>' : ''}
+    </div>
+
+    <div style="background:linear-gradient(135deg,#fff7ed,#fef3c7);border-radius:12px;padding:14px;margin-bottom:12px;font-size:13px;color:#0f172a;line-height:1.6;font-weight:500">
+      ${d.situation}
+    </div>
+
+    <div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:8px">${answered ? 'Options:' : 'How would you respond?'}</div>
+    ${optsHtml}
+
+    ${answered && d.tip ? `<div style="background:#fffbeb;border-left:3px solid #f97316;padding:10px 14px;border-radius:0 8px 8px 0;font-size:12px;color:#92400e;margin-top:8px">💡 ${d.tip}</div>` : ''}
+  </div>`;
+}
+
+async function answerRPInbox(docId, optIdx) {
+  try {
+    const docRef = db.collection('rpQuestions').doc(docId);
+    const snap   = await docRef.get();
+    const d      = snap.data();
+    if(!d || d.answered) return;
+
+    const chosen  = d.options[optIdx];
+    const correct = chosen?.correct || false;
+
+    await docRef.update({
+      answered:        true,
+      answeredCorrect: correct,
+      answeredAt:      new Date().toISOString(),
+      answeredByName:  CURRENT_USER?.name || '',
+    });
+
+    renderRPInbox();
+    updateRPInboxBadge();
+  } catch(e) { alert('Error saving answer.'); }
+}
+
+async function updateRPInboxBadge() {
+  if(!CURRENT_USER || !db) return;
+  try {
+    const snap = await db.collection('rpQuestions')
+      .where('toId','==', CURRENT_USER.id)
+      .where('answered','==', false).get();
+    const count  = snap.size;
+    const badge  = document.getElementById('rp-inbox-badge');
+    if(badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? '' : 'none';
+    }
+  } catch(e) {}
+}
+
+// ═══════════════ END CUSTOM QUESTIONS SYSTEM ═══════════════
+
 
 
 
