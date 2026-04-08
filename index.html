@@ -7707,8 +7707,8 @@ function renderRPCustomForm() {
 
         ${[0,1,2,3].map(i => `
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-            <input type="checkbox" id="rp-correct-${i}" title="Mark as correct answer" style="flex-shrink:0;width:16px;height:16px;accent-color:#10b981">
-            <input id="rp-opt-${i}" placeholder="Option ${String.fromCharCode(65+i)}"
+            <input type="checkbox" id="rpq-correct-${i}" title="Mark as correct answer" style="flex-shrink:0;width:16px;height:16px;accent-color:#10b981">
+            <input id="rpq-opt-${i}" placeholder="Option ${String.fromCharCode(65+i)}"
               style="flex:1;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;outline:none;box-sizing:border-box">
           </div>`).join('')}
 
@@ -7741,9 +7741,9 @@ async function sendRPQuestion() {
   const sit    = document.getElementById('rp-q-situation')?.value.trim();
   const tip    = document.getElementById('rp-q-tip')?.value.trim();
   const opts   = [0,1,2,3].map(i => ({
-    text:    document.getElementById('rp-opt-'+i)?.value.trim(),
-    correct: document.getElementById('rp-correct-'+i)?.checked || false,
-    feedback: document.getElementById('rp-correct-'+i)?.checked
+    text:    document.getElementById('rpq-opt-'+i)?.value.trim(),
+    correct: document.getElementById('rpq-correct-'+i)?.checked || false,
+    feedback: document.getElementById('rpq-correct-'+i)?.checked
       ? '✅ Correct! Great response.'
       : '❌ Not the best choice. Review the tip.'
   })).filter(o => o.text);
@@ -7777,8 +7777,8 @@ async function sendRPQuestion() {
     document.getElementById('rp-q-situation').value = '';
     document.getElementById('rp-q-tip').value = '';
     [0,1,2,3].forEach(i => {
-      document.getElementById('rp-opt-'+i).value = '';
-      document.getElementById('rp-correct-'+i).checked = false;
+      const oi = document.getElementById('rpq-opt-'+i); if(oi) oi.value = '';
+      const ci = document.getElementById('rpq-correct-'+i); if(ci) ci.checked = false;
     });
     document.getElementById('rp-to-staff').value = '';
     alert('✅ Question sent to ' + toStaff?.name + '!');
@@ -7795,7 +7795,7 @@ async function loadRPSentQuestions() {
   try {
     const snap = await db.collection('rpQuestions')
       .where('fromId','==', CURRENT_USER.id)
-      .orderBy('sentAt','desc').limit(20).get();
+      .limit(20).get();
 
     if(snap.empty) {
       el.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">No questions sent yet.<br>Create one on the left!</div>';
@@ -7844,7 +7844,7 @@ async function renderRPInbox() {
   try {
     const snap = await db.collection('rpQuestions')
       .where('toId','==', CURRENT_USER.id)
-      .orderBy('sentAt','desc').limit(30).get();
+      .limit(30).get();
 
     if(snap.empty) {
       el.innerHTML = `<div style="text-align:center;padding:60px 20px;color:#94a3b8">
