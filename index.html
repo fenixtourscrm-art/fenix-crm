@@ -916,6 +916,11 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
               <col class="c-actions"/>
             </colgroup>
             <thead><tr>
+              <th class="col-sticky-first" style="width:32px">
+                <input type="checkbox" id="bulk-select-all" title="Select all visible"
+                  onchange="document.querySelectorAll('.bulk-client-cb').forEach(cb=>{cb.checked=this.checked;toggleBulkSelect(cb.dataset.id,cb);})"
+                  style="accent-color:#f97316;cursor:pointer">
+              </th>
               <th class="col-sticky-first">CATEGORY</th>
               <th>COMPANY</th>
               <th>NAME</th>
@@ -2540,6 +2545,178 @@ const CLIENT_CAT_STYLES = {
   "Old Data":    {bg:"#f1f5f9",color:"#64748b",icon:"📦"},
   "GIDC Data":   {bg:"#fef3c7",color:"#b45309",icon:"🏭"},
 };
+
+// ── Move Client to Category ──────────────────────────
+function openMoveCategoryMenu(clientId, triggerEl) {
+  // Remove any existing submenu
+  const existing = document.getElementById('portal-cat-submenu');
+  if(existing) existing.remove();
+
+  const cl = clients.find(x => x.id === clientId);
+  const curCat = cl?.clientCategory || 'Regular';
+  const rect = triggerEl.getBoundingClientRect();
+
+  const sub = document.createElement('div');
+  sub.id = 'portal-cat-submenu';
+  sub.style.cssText = `
+    position:fixed;
+    top:${rect.top}px;
+    left:${rect.right + 4}px;
+    z-index:100000;
+    background:#fff;
+    border:1.5px solid #e2e8f0;
+    border-radius:12px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.18);
+    min-width:200px;
+    overflow:hidden;
+    font-family:Inter,sans-serif;
+  `;
+
+  const catStyles = {
+    'Platinum':      { bg:'#f0f9ff', color:'#0369a1', icon:'💎' },
+    'Gold':          { bg:'#fffbeb', color:'#b45309', icon:'🥇' },
+    'Silver':        { bg:'#f8fafc', color:'#475569', icon:'🥈' },
+    'Regular':       { bg:'#f8fafc', color:'#374151', icon:'👤' },
+    'Inquired':      { bg:'#f0fdf4', color:'#16a34a', icon:'📋' },
+    'Personal Visit':{ bg:'#fff7ed', color:'#c2410c', icon:'🚶' },
+    'Social Media':  { bg:'#fdf4ff', color:'#7e22ce', icon:'📱' },
+    'Corporate':     { bg:'#eff6ff', color:'#1d4ed8', icon:'🏢' },
+    'Old Data':      { bg:'#f8fafc', color:'#64748b', icon:'📦' },
+    'GIDC Data':     { bg:'#fef3c7', color:'#b45309', icon:'🏭' },
+  };
+
+  sub.innerHTML = `
+    <div style="padding:10px 14px;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #f1f5f9">
+      Move to Category
+    </div>
+    ${CLIENT_CATS.map(cat => {
+      const s = catStyles[cat] || { bg:'#f8fafc', color:'#374151', icon:'📂' };
+      const isCurrent = cat === curCat;
+      return `<div onclick="${isCurrent ? '' : `moveClientToCategory('${clientId}','${cat}')`}"
+        style="padding:10px 16px;font-size:12px;font-weight:${isCurrent?'800':'600'};
+          color:${isCurrent?s.color:'#374151'};cursor:${isCurrent?'default':'pointer'};
+          display:flex;align-items:center;justify-content:space-between;gap:8px;
+          background:${isCurrent?s.bg:'#fff'}"
+        ${isCurrent ? '' : `onmouseover="this.style.background='${s.bg}';this.style.color='${s.color}'"
+          onmouseout="this.style.background='#fff';this.style.color='#374151'"`}>
+        <span>${s.icon} ${cat}</span>
+        ${isCurrent ? '<span style="font-size:10px;background:'+s.bg+';color:'+s.color+';padding:2px 8px;border-radius:99px">Current</span>' : ''}
+      </div>`;
+    }).join('')}`;
+
+  document.body.appendChild(sub);
+
+  // Reposition if off-screen
+  const sr = sub.getBoundingClientRect();
+  if(sr.right > window.innerWidth - 10)  sub.style.left = (rect.left - sr.width - 4) + 'px';
+  if(sr.bottom > window.innerHeight - 10) sub.style.top  = (window.innerHeight - sr.height - 10) + 'px';
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', function closeSub(e) {
+      if(!e.target.closest('#portal-cat-submenu') && !e.target.closest('#portal-action-menu')) {
+        sub.remove();
+        document.removeEventListener('click', closeSub);
+      }
+    });
+  }, 0);
+}
+
+async function moveClientToCategory(clientId, newCat) {
+  // Remove submenus and action menu
+  document.getElementById('portal-cat-submenu')?.remove();
+  closePortalMenu();
+
+  const cl = clients.find(x => x.id === clientId);
+  if(!cl) return;
+  const oldCat = cl.clientCategory || 'Regular';
+  if(oldCat === newCat) return;
+
+  const name = ((cl.firstName || '') + ' ' + (cl.lastName || '')).trim() || cl.name || 'Client';
+
+  if(!confirm(`Move "${name}" from ${oldCat} → ${newCat}?`)) return;
+
+  try {
+    await db.collection('clients').doc(clientId).update({ clientCategory: newCat });
+    // Update local array
+    cl.clientCategory = newCat;
+    _updateClientCatCounts();
+    renderClients();
+
+    // Toast notification
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999999;box-shadow:0 4px 16px rgba(0,0,0,0.2)';
+    toast.textContent = `✅ ${name} moved to ${newCat}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  } catch(e) {
+    alert('❌ Failed to update. Try again.');
+  }
+}
+
+// ── Bulk Move to Category ─────────────────────────────
+let _bulkSelectedClients = new Set();
+
+function toggleBulkSelect(clientId, cb) {
+  if(cb.checked) _bulkSelectedClients.add(clientId);
+  else           _bulkSelectedClients.delete(clientId);
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  let bar = document.getElementById('bulk-move-bar');
+  if(_bulkSelectedClients.size === 0) {
+    if(bar) bar.remove();
+    return;
+  }
+  if(!bar) {
+    bar = document.createElement('div');
+    bar.id = 'bulk-move-bar';
+    bar.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 4px 20px rgba(0,0,0,0.25);display:flex;align-items:center;gap:12px;white-space:nowrap';
+    document.body.appendChild(bar);
+  }
+  const catOptions = CLIENT_CATS.map(c => `<option value="${c}">${c}</option>`).join('');
+  bar.innerHTML = `
+    <span>${_bulkSelectedClients.size} client${_bulkSelectedClients.size>1?'s':''} selected</span>
+    <select id="bulk-cat-select" style="padding:6px 10px;border-radius:8px;border:none;font-size:12px;color:#0f172a;background:#fff;cursor:pointer;outline:none">
+      <option value="">Move to...</option>${catOptions}
+    </select>
+    <button onclick="executeBulkMove()" style="padding:6px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Move</button>
+    <button onclick="clearBulkSelection()" style="padding:6px 10px;background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;font-size:12px;cursor:pointer">✕</button>`;
+}
+
+async function executeBulkMove() {
+  const newCat = document.getElementById('bulk-cat-select')?.value;
+  if(!newCat) return alert('Please select a category.');
+  const ids = [..._bulkSelectedClients];
+  if(!confirm(`Move ${ids.length} clients to "${newCat}"?`)) return;
+
+  try {
+    const batch = db.batch();
+    ids.forEach(id => {
+      const ref = db.collection('clients').doc(id);
+      batch.update(ref, { clientCategory: newCat });
+      const cl = clients.find(x => x.id === id);
+      if(cl) cl.clientCategory = newCat;
+    });
+    await batch.commit();
+    clearBulkSelection();
+    _updateClientCatCounts();
+    renderClients();
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:999999';
+    toast.textContent = `✅ ${ids.length} clients moved to ${newCat}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  } catch(e) { alert('Bulk move failed. Try again.'); }
+}
+
+function clearBulkSelection() {
+  _bulkSelectedClients.clear();
+  document.querySelectorAll('.bulk-client-cb').forEach(cb => cb.checked = false);
+  document.getElementById('bulk-move-bar')?.remove();
+}
+
 function renderClients(){
   // Show Fix Names button only for owner
   const fixBtn = document.getElementById('fix-names-btn');
@@ -2564,6 +2741,11 @@ function renderClients(){
     const cat = c.clientCategory || "Regular";
     const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
     return `<tr>
+    <td class="col-sticky-first" style="padding:0 8px;width:32px;text-align:center">
+      <input type="checkbox" class="bulk-client-cb" data-id="${c.id}"
+        onchange="toggleBulkSelect('${c.id}',this)"
+        style="accent-color:#f97316;cursor:pointer;width:14px;height:14px">
+    </td>
     <td class="col-sticky-first"><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-block;max-width:95px;overflow:hidden;text-overflow:ellipsis">${cs.icon} ${cat}</span></td>
     <td style="font-size:11px;font-weight:700">${c.companyName?`<span style="font-weight:800;color:#0369a1">${c.companyName}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
     <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
@@ -2589,7 +2771,7 @@ function renderClients(){
       </div>
     </td>
   </tr>`;
-  }).join("")||`<tr><td colspan="11" class="empty">No clients in this category</td></tr>`;
+  }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
   // Recheck scroll arrows after data renders
   setTimeout(() => window._tblScrollUXRecheck?.(), 50);
 }
@@ -2662,10 +2844,18 @@ function toggleActionMenu(clientId, triggerBtn) {
     font-family:Inter,sans-serif;
   `;
 
+  const cl = clients.find(x => x.id === clientId);
+  const curCat = cl?.clientCategory || 'Regular';
+
   menu.innerHTML = `
-    <div onclick="generateEnquiry('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">🎯 Generate Enquiry</div>
-    <div onclick="logMarketingCall('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">📞 Log Marketing Call</div>
-    <div onclick="openClientDocs('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">📁 Documents</div>
+    <div onclick="generateEnquiry('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">🎯 Generate Enquiry</div>
+    <div onclick="logMarketingCall('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">📞 Log Marketing Call</div>
+    <div onclick="openClientDocs('${clientId}');closePortalMenu()" style="padding:11px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;gap:8px" onmouseover="this.style.background='#fff7ed';this.style.color='#ea580c'" onmouseout="this.style.background='';this.style.color='#374151'">📁 Documents</div>
+    <div style="height:1px;background:#f1f5f9;margin:2px 0"></div>
+    <div onclick="openMoveCategoryMenu('${clientId}', this)" style="padding:11px 16px;font-size:12px;font-weight:600;color:#7c3aed;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px" onmouseover="this.style.background='#faf5ff'" onmouseout="this.style.background=''">
+      <span>📂 Move to Category</span>
+      <span style="font-size:10px;background:#ede9fe;padding:2px 6px;border-radius:99px">${curCat}</span>
+    </div>
   `;
 
   document.body.appendChild(menu);
