@@ -108,6 +108,43 @@ body{font-family:'DM Sans',sans-serif;background:transparent;min-height:100vh;di
 .popup-success-icon{font-size:48px;margin-bottom:12px}
 .popup-success-text{font-size:16px;font-weight:600;color:#1a1a1a;margin-bottom:6px}
 .popup-success-sub{font-size:13px;color:#888}
+
+/* ── MOBILE OPTIMIZATIONS ── */
+@media(max-width:390px){
+  .front-top{padding:16px 14px 12px}
+  .ft-name{font-size:17px}
+  .ft-row{font-size:11px}
+  .logo-section{padding:12px 14px 10px}
+  .logo-img{height:55px}
+  .front-bottom{padding:12px 14px;gap:10px}
+  .addr{font-size:10.5px;line-height:1.7}
+  .oc-row{font-size:10.5px}
+  .back-header{padding:10px 14px}
+  .back-logo{height:32px}
+  .services{padding:12px 14px}
+  .svc{font-size:9.5px}
+  .actions{gap:8px}
+  .btn{padding:13px;font-size:13px}
+  .testimonials{padding:12px 14px}
+  .test-card{flex:0 0 180px}
+}
+@media(max-width:340px){
+  .ft-name{font-size:15px}
+  .ft-row{font-size:10px}
+  .wrap{padding:16px 10px}
+  .front-top{grid-template-columns:auto auto}
+  .svc{font-size:8.5px}
+  .svc-grid{column-gap:2px}
+}
+/* Fix front-bottom wrapping on very small screens */
+@media(max-width:360px){
+  .front-bottom{grid-template-columns:1fr}
+  .office-contacts{align-items:flex-start;flex-direction:row;flex-wrap:wrap;gap:8px}
+}
+/* Ensure buttons are always full width and tappable */
+.btn,.wa-enquiry,.btn-share,.btn-save{min-height:48px;touch-action:manipulation}
+/* Better tap targets for action buttons */
+.actions{padding:0 2px}
 </style>
 </head>
 <body>
