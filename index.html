@@ -902,6 +902,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div class="tbl-scroll clients-table-scroll" id="scroll-clients">
           <table class="tbl-base clients-table">
             <colgroup>
+              <col style="width:36px"/>
               <col class="c-cat"/>
               <col class="c-company"/>
               <col class="c-fname"/>
@@ -916,7 +917,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
               <col class="c-actions"/>
             </colgroup>
             <thead><tr>
-              <th class="col-sticky-first" style="width:32px">
+              <th style="width:36px;text-align:center;padding:0 8px">
                 <input type="checkbox" id="bulk-select-all" title="Select all visible"
                   onchange="document.querySelectorAll('.bulk-client-cb').forEach(cb=>{cb.checked=this.checked;toggleBulkSelect(cb.dataset.id,cb);})"
                   style="accent-color:#f97316;cursor:pointer">
@@ -2741,7 +2742,7 @@ function renderClients(){
     const cat = c.clientCategory || "Regular";
     const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
     return `<tr>
-    <td class="col-sticky-first" style="padding:0 8px;width:32px;text-align:center">
+    <td style="padding:0 8px;width:36px;text-align:center">
       <input type="checkbox" class="bulk-client-cb" data-id="${c.id}"
         onchange="toggleBulkSelect('${c.id}',this)"
         style="accent-color:#f97316;cursor:pointer;width:14px;height:14px">
