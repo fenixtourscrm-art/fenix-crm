@@ -69,6 +69,39 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 #fmkt-visit-map{height:280px;width:100%;border-radius:12px;border:1.5px solid #e2e8f0;margin-bottom:16px;box-sizing:border-box;max-height:60vw;min-height:220px}
 .fmkt-status-dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:5px}
 /* Popup styling */
+.qb-editable{background:#f0fdf4;border:1px dashed #86efac;border-radius:3px;min-height:1em;padding:2px 4px;outline:none;cursor:text}
+.qb-editable:focus{background:#dcfce7;border-color:#22c55e;box-shadow:0 0 0 2px rgba(34,197,94,.15)}
+.qb-locked{background:#fefce8}
+.qb-preview .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important;cursor:default}
+.qb-preview .qb-locked{background:transparent!important}
+.qb-preview .qb-add-row,.qb-preview .qb-del-row,.qb-preview .qb-add-item,.qb-preview .qb-del-item,.qb-preview #qb-legend,.qb-preview .qb-custom-section-btns{display:none!important}
+.qb-preview #qb-canvas{box-shadow:none;border:none}
+.qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9}
+.qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
+.qb-table{width:100%;border-collapse:collapse;margin:8px 0}
+.qb-table th{background:#c2410c;color:#fff;padding:7px 10px;font-size:12px;border:1px solid #9a3412;text-align:center}
+.qb-table td{padding:7px 10px;border:1px solid #d1d5db;font-size:12px;vertical-align:top}
+.qb-table .qb-editable{display:block;width:100%;box-sizing:border-box}
+.qb-add-row{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.qb-del-row{padding:2px 6px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;display:none}
+tr:hover .qb-del-row{display:inline-block}
+.qb-bullet-list{list-style:none;padding:0;margin:0}
+.qb-bullet-list li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12px}
+.qb-bullet-list li::before{content:"❖";color:#d97706;font-size:14px;flex-shrink:0;margin-top:1px}
+.qb-add-item{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:4px 10px;background:#f0fdf4;color:#16a34a;border:1px solid #86efac;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer}
+.qb-del-item{padding:1px 5px;background:transparent;color:#dc2626;border:none;font-size:14px;cursor:pointer;opacity:0;transition:.15s;flex-shrink:0}
+li:hover .qb-del-item{opacity:1}
+.qb-day-block{margin-bottom:12px}
+.qb-day-title{font-family:Arial,sans-serif;font-size:14px;font-weight:800;color:#1e40af;text-decoration:underline;margin:0 0 6px}
+.qb-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:80px;font-weight:900;color:rgba(200,200,200,.15);pointer-events:none;white-space:nowrap;letter-spacing:4px;z-index:0}
+@media print{
+  body *{visibility:hidden}
+  #qb-canvas,#qb-canvas *{visibility:visible}
+  #qb-canvas{position:fixed;top:0;left:0;width:100%;margin:0;box-shadow:none;border:none}
+  .qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
+  .qb-editable{background:transparent!important;border:none!important}
+  .qb-locked{background:transparent!important}
+}
 .dest-tooltip{background:#fff!important;border:1.5px solid #e2e8f0!important;border-radius:10px!important;padding:8px 12px!important;box-shadow:0 4px 16px rgba(0,0,0,0.12)!important;font-family:Inter,sans-serif!important}
 .dest-tooltip.leaflet-tooltip::before{border-top-color:#e2e8f0!important}
 .fmkt-leaflet-popup .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.18);border:1.5px solid #e2e8f0;padding:0;max-width:calc(100vw - 48px)!important}
@@ -759,6 +792,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('data',this)"><span class="nav-icon">👥</span>Client Data</div>
     <div class="nav-item" onclick="showTab('enquiries',this)"><span class="nav-icon">🎯</span>Enquiries<span class="nav-badge o" id="enq-badge">0</span></div>
     <div class="nav-item" onclick="showTab('bookings',this)"><span class="nav-icon">📁</span>Bookings</div>
+    <div class="nav-item" onclick="showTab('quotes',this)"><span class="nav-icon">📄</span>Quotation Builder</div>
     <div class="nav-item" onclick="showTab('currency',this)"><span class="nav-icon">💱</span>Currency</div>
     <div class="nav-section">Team</div>
     <div class="nav-item" onclick="showTab('tasks',this)"><span class="nav-icon">📋</span>Tasks<span class="nav-badge" id="task-badge" style="display:none">!</span></div>
@@ -1507,6 +1541,51 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     </div>
 
     
+    <!-- QUOTATION BUILDER TAB -->
+    <div class="tab" id="tab-quotes">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="section-title" style="margin:0">📄 Quotation Builder</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px">Create professional travel quotations — green = editable, yellow = locked</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="qbTogglePreview()" id="qb-preview-btn" style="padding:8px 16px;background:#f1f5f9;color:#374151;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">👁 Preview Mode</button>
+          <button onclick="qbSaveQuote()" style="padding:8px 16px;background:#10b981;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">💾 Save</button>
+          <button onclick="qbNewQuote()" style="padding:8px 16px;background:#0369a1;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">+ New Quotation</button>
+          <button onclick="qbPrint()" style="padding:8px 16px;background:#7c3aed;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Print / PDF</button>
+        </div>
+      </div>
+
+      <!-- Saved Quotes List -->
+      <div id="qb-list-wrap" style="margin-bottom:16px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">SAVED QUOTATIONS</div>
+        <div id="qb-list" style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="font-size:12px;color:#94a3b8">No saved quotations yet. Click "+ New Quotation" to start.</div>
+        </div>
+      </div>
+
+      <!-- Builder Area -->
+      <div id="qb-builder" style="display:none">
+        <!-- Edit Legend -->
+        <div id="qb-legend" style="display:flex;gap:12px;margin-bottom:12px;font-size:11px;font-weight:600;align-items:center">
+          <span style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:3px 10px;color:#166534">🟢 Editable — click to edit</span>
+          <span style="background:#fefce8;border:1px solid #fde047;border-radius:6px;padding:3px 10px;color:#713f12">🟡 Locked — structure only</span>
+        </div>
+
+        <!-- A4 Canvas -->
+        <div id="qb-canvas" style="background:#fff;max-width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid #e2e8f0;font-family:Arial,sans-serif">
+          <div id="qb-document"></div>
+        </div>
+
+        <!-- Add Section Button -->
+        <div style="max-width:794px;margin:12px auto">
+          <button onclick="qbAddCustomSection()" style="width:100%;padding:10px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:8px;font-size:12px;font-weight:700;color:#64748b;cursor:pointer">
+            + Add Custom Section
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- TRASH / RECYCLE BIN TAB -->
     <div class="tab" id="tab-trash">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -2318,6 +2397,7 @@ function showTab(tab,el){
   }
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
+  if(tab==="quotes"){initQuotationBuilder();}
   if(tab==="currency"){initCurrencyTab();}
   if(tab==="fieldmkt"){initFieldMkt();}
   if(tab==="destinations"){initDestinations();}
@@ -7478,6 +7558,503 @@ async function loadThContent() {
 }
 
 // ═══════════════ END TRAINING HUB EDITOR ═══════════════
+
+// ═══════════════════════════════════════════════════════
+//  QUOTATION BUILDER MODULE
+// ═══════════════════════════════════════════════════════
+
+let qbCurrentId = null;
+let qbPreviewMode = false;
+let qbSavedQuotes = [];
+
+// ── Default template data ──
+function qbDefaultData() {
+  return {
+    id: 'qb_' + Date.now(),
+    name: 'New Package',
+    createdAt: new Date().toISOString(),
+    packageTitle: 'Sri Lanka & Hong Kong',
+    duration: '14 Nights / 15 Days',
+    subTitle: '(04 Nights Bentota + 02 Nights Kirinda + 01 Night Colombo + 05 Nights Hong Kong + 02 Nights Macau)',
+    images: [],
+    flights: [
+      { date: '04 May 2026', airline: 'Indigo', sector: 'BLR - CMB', time: '09:05 - 10:30', baggage: '30KG + 7KG' },
+      { date: '11 May 2026', airline: 'AirIndia', sector: 'CMB - DEL', time: '17:05 - 20:50', baggage: '' },
+    ],
+    pricing: [
+      { paxType: 'Adult', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Extra Adult', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Child With Bed', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Child No Bed', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Infant', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+    ],
+    hotels: [
+      { destination: 'Bentota', hotel: 'Taj Bentota Resort & Spa / Similar', room: 'Superior Room, 1 King Bed, Garden View' },
+      { destination: 'Kirinda', hotel: 'Jetwing Yala / Similar', room: 'Superior Room' },
+      { destination: 'Colombo', hotel: 'Taj Samudra, Colombo / Similar', room: 'Deluxe Double Room' },
+    ],
+    inclusions: [
+      '04 Nights Accommodation in Bentota Hotel',
+      '02 Nights Accommodation in Macau Hotel',
+      'Daily American Breakfast at Hotels',
+      'Mangroves Safari Bentota River',
+      'Transfer from Bentota to Kirinda Hotel',
+    ],
+    exclusions: [
+      '5% GST + 2% TCS',
+      'Flight fare',
+      'Guaranteed early check in or late checkout',
+      'Tips and porter-age',
+      'Meals other than specified in the inclusions',
+      'Any expenses of personal nature',
+    ],
+    itinerary: [
+      { day: 'Day 01: Arrival', content: 'Welcome! Upon arrival, your group will be met by the local guide in the terminal's arrivals hall. You will be escorted to the hotel in a private coach.' },
+      { day: 'Day 02: City Tour', content: 'After breakfast in the hotel, your group will meet a local guide in the lobby for an exciting tour of this scenic city.' },
+    ],
+    customSections: [],
+  };
+}
+
+// ── Init ──
+function initQuotationBuilder() {
+  loadQbList();
+}
+
+async function loadQbList() {
+  const el = document.getElementById('qb-list');
+  if(!el) return;
+  try {
+    const snap = await db.collection('quotations').orderBy('createdAt','desc').limit(20).get();
+    qbSavedQuotes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  } catch(e) {
+    qbSavedQuotes = JSON.parse(localStorage.getItem('qb_quotes') || '[]');
+  }
+
+  if(!qbSavedQuotes.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#94a3b8">No saved quotations yet. Click "+ New Quotation" to start.</div>';
+    return;
+  }
+
+  el.innerHTML = qbSavedQuotes.map(q => `
+    <div style="display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s"
+      onclick="qbLoadQuote('${q.id}')"
+      onmouseover="this.style.borderColor='#0369a1'" onmouseout="this.style.borderColor='#e2e8f0'">
+      <span style="font-size:18px">📄</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${q.packageTitle || q.name}</div>
+        <div style="font-size:10px;color:#94a3b8">${new Date(q.createdAt).toLocaleDateString('en-IN')}</div>
+      </div>
+      <button onclick="event.stopPropagation();qbDeleteQuote('${q.id}')" style="margin-left:6px;padding:2px 6px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:10px;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+
+function qbNewQuote() {
+  qbCurrentId = null;
+  const data = qbDefaultData();
+  qbCurrentId = data.id;
+  qbRenderDocument(data);
+  document.getElementById('qb-builder').style.display = '';
+}
+
+function qbLoadQuote(id) {
+  const q = qbSavedQuotes.find(x => x.id === id);
+  if(!q) return;
+  qbCurrentId = id;
+  qbRenderDocument(q);
+  document.getElementById('qb-builder').style.display = '';
+  document.getElementById('qb-builder').scrollIntoView({behavior:'smooth'});
+}
+
+async function qbDeleteQuote(id) {
+  if(!confirm('Delete this quotation?')) return;
+  try {
+    await db.collection('quotations').doc(id).delete();
+  } catch(e) {}
+  qbSavedQuotes = qbSavedQuotes.filter(x => x.id !== id);
+  loadQbList();
+  if(qbCurrentId === id) document.getElementById('qb-builder').style.display = 'none';
+}
+
+// ── Render the full document ──
+function qbRenderDocument(data) {
+  const doc = document.getElementById('qb-document');
+  if(!doc) return;
+
+  doc.innerHTML = `
+    <!-- Fenix Header -->
+    <div style="text-align:center;padding:20px 32px 10px;border-bottom:3px solid #c2410c">
+      <img src="https://fenixtours.co.in/wp-content/uploads/2023/01/cropped-fenix-logo-192x192.png"
+        onerror="this.style.display='none'" style="height:60px;object-fit:contain;margin-bottom:6px">
+    </div>
+
+    <!-- Title Section -->
+    <div class="qb-title-section" style="position:relative">
+      <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:900;color:#dc2626;letter-spacing:2px;text-shadow:1px 1px 0 #fbbf24"
+        contenteditable="true" class="qb-editable" id="qb-packageTitle">${data.packageTitle}</div>
+      <div style="font-size:18px;font-weight:700;color:#1e40af;margin:4px 0"
+        contenteditable="true" class="qb-editable" id="qb-duration">${data.duration}</div>
+      <div style="font-size:13px;color:#374151;font-weight:500;margin-top:4px"
+        contenteditable="true" class="qb-editable" id="qb-subTitle">${data.subTitle}</div>
+    </div>
+
+    <!-- Image Section -->
+    <div class="qb-section" id="qb-images-section">
+      <div class="qb-locked" style="font-size:11px;font-weight:700;color:#92400e;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:8px">PACKAGE IMAGES</div>
+      <div id="qb-images-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        ${data.images.map((img,i) => qbImageCell(img, i)).join('')}
+        ${data.images.length === 0 ? '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet — use the button below to add</div>' : ''}
+      </div>
+      <button class="qb-add-item" onclick="qbAddImage()">+ Add Image (URL or Upload)</button>
+    </div>
+
+    <!-- Flights Table -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">
+        Flights Details: <span style="font-size:11px;font-weight:600">Seats are subject to Availability</span>
+      </div>
+      <table class="qb-table" id="qb-flights-table">
+        <thead>
+          <tr>
+            <th class="qb-locked">DATE</th>
+            <th class="qb-locked">AIRLINE NAME</th>
+            <th class="qb-locked">SECTOR</th>
+            <th class="qb-locked">TIME</th>
+            <th class="qb-locked">BAGGAGE</th>
+            <th class="qb-locked" style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="qb-flights-tbody">
+          ${data.flights.map((f,i) => qbFlightRow(f,i)).join('')}
+        </tbody>
+      </table>
+      <button class="qb-add-row" onclick="qbAddFlightRow()">+ Add Flight</button>
+    </div>
+
+    <!-- Pricing Table -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Package Pricing</div>
+      <table class="qb-table" id="qb-pricing-table">
+        <thead>
+          <tr>
+            <th class="qb-locked">Pax Type</th>
+            <th class="qb-locked">Flight Fare (INR)</th>
+            <th class="qb-locked">Land Package (Currency)</th>
+            <th class="qb-locked">Total</th>
+            <th class="qb-locked" style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="qb-pricing-tbody">
+          ${data.pricing.map((p,i) => qbPricingRow(p,i)).join('')}
+        </tbody>
+      </table>
+      <button class="qb-add-row" onclick="qbAddPricingRow()">+ Add Row</button>
+    </div>
+
+    <!-- Hotel Details -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Hotel Details: -</div>
+      <table class="qb-table" id="qb-hotels-table">
+        <thead>
+          <tr>
+            <th class="qb-locked">Destination</th>
+            <th class="qb-locked">Hotel Name</th>
+            <th class="qb-locked">Room Category</th>
+            <th class="qb-locked" style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="qb-hotels-tbody">
+          ${data.hotels.map((h,i) => qbHotelRow(h,i)).join('')}
+        </tbody>
+      </table>
+      <button class="qb-add-row" onclick="qbAddHotelRow()">+ Add Hotel</button>
+    </div>
+
+    <!-- Inclusions -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Land Package Inclusions:</div>
+      <ul class="qb-bullet-list" id="qb-inclusions-list">
+        ${data.inclusions.map((inc,i) => qbBulletItem(inc, 'inclusions', i)).join('')}
+      </ul>
+      <button class="qb-add-item" onclick="qbAddBullet('inclusions')">+ Add Inclusion</button>
+    </div>
+
+    <!-- Exclusions -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Land Package Exclusions:</div>
+      <ul class="qb-bullet-list" id="qb-exclusions-list">
+        ${data.exclusions.map((exc,i) => qbBulletItem(exc, 'exclusions', i)).join('')}
+      </ul>
+      <button class="qb-add-item" onclick="qbAddBullet('exclusions')">+ Add Exclusion</button>
+    </div>
+
+    <!-- Payment Policy (LOCKED) -->
+    <div class="qb-section qb-locked">
+      <div style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Payment Policy:</div>
+      <ul class="qb-bullet-list">
+        <li><span class="qb-locked">Initial deposit – Rs 50% per person to confirm your booking with us plus full payment of air ticket.</span></li>
+        <li><span class="qb-locked">75% of the Total payment to be made before 30 days of the departure.</span></li>
+        <li><span class="qb-locked">100% payment to be made at least 20 days before departure.</span></li>
+      </ul>
+    </div>
+
+    <!-- Cancellation Policy (LOCKED) -->
+    <div class="qb-section qb-locked">
+      <div style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Cancellation Policy for Land Package: -</div>
+      <ul class="qb-bullet-list">
+        <li><span class="qb-locked">25% cancellation fee if cancelled before 20 days prior to check-in.</span></li>
+        <li><span class="qb-locked">50% Cancellation fee if cancelled within 15 days prior to check-in.</span></li>
+        <li><span class="qb-locked">75% Cancellation fee if cancelled within 10 days prior to check-in.</span></li>
+        <li><span class="qb-locked">100% Cancellation fee if cancelled within 07 days OR No-Show of check-in.</span></li>
+      </ul>
+    </div>
+
+    <!-- Day to Day Itinerary -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:18px;font-weight:900;color:#dc2626;letter-spacing:2px;text-align:center;padding:8px;border:2px solid #f97316;border-radius:6px;background:#fef3c7;margin-bottom:16px">
+        DAY TO DAY ITINERARY
+      </div>
+      <div id="qb-itinerary-blocks">
+        ${data.itinerary.map((d,i) => qbDayBlock(d,i)).join('')}
+      </div>
+      <button class="qb-add-item" onclick="qbAddDay()">+ Add Day</button>
+    </div>
+
+    <!-- Custom Sections -->
+    <div id="qb-custom-sections">
+      ${(data.customSections||[]).map((s,i) => qbCustomSection(s,i)).join('')}
+    </div>
+
+    <!-- Fenix Footer -->
+    <div class="qb-locked" style="text-align:center;padding:16px;background:#fef3c7;border-top:2px solid #f97316;font-size:11px;color:#92400e;font-weight:600">
+      Fenix Tours & Travels Pvt Ltd · www.fenixtours.co.in · All rights reserved
+    </div>
+  `;
+}
+
+// ── Row/Item builders ──
+function qbFlightRow(f, i) {
+  return `<tr data-row="${i}">
+    <td><span class="qb-editable" contenteditable="true">${f.date||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.airline||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.sector||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.time||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.baggage||''}</span></td>
+    <td><button class="qb-del-row" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>`;
+}
+
+function qbPricingRow(p, i) {
+  return `<tr data-row="${i}">
+    <td style="background:#fef3c7;font-weight:700"><span class="qb-editable" contenteditable="true">${p.paxType||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${p.flightFare||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${p.landPackage||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${p.total||''}</span></td>
+    <td><button class="qb-del-row" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>`;
+}
+
+function qbHotelRow(h, i) {
+  return `<tr data-row="${i}">
+    <td style="font-weight:700"><span class="qb-editable" contenteditable="true">${h.destination||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${h.hotel||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${h.room||''}</span></td>
+    <td><button class="qb-del-row" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>`;
+}
+
+function qbBulletItem(text, listId, i) {
+  return `<li id="qb-${listId}-item-${i}">
+    <span class="qb-editable" contenteditable="true" style="flex:1">${text}</span>
+    <button class="qb-del-item" onclick="this.parentElement.remove()">✕</button>
+  </li>`;
+}
+
+function qbDayBlock(d, i) {
+  return `<div class="qb-day-block" id="qb-day-${i}">
+    <div class="qb-day-title qb-editable" contenteditable="true">${d.day}</div>
+    <div class="qb-editable" contenteditable="true" style="font-size:12px;color:#374151;line-height:1.7;padding:4px 0">${d.content}</div>
+    <button class="qb-del-item" onclick="this.parentElement.remove()" style="opacity:.5;font-size:11px;padding:2px 8px;border:1px solid #fca5a5;border-radius:4px;background:#fef2f2;color:#dc2626;cursor:pointer;margin-top:4px">✕ Remove Day</button>
+  </div>`;
+}
+
+function qbImageCell(img, i) {
+  return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:160px">
+    <img src="${img}" style="width:100%;height:160px;object-fit:cover" onerror="this.style.display='none'">
+    <button onclick="qbRemoveImage(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
+    <button onclick="qbReplaceImage(${i})" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">🔄 Replace</button>
+  </div>`;
+}
+
+function qbCustomSection(s, i) {
+  return `<div class="qb-section" id="qb-custom-${i}">
+    <div class="qb-custom-section-btns" style="float:right;display:flex;gap:4px">
+      <button onclick="document.getElementById('qb-custom-${i}').remove()" style="padding:2px 8px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:11px;cursor:pointer">✕ Remove</button>
+    </div>
+    <div class="qb-editable" contenteditable="true" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">${s.title}</div>
+    <div class="qb-editable" contenteditable="true" style="font-size:12px;color:#374151;line-height:1.7">${s.content}</div>
+  </div>`;
+}
+
+// ── Add actions ──
+function qbAddFlightRow() {
+  document.getElementById('qb-flights-tbody').insertAdjacentHTML('beforeend',
+    qbFlightRow({date:'',airline:'',sector:'',time:'',baggage:''}, Date.now()));
+}
+function qbAddPricingRow() {
+  document.getElementById('qb-pricing-tbody').insertAdjacentHTML('beforeend',
+    qbPricingRow({paxType:'',flightFare:'',landPackage:'',total:''}, Date.now()));
+}
+function qbAddHotelRow() {
+  document.getElementById('qb-hotels-tbody').insertAdjacentHTML('beforeend',
+    qbHotelRow({destination:'',hotel:'',room:''}, Date.now()));
+}
+function qbAddBullet(listId) {
+  const list = document.getElementById('qb-'+listId+'-list');
+  if(!list) return;
+  const i = Date.now();
+  list.insertAdjacentHTML('beforeend', qbBulletItem('', listId, i));
+  list.lastElementChild.querySelector('.qb-editable').focus();
+}
+function qbAddDay() {
+  const blocks = document.getElementById('qb-itinerary-blocks');
+  if(!blocks) return;
+  const i = blocks.children.length + 1;
+  blocks.insertAdjacentHTML('beforeend', qbDayBlock({day:'Day '+i+': Title', content:'Write itinerary details here...'}, Date.now()));
+}
+function qbAddCustomSection() {
+  const container = document.getElementById('qb-custom-sections');
+  if(!container) return;
+  const i = Date.now();
+  container.insertAdjacentHTML('beforeend',
+    qbCustomSection({title:'Custom Section Title', content:'Write your content here...'}, i));
+}
+
+// ── Image handling ──
+let _qbImages = [];
+function qbAddImage() {
+  const url = prompt('Enter image URL (or leave blank to upload):');
+  if(url) {
+    _qbImages.push(url);
+    qbRefreshImages();
+  } else {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => { _qbImages.push(ev.target.result); qbRefreshImages(); };
+      reader.readAsDataURL(file);
+    };
+    inp.click();
+  }
+}
+function qbRemoveImage(i) { _qbImages.splice(i,1); qbRefreshImages(); }
+function qbReplaceImage(i) {
+  const url = prompt('Enter new image URL:');
+  if(url) { _qbImages[i] = url; qbRefreshImages(); }
+}
+function qbRefreshImages() {
+  const grid = document.getElementById('qb-images-grid');
+  if(!grid) return;
+  grid.innerHTML = _qbImages.length
+    ? _qbImages.map((img,i) => qbImageCell(img,i)).join('')
+    : '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet</div>';
+}
+
+// ── Preview Mode ──
+function qbTogglePreview() {
+  qbPreviewMode = !qbPreviewMode;
+  const canvas = document.getElementById('qb-canvas');
+  const btn    = document.getElementById('qb-preview-btn');
+  if(!canvas) return;
+  if(qbPreviewMode) {
+    canvas.classList.add('qb-preview');
+    btn.textContent = '✏️ Edit Mode';
+    btn.style.background = '#f97316';
+    btn.style.color = '#fff';
+  } else {
+    canvas.classList.remove('qb-preview');
+    btn.textContent = '👁 Preview Mode';
+    btn.style.background = '#f1f5f9';
+    btn.style.color = '#374151';
+  }
+}
+
+// ── Collect data from DOM ──
+function qbCollectData() {
+  const get = id => document.getElementById(id)?.innerText?.trim() || '';
+  const rows = (tbodyId, fields) => {
+    const tbody = document.getElementById(tbodyId);
+    if(!tbody) return [];
+    return [...tbody.querySelectorAll('tr')].map(tr => {
+      const cells = [...tr.querySelectorAll('.qb-editable')];
+      const obj = {};
+      fields.forEach((f,i) => obj[f] = cells[i]?.innerText?.trim() || '');
+      return obj;
+    });
+  };
+  const bullets = listId => [...(document.getElementById('qb-'+listId+'-list')?.querySelectorAll('.qb-editable') || [])].map(el => el.innerText.trim());
+  const days = [...(document.getElementById('qb-itinerary-blocks')?.querySelectorAll('.qb-day-block') || [])].map(block => {
+    const divs = block.querySelectorAll('.qb-editable');
+    return { day: divs[0]?.innerText?.trim() || '', content: divs[1]?.innerText?.trim() || '' };
+  });
+  const customs = [...(document.getElementById('qb-custom-sections')?.children || [])].map(s => {
+    const divs = s.querySelectorAll('.qb-editable');
+    return { title: divs[0]?.innerText?.trim() || '', content: divs[1]?.innerText?.trim() || '' };
+  });
+
+  return {
+    id: qbCurrentId || ('qb_' + Date.now()),
+    packageTitle: get('qb-packageTitle'),
+    duration: get('qb-duration'),
+    subTitle: get('qb-subTitle'),
+    images: _qbImages,
+    flights: rows('qb-flights-tbody', ['date','airline','sector','time','baggage']),
+    pricing: rows('qb-pricing-tbody', ['paxType','flightFare','landPackage','total']),
+    hotels:  rows('qb-hotels-tbody',  ['destination','hotel','room']),
+    inclusions: bullets('inclusions'),
+    exclusions: bullets('exclusions'),
+    itinerary: days,
+    customSections: customs,
+    createdAt: new Date().toISOString(),
+    name: get('qb-packageTitle'),
+  };
+}
+
+// ── Save ──
+async function qbSaveQuote() {
+  const data = qbCollectData();
+  qbCurrentId = data.id;
+  try {
+    await db.collection('quotations').doc(data.id).set(data);
+  } catch(e) {
+    const local = JSON.parse(localStorage.getItem('qb_quotes') || '[]');
+    const idx = local.findIndex(x => x.id === data.id);
+    if(idx >= 0) local[idx] = data; else local.unshift(data);
+    localStorage.setItem('qb_quotes', JSON.stringify(local));
+  }
+  loadQbList();
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:999999';
+  toast.textContent = '✅ Quotation saved!';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+// ── Print / PDF ──
+function qbPrint() {
+  const wasPreview = qbPreviewMode;
+  if(!qbPreviewMode) qbTogglePreview();
+  setTimeout(() => {
+    window.print();
+    if(!wasPreview) setTimeout(() => qbTogglePreview(), 500);
+  }, 300);
+}
+
+// ═══════════════ END QUOTATION BUILDER MODULE ═══════════════
+
 
 // ═══════════════ END TRAINING HUB MODULE ═══════════════
 
