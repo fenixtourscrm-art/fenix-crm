@@ -7728,7 +7728,8 @@ function qbRenderDocument(data) {
     <!-- Title Section -->
     <div class="qb-title-section" style="position:relative">
       <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:900;color:#dc2626;letter-spacing:2px;text-shadow:1px 1px 0 #fbbf24"
-        contenteditable="true" class="qb-editable" id="qb-packageTitle">${data.packageTitle}</div>
+        contenteditable="true" class="qb-editable" id="qb-packageTitle"
+        oninput="qbApplyTheme()">${data.packageTitle}</div>
       <div style="font-size:18px;font-weight:700;color:#1e40af;margin:4px 0"
         contenteditable="true" class="qb-editable" id="qb-duration">${data.duration}</div>
       <div style="font-size:13px;color:#374151;font-weight:500;margin-top:4px"
@@ -7847,14 +7848,14 @@ function qbRenderDocument(data) {
     </div>
 
     <!-- Day to Day Itinerary -->
-    <div class="qb-section">
-      <div class="qb-locked" style="font-size:18px;font-weight:900;color:#dc2626;letter-spacing:2px;text-align:center;padding:8px;border:2px solid #f97316;border-radius:6px;background:#fef3c7;margin-bottom:16px">
-        DAY TO DAY ITINERARY
+    <div class="qb-section" id="qb-itinerary-section" style="transition:background .4s ease">
+      <div id="qb-itinerary-banner" style="font-size:16px;font-weight:900;color:#fff;letter-spacing:2px;text-align:center;padding:12px;border-radius:8px;margin-bottom:16px;background:linear-gradient(135deg,#c2410c,#9a3412);transition:background .4s ease">
+        🌍 DAY TO DAY ITINERARY 🌍
       </div>
       <div id="qb-itinerary-blocks">
         ${data.itinerary.map((d,i) => qbDayBlock(d,i)).join('')}
       </div>
-      <button class="qb-add-item" onclick="qbAddDay()">+ Add Day</button>
+      <button class="qb-add-item qb-no-print" onclick="qbAddDay()">+ Add Day</button>
     </div>
 
     <!-- Custom Sections -->
@@ -7869,6 +7870,8 @@ function qbRenderDocument(data) {
   `;
   // Init paste handler after render
   setTimeout(qbInitPasteHandler, 100);
+  // Apply destination theme
+  setTimeout(qbApplyTheme, 150);
 }
 
 // ── Row/Item builders ──
@@ -7910,10 +7913,16 @@ function qbBulletItem(text, listId, i) {
 }
 
 function qbDayBlock(d, i) {
-  return `<div class="qb-day-block" id="qb-day-${i}">
-    <div class="qb-day-title qb-editable" contenteditable="true">${d.day}</div>
-    <div class="qb-editable" contenteditable="true" style="font-size:12px;color:#374151;line-height:1.7;padding:4px 0">${d.content}</div>
-    <button class="qb-del-item" onclick="this.parentElement.remove()" style="opacity:.5;font-size:11px;padding:2px 8px;border:1px solid #fca5a5;border-radius:4px;background:#fef2f2;color:#dc2626;cursor:pointer;margin-top:4px">✕ Remove Day</button>
+  const theme = window._qbCurrentTheme || QB_DEST_THEMES.default;
+  return `<div class="qb-day-block" id="qb-day-${i}"
+    style="border-left:4px solid ${theme.border};background:${theme.sectionBg};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:12px">
+    <div class="qb-day-title qb-editable" contenteditable="true"
+      style="color:${theme.titleColor};font-size:14px;font-weight:800;font-family:Arial,sans-serif;margin:0 0 6px;text-decoration:underline"
+      oninput="qbApplyTheme()">${d.day}</div>
+    <div class="qb-editable" contenteditable="true"
+      style="font-size:12px;color:#374151;line-height:1.8;padding:4px 0">${d.content}</div>
+    <button class="qb-del-item qb-no-print" onclick="this.parentElement.remove()"
+      style="opacity:.5;font-size:11px;padding:2px 8px;border:1px solid #fca5a5;border-radius:4px;background:#fef2f2;color:#dc2626;cursor:pointer;margin-top:6px">✕ Remove Day</button>
   </div>`;
 }
 
@@ -8125,6 +8134,93 @@ function qbInitPasteHandler() {
     sel.addRange(range);
   });
 }
+
+
+// ── Destination Theme Engine ──────────────────────────────────
+const QB_DEST_THEMES = {
+  // Asia
+  china:       { flag:'🇨🇳', accent:'#c0392b', accent2:'#f39c12', bg:'#fff5f5', dayBg:'linear-gradient(135deg,#c0392b,#8e1a0e)', dayColor:'#fff', border:'#c0392b', pattern:'🏯', sectionBg:'#fff5f5', titleColor:'#8e1a0e' },
+  japan:       { flag:'🇯🇵', accent:'#e91e63', accent2:'#ff9800', bg:'#fff0f3', dayBg:'linear-gradient(135deg,#e91e63,#ad1457)', dayColor:'#fff', border:'#e91e63', pattern:'🌸', sectionBg:'#fff0f3', titleColor:'#880e4f' },
+  dubai:       { flag:'🇦🇪', accent:'#c8960c', accent2:'#8B6914', bg:'#fffbf0', dayBg:'linear-gradient(135deg,#c8960c,#8B6914)', dayColor:'#fff', border:'#c8960c', pattern:'🏙️', sectionBg:'#fffbf0', titleColor:'#6d4c00' },
+  uae:         { flag:'🇦🇪', accent:'#c8960c', accent2:'#8B6914', bg:'#fffbf0', dayBg:'linear-gradient(135deg,#c8960c,#8B6914)', dayColor:'#fff', border:'#c8960c', pattern:'🏙️', sectionBg:'#fffbf0', titleColor:'#6d4c00' },
+  thailand:    { flag:'🇹🇭', accent:'#00838f', accent2:'#e65100', bg:'#e0f7fa', dayBg:'linear-gradient(135deg,#00838f,#006064)', dayColor:'#fff', border:'#00838f', pattern:'🛕', sectionBg:'#e0f7fa', titleColor:'#004d40' },
+  bali:        { flag:'🇮🇩', accent:'#2e7d32', accent2:'#f57f17', bg:'#f1f8e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🌴', sectionBg:'#f1f8e9', titleColor:'#1b5e20' },
+  indonesia:   { flag:'🇮🇩', accent:'#c62828', accent2:'#f57f17', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#c62828,#b71c1c)', dayColor:'#fff', border:'#c62828', pattern:'🌴', sectionBg:'#fff3e0', titleColor:'#7f0000' },
+  singapore:   { flag:'🇸🇬', accent:'#c62828', accent2:'#1565c0', bg:'#fce4ec', dayBg:'linear-gradient(135deg,#c62828,#880e4f)', dayColor:'#fff', border:'#c62828', pattern:'🦁', sectionBg:'#fce4ec', titleColor:'#880e4f' },
+  malaysia:    { flag:'🇲🇾', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🌴', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  maldives:    { flag:'🇲🇻', accent:'#00695c', accent2:'#0097a7', bg:'#e0f2f1', dayBg:'linear-gradient(135deg,#00695c,#004d40)', dayColor:'#fff', border:'#00695c', pattern:'🏖️', sectionBg:'#e0f2f1', titleColor:'#004d40' },
+  nepal:       { flag:'🇳🇵', accent:'#b71c1c', accent2:'#1565c0', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#b71c1c,#7f0000)', dayColor:'#fff', border:'#b71c1c', pattern:'🏔️', sectionBg:'#fff3e0', titleColor:'#7f0000' },
+  bhutan:      { flag:'🇧🇹', accent:'#e65100', accent2:'#4a148c', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🐉', sectionBg:'#fff8e1', titleColor:'#bf360c' },
+  srilanka:    { flag:'🇱🇰', accent:'#8d1c00', accent2:'#f9a825', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#8d1c00,#6d1500)', dayColor:'#fff', border:'#8d1c00', pattern:'🦁', sectionBg:'#fff8e1', titleColor:'#6d1500' },
+  vietnam:     { flag:'🇻🇳', accent:'#c62828', accent2:'#f9a825', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#c62828,#7f0000)', dayColor:'#fff', border:'#c62828', pattern:'🏮', sectionBg:'#fff3e0', titleColor:'#7f0000' },
+  cambodia:    { flag:'🇰🇭', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🛕', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  korea:       { flag:'🇰🇷', accent:'#1565c0', accent2:'#c62828', bg:'#e8eaf6', dayBg:'linear-gradient(135deg,#283593,#1a237e)', dayColor:'#fff', border:'#283593', pattern:'🎎', sectionBg:'#e8eaf6', titleColor:'#1a237e' },
+  // Middle East
+  jordan:      { flag:'🇯🇴', accent:'#c62828', accent2:'#4e342e', bg:'#fbe9e7', dayBg:'linear-gradient(135deg,#c62828,#7f0000)', dayColor:'#fff', border:'#c62828', pattern:'🏺', sectionBg:'#fbe9e7', titleColor:'#7f0000' },
+  turkey:      { flag:'🇹🇷', accent:'#c62828', accent2:'#e65100', bg:'#fce4ec', dayBg:'linear-gradient(135deg,#c62828,#880e4f)', dayColor:'#fff', border:'#c62828', pattern:'🕌', sectionBg:'#fce4ec', titleColor:'#880e4f' },
+  oman:        { flag:'🇴🇲', accent:'#2e7d32', accent2:'#c62828', bg:'#f1f8e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🏜️', sectionBg:'#f1f8e9', titleColor:'#1b5e20' },
+  // Europe
+  paris:       { flag:'🇫🇷', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🗼', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  france:      { flag:'🇫🇷', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🗼', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  italy:       { flag:'🇮🇹', accent:'#2e7d32', accent2:'#c62828', bg:'#e8f5e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🏛️', sectionBg:'#e8f5e9', titleColor:'#1b5e20' },
+  greece:      { flag:'🇬🇷', accent:'#1565c0', accent2:'#fdd835', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🏛️', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  switzerland: { flag:'🇨🇭', accent:'#c62828', accent2:'#fff', bg:'#fce4ec', dayBg:'linear-gradient(135deg,#c62828,#7f0000)', dayColor:'#fff', border:'#c62828', pattern:'🏔️', sectionBg:'#fce4ec', titleColor:'#7f0000' },
+  spain:       { flag:'🇪🇸', accent:'#f9a825', accent2:'#c62828', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🌞', sectionBg:'#fff8e1', titleColor:'#bf360c' },
+  uk:          { flag:'🇬🇧', accent:'#1565c0', accent2:'#c62828', bg:'#e8eaf6', dayBg:'linear-gradient(135deg,#1a237e,#283593)', dayColor:'#fff', border:'#1a237e', pattern:'🎡', sectionBg:'#e8eaf6', titleColor:'#1a237e' },
+  london:      { flag:'🇬🇧', accent:'#1565c0', accent2:'#c62828', bg:'#e8eaf6', dayBg:'linear-gradient(135deg,#1a237e,#283593)', dayColor:'#fff', border:'#1a237e', pattern:'🎡', sectionBg:'#e8eaf6', titleColor:'#1a237e' },
+  // Americas & Africa
+  usa:         { flag:'🇺🇸', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🗽', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  kenya:       { flag:'🇰🇪', accent:'#2e7d32', accent2:'#c62828', bg:'#f1f8e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🦁', sectionBg:'#f1f8e9', titleColor:'#1b5e20' },
+  egypt:       { flag:'🇪🇬', accent:'#c8960c', accent2:'#c62828', bg:'#fffbf0', dayBg:'linear-gradient(135deg,#c8960c,#8B6914)', dayColor:'#fff', border:'#c8960c', pattern:'🏜️', sectionBg:'#fffbf0', titleColor:'#6d4c00' },
+  // India domestic
+  goa:         { flag:'🇮🇳', accent:'#e65100', accent2:'#00897b', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🏖️', sectionBg:'#fff3e0', titleColor:'#bf360c' },
+  kashmir:     { flag:'🇮🇳', accent:'#4a148c', accent2:'#1565c0', bg:'#f3e5f5', dayBg:'linear-gradient(135deg,#4a148c,#311b92)', dayColor:'#fff', border:'#4a148c', pattern:'🏔️', sectionBg:'#f3e5f5', titleColor:'#311b92' },
+  rajasthan:   { flag:'🇮🇳', accent:'#e65100', accent2:'#f9a825', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🏰', sectionBg:'#fff8e1', titleColor:'#bf360c' },
+  kerala:      { flag:'🇮🇳', accent:'#2e7d32', accent2:'#e65100', bg:'#e8f5e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🌴', sectionBg:'#e8f5e9', titleColor:'#1b5e20' },
+  // Default
+  default:     { flag:'✈️', accent:'#c2410c', accent2:'#f97316', bg:'#fff7ed', dayBg:'linear-gradient(135deg,#c2410c,#9a3412)', dayColor:'#fff', border:'#c2410c', pattern:'🌍', sectionBg:'#fff7ed', titleColor:'#9a3412' },
+};
+
+function qbDetectTheme(title) {
+  if(!title) return QB_DEST_THEMES.default;
+  const t = title.toLowerCase();
+  for(const [key, theme] of Object.entries(QB_DEST_THEMES)) {
+    if(key === 'default') continue;
+    if(t.includes(key)) return theme;
+  }
+  return QB_DEST_THEMES.default;
+}
+
+function qbApplyTheme() {
+  const title = document.getElementById('qb-packageTitle')?.innerText || '';
+  const theme = qbDetectTheme(title);
+
+  // Update itinerary header banner
+  const banner = document.getElementById('qb-itinerary-banner');
+  if(banner) {
+    banner.style.background = theme.dayBg;
+    banner.textContent = theme.pattern + ' DAY TO DAY ITINERARY ' + theme.pattern;
+  }
+
+  // Update each day block
+  document.querySelectorAll('.qb-day-block').forEach(block => {
+    block.style.borderLeft = '4px solid ' + theme.border;
+    block.style.background = theme.sectionBg;
+    block.style.borderRadius = '0 8px 8px 0';
+    block.style.padding = '12px 16px';
+    block.style.marginBottom = '12px';
+    const title = block.querySelector('.qb-day-title');
+    if(title) title.style.color = theme.titleColor;
+  });
+
+  // Update itinerary section background
+  const itin = document.getElementById('qb-itinerary-section');
+  if(itin) itin.style.background = theme.bg;
+
+  // Store theme for new days
+  window._qbCurrentTheme = theme;
+}
+// ── End Destination Theme Engine ──────────────────────────────
 
 // ═══════════════ END QUOTATION BUILDER MODULE ═══════════════
 
