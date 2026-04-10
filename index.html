@@ -1585,7 +1585,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
 
         <!-- A4 Canvas -->
-        <div style="overflow-x:auto;padding-bottom:20px">
+        <div style="overflow-x:auto;overflow-y:visible;padding-bottom:20px">
           <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid #e2e8f0">
             <div id="qb-document"></div>
           </div>
@@ -7633,18 +7633,25 @@ function qbDefaultData() {
 // ── Init ──
 function initQuotationBuilder() {
   loadQbList();
-  // Ensure the .content scroll container scrolls properly for this tab
+  // Force .content to scroll — it is the scroll container
   const contentDiv = document.querySelector('.content');
   if(contentDiv) {
     contentDiv.style.overflowY = 'auto';
-    contentDiv.style.height = '';
   }
-  // Auto-start new quote if none loaded
+  // Pass wheel events from canvas up to .content so mouse scroll works
   setTimeout(() => {
+    const canvas = document.getElementById('qb-canvas');
+    if(canvas && contentDiv) {
+      canvas.addEventListener('wheel', function(e) {
+        contentDiv.scrollTop += e.deltaY;
+        e.preventDefault();
+      }, { passive: false });
+    }
+    // Auto-start
     if(document.getElementById('qb-builder').style.display === 'none') {
       qbNewQuote();
     }
-  }, 100);
+  }, 200);
 }
 
 async function loadQbList() {
