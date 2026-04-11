@@ -106,7 +106,7 @@ li:hover .qb-del-item{opacity:1}
     box-shadow:none !important;border:none !important;
   }
   .qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,
-  #qb-legend,.qb-custom-section-btns,.qb-no-print{display:none !important}
+  #qb-legend,.qb-custom-section-btns,.qb-no-print,[class~='qb-no-print']{display:none !important}
   .qb-editable{background:transparent !important;border:none !important;box-shadow:none !important}
   .qb-locked{background:#fefce8 !important}
   .qb-table th{background:#c2410c !important;color:#fff !important}
@@ -7779,19 +7779,20 @@ function qbRenderDocument(data) {
             <th class="qb-locked">Flight Fare (INR)</th>
             <th class="qb-locked">
               Land Package
-              <select id="qb-currency-select" onchange="qbUpdateCurrency()"
-                style="margin-left:6px;padding:2px 6px;border:1px solid #fff4;border-radius:4px;font-size:11px;background:rgba(255,255,255,0.2);color:#fff;cursor:pointer;outline:none">
-                <option value="₹">₹ INR</option>
-                <option value="$">$ USD</option>
-                <option value="€">€ EUR</option>
-                <option value="£">£ GBP</option>
-                <option value="¥">¥ JPY</option>
+              <select id="qb-currency-select" onchange="qbUpdateCurrency()" class="qb-no-print"
+                style="margin-left:6px;padding:3px 6px;border:1px solid rgba(255,255,255,0.5);border-radius:4px;font-size:12px;background:#fff;color:#c2410c;cursor:pointer;outline:none;font-weight:700">
+                <option value="&#8377; INR">&#8377; INR</option>
+                <option value="$ USD">$ USD</option>
+                <option value="&#8364; EUR">&#8364; EUR</option>
+                <option value="&#163; GBP">&#163; GBP</option>
+                <option value="&#165; JPY">&#165; JPY</option>
                 <option value="AED">AED</option>
-                <option value="THB">฿ THB</option>
-                <option value="SGD">S$</option>
-                <option value="AUD">A$</option>
-                <option value="CAD">C$</option>
+                <option value="&#3647; THB">&#3647; THB</option>
+                <option value="S$ SGD">S$ SGD</option>
+                <option value="A$ AUD">A$ AUD</option>
+                <option value="C$ CAD">C$ CAD</option>
               </select>
+              <span id="qb-currency-print" class="qb-print-only" style="display:none;margin-left:6px;font-size:11px;font-weight:700;color:#fff">&#8377; INR</span>
             </th>
             <th class="qb-locked">Total</th>
             <th class="qb-locked qb-no-print" style="width:30px"></th>
@@ -7862,40 +7863,18 @@ function qbRenderDocument(data) {
       </ul>
     </div>
 
-    <!-- Day to Day Itinerary -->
-    <div class="qb-section" id="qb-itinerary-section" style="transition:background .4s ease">
-      <div id="qb-itinerary-banner" style="font-size:16px;font-weight:900;color:#fff;letter-spacing:2px;text-align:center;padding:12px;border-radius:8px;margin-bottom:16px;background:linear-gradient(135deg,#c2410c,#9a3412);transition:background .4s ease">
-        🌍 DAY TO DAY ITINERARY 🌍
-      </div>
-      <div id="qb-itinerary-blocks">
-        ${data.itinerary.map((d,i) => qbDayBlock(d,i)).join('')}
-      </div>
-      <button class="qb-add-item qb-no-print" onclick="qbAddDay()">+ Add Day</button>
-    </div>
-
     <!-- Visa Checklist -->
     <div class="qb-section" id="qb-visa-section">
-      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">
-        🛂 Visa Checklist:
-      </div>
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">🛂 Visa Checklist:</div>
       <ul class="qb-bullet-list" id="qb-visa-list">
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Valid Passport (minimum 6 months validity from travel date)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Passport size photographs (white background, 35mm x 45mm)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Confirmed flight tickets (to and from destination)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Hotel booking confirmation for entire stay</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Bank statement (last 3 months with sufficient balance)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Income tax returns (last 2 years)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Travel insurance covering entire trip duration</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Leave letter / NOC from employer (if employed)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
-        <li><span class="qb-editable" contenteditable="true" style="flex:1">Business registration documents (if self-employed)</span><button class="qb-del-item" onclick="this.parentElement.remove()">✕</button></li>
+        ${(data.visaChecklist||['Valid Passport (minimum 6 months validity from travel date)','Passport size photographs (white background, 35mm x 45mm)','Confirmed flight tickets (to and from destination)','Hotel booking confirmation for entire stay','Bank statement (last 3 months with sufficient balance)','Travel insurance covering entire trip duration','Leave letter / NOC from employer (if employed)']).map((v,i) => qbBulletItem(v,'visa',i)).join('')}
       </ul>
       <button class="qb-add-item qb-no-print" onclick="qbAddBullet('visa')">+ Add Document</button>
-
-      <div style="margin-top:16px">
+      <div style="margin-top:14px">
         <div class="qb-locked" style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">📝 Additional Notes / Special Instructions:</div>
         <div class="qb-editable" id="qb-visa-notes" contenteditable="true"
-          style="min-height:60px;font-size:12px;color:#374151;line-height:1.8;border:1px dashed #86efac;border-radius:6px;padding:8px 12px;background:#f0fdf4">
-          Add any special visa requirements, processing time, or important notes for this destination here...
+          style="min-height:50px;font-size:12px;color:#374151;line-height:1.8;border:1px dashed #86efac;border-radius:6px;padding:8px 12px;background:#f0fdf4">
+          ${data.visaNotes||'Add any special visa requirements, processing time, or notes here...'}
         </div>
       </div>
     </div>
@@ -7971,8 +7950,8 @@ function qbDayBlock(d, i) {
 function qbImageCell(img, i) {
   return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:160px">
     <img src="${img}" style="width:100%;height:160px;object-fit:cover" onerror="this.style.display='none'">
-    <button onclick="qbRemoveImage(${i})" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
-    <button onclick="qbReplaceImage(${i})" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">🔄 Replace</button>
+    <button onclick="qbRemoveImage(${i})" class="qb-no-print" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
+    <button onclick="qbReplaceImage(${i})" class="qb-no-print" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">🔄 Replace</button>
   </div>`;
 }
 
@@ -8119,41 +8098,31 @@ async function qbSaveQuote() {
 
 // ── Print / PDF ──
 function qbPrint() {
-  // Temporarily remove all color suppression
-  const style = document.createElement('style');
-  style.id = 'qb-print-force';
-  style.textContent = `
-    @media print {
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      body * { visibility: hidden; }
-      #qb-canvas, #qb-canvas * { visibility: visible; }
-      #qb-canvas {
-        position: absolute !important;
-        top: 0 !important; left: 0 !important;
-        width: 794px !important;
-        margin: 0 !important;
-        box-shadow: none !important;
-        border: none !important;
-        font-family: Arial, sans-serif !important;
-      }
-      .qb-add-row, .qb-del-row, .qb-add-item, .qb-del-item,
-      #qb-legend, .qb-custom-section-btns, .qb-no-print { display: none !important; }
-      .qb-editable { background: transparent !important; border: none !important; }
-      .qb-locked { background: #fefce8 !important; }
-      .qb-table th { background: #c2410c !important; color: #fff !important; }
-      .qb-section { page-break-inside: avoid; }
-      .qb-day-block { page-break-inside: avoid; }
-      @page { size: A4; margin: 10mm; }
-    }`;
-  document.head.appendChild(style);
-  // Strip edit mode for print
-  setTimeout(() => {
-    window.print();
-    setTimeout(() => {
-      document.getElementById('qb-print-force')?.remove();
-      document.title = origTitle;
-    }, 1000);
-  }, 400);
+  const canvas = document.getElementById('qb-canvas');
+  if(!canvas) { alert('No quotation to print.'); return; }
+  const html = canvas.innerHTML;
+  const win = window.open('', '', 'width=900,height=750');
+  if(!win) { alert('Please allow popups for printing.'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><title></title><style>
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#fff}
+    .qb-no-print,.qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
+    .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important}
+    .qb-locked{background:#fefce8!important}
+    .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
+    .qb-table th{background:#c2410c!important;color:#fff!important;padding:7px 10px;font-size:12px;border:1px solid #9a3412;text-align:center}
+    .qb-table td{padding:7px 10px;border:1px solid #d1d5db;font-size:12px;vertical-align:top}
+    .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid}
+    .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
+    .qb-day-block{margin-bottom:16px;page-break-inside:avoid}
+    .qb-bullet-list{list-style:none;padding:0;margin:0}
+    .qb-bullet-list li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12px}
+    .qb-bullet-list li::before{content:"❖";color:#d97706;font-size:14px;flex-shrink:0;margin-top:1px}
+    img{max-width:100%;height:auto}
+    @page{size:A4;margin:8mm}
+  </style></head><body>${html}</body></html>`);
+  win.document.close();
+  setTimeout(() => { win.print(); setTimeout(() => win.close(), 1000); }, 500);
 }
 
 // ── Clean paste — strip Excel/Word formatting ──
