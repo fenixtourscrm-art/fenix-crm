@@ -1370,6 +1370,681 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     </div>
 
     
+//  QUOTATION BUILDER MODULE
+// ═══════════════════════════════════════════════════════
+
+let qbCurrentId = null;
+let qbPreviewMode = false;
+let qbSavedQuotes = [];
+
+// ── Default template data ──
+function qbDefaultData() {
+  return {
+    id: 'qb_' + Date.now(),
+    name: 'New Package',
+    createdAt: new Date().toISOString(),
+    packageTitle: 'Sri Lanka & Hong Kong',
+    duration: '14 Nights / 15 Days',
+    subTitle: '(04 Nights Bentota + 02 Nights Kirinda + 01 Night Colombo + 05 Nights Hong Kong + 02 Nights Macau)',
+    images: [],
+    flights: [
+      { date: '04 May 2026', airline: 'Indigo', sector: 'BLR - CMB', time: '09:05 - 10:30', baggage: '30KG + 7KG' },
+      { date: '11 May 2026', airline: 'AirIndia', sector: 'CMB - DEL', time: '17:05 - 20:50', baggage: '' },
+    ],
+    pricing: [
+      { paxType: 'Adult', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Extra Adult', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Child With Bed', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Child No Bed', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+      { paxType: 'Infant', flightFare: '', landPackage: '', currency: 'INR', total: '' },
+    ],
+    hotels: [
+      { destination: 'Bentota', hotel: 'Taj Bentota Resort & Spa / Similar', room: 'Superior Room, 1 King Bed, Garden View' },
+      { destination: 'Kirinda', hotel: 'Jetwing Yala / Similar', room: 'Superior Room' },
+      { destination: 'Colombo', hotel: 'Taj Samudra, Colombo / Similar', room: 'Deluxe Double Room' },
+    ],
+    inclusions: [
+      '04 Nights Accommodation in Bentota Hotel',
+      '02 Nights Accommodation in Macau Hotel',
+      'Daily American Breakfast at Hotels',
+      'Mangroves Safari Bentota River',
+      'Transfer from Bentota to Kirinda Hotel',
+    ],
+    exclusions: [
+      '5% GST + 2% TCS',
+      'Flight fare',
+      'Guaranteed early check in or late checkout',
+      'Tips and porter-age',
+      'Meals other than specified in the inclusions',
+      'Any expenses of personal nature',
+    ],
+    itinerary: [
+      { day: 'Day 01: Arrival', content: 'Welcome! Upon arrival, your group will be met by the local guide in the terminal arrivals hall. You will be escorted to the hotel in a private coach.' },
+      { day: 'Day 02: City Tour', content: 'After breakfast in the hotel, your group will meet a local guide in the lobby for an exciting tour of this scenic city.' },
+    ],
+    customSections: [],
+  };
+}
+
+// ── Init ──
+function initQuotationBuilder() {
+  loadQbList();
+  // Force .content to scroll — it is the scroll container
+  const contentDiv = document.querySelector('.content');
+  if(contentDiv) {
+    contentDiv.style.overflowY = 'auto';
+  }
+  // Pass wheel events from canvas up to .content so mouse scroll works
+  setTimeout(() => {
+    const canvas = document.getElementById('qb-canvas');
+    if(canvas && contentDiv) {
+      canvas.addEventListener('wheel', function(e) {
+        contentDiv.scrollTop += e.deltaY;
+        e.preventDefault();
+      }, { passive: false });
+    }
+    // Auto-start
+    if(document.getElementById('qb-builder').style.display === 'none') {
+      qbNewQuote();
+    }
+  }, 200);
+}
+
+async function loadQbList() {
+  const el = document.getElementById('qb-list');
+  if(!el) return;
+  try {
+    const snap = await db.collection('quotations').orderBy('createdAt','desc').limit(20).get();
+    qbSavedQuotes = snap.docs.map(d => ({id: d.id, ...d.data()}));
+  } catch(e) {
+    qbSavedQuotes = JSON.parse(localStorage.getItem('qb_quotes') || '[]');
+  }
+
+  if(!qbSavedQuotes.length) {
+    el.innerHTML = '<div style="font-size:12px;color:#94a3b8">No saved quotations yet. Click "+ New Quotation" to start.</div>';
+    return;
+  }
+
+  el.innerHTML = qbSavedQuotes.map(q => `
+    <div style="display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s"
+      onclick="qbLoadQuote('${q.id}')"
+      onmouseover="this.style.borderColor='#0369a1'" onmouseout="this.style.borderColor='#e2e8f0'">
+      <span style="font-size:18px">📄</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#0f172a">${q.packageTitle || q.name}</div>
+        <div style="font-size:10px;color:#94a3b8">${new Date(q.createdAt).toLocaleDateString('en-IN')}</div>
+      </div>
+      <button onclick="event.stopPropagation();qbDeleteQuote('${q.id}')" style="margin-left:6px;padding:2px 6px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:10px;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+
+function qbNewQuote() {
+  qbCurrentId = null;
+  const data = qbDefaultData();
+  qbCurrentId = data.id;
+  qbRenderDocument(data);
+  document.getElementById('qb-builder').style.display = '';
+}
+
+function qbLoadQuote(id) {
+  const q = qbSavedQuotes.find(x => x.id === id);
+  if(!q) return;
+  qbCurrentId = id;
+  qbRenderDocument(q);
+  document.getElementById('qb-builder').style.display = '';
+  document.getElementById('qb-builder').scrollIntoView({behavior:'smooth'});
+}
+
+async function qbDeleteQuote(id) {
+  if(!confirm('Delete this quotation?')) return;
+  try {
+    await db.collection('quotations').doc(id).delete();
+  } catch(e) {}
+  qbSavedQuotes = qbSavedQuotes.filter(x => x.id !== id);
+  loadQbList();
+  if(qbCurrentId === id) document.getElementById('qb-builder').style.display = 'none';
+}
+
+// ── Render the full document ──
+function qbRenderDocument(data) {
+  const doc = document.getElementById('qb-document');
+  if(!doc) return;
+
+  _qbImages = data.images || [];
+  doc.innerHTML = `
+    <!-- Fenix Branded Header -->
+    <div style="background:#fff;border-bottom:4px solid #c2410c;padding:12px 24px;display:flex;align-items:center;justify-content:center;position:relative">
+      <img src="fenix_quote_logo.png" style="height:80px;object-fit:contain;background:#fff">
+      <div style="position:absolute;right:24px;text-align:right;font-size:11px;color:#64748b">
+        <div style="font-weight:700;color:#374151;font-size:12px">${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
+        <div style="color:#94a3b8">Travel Quotation</div>
+      </div>
+    </div>
+
+    <!-- Title Section -->
+    <div class="qb-title-section" style="position:relative">
+      <div style="font-family:Arial,sans-serif;font-size:28px;font-weight:900;color:#dc2626;letter-spacing:2px;text-shadow:1px 1px 0 #fbbf24"
+        contenteditable="true" class="qb-editable" id="qb-packageTitle"
+        oninput="qbApplyTheme()">${data.packageTitle}</div>
+      <div style="font-size:18px;font-weight:700;color:#1e40af;margin:4px 0"
+        contenteditable="true" class="qb-editable" id="qb-duration">${data.duration}</div>
+      <div style="font-size:13px;color:#374151;font-weight:500;margin-top:4px"
+        contenteditable="true" class="qb-editable" id="qb-subTitle">${data.subTitle}</div>
+    </div>
+
+    <!-- Image Section -->
+    <div class="qb-section" id="qb-images-section">
+      <div class="qb-locked" style="font-size:11px;font-weight:700;color:#92400e;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:8px">PACKAGE IMAGES</div>
+      <div id="qb-images-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        ${data.images.map((img,i) => qbImageCell(img, i)).join('')}
+        ${data.images.length === 0 ? '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet — use the button below to add</div>' : ''}
+      </div>
+      <button class="qb-add-item" onclick="qbAddImage()">+ Add Image (URL or Upload)</button>
+    </div>
+
+    <!-- Flights Table -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">
+        Flights Details: <span style="font-size:11px;font-weight:600">Seats are subject to Availability</span>
+      </div>
+      <table class="qb-table" id="qb-flights-table">
+        <thead>
+          <tr>
+            <th class="qb-locked">DATE</th>
+            <th class="qb-locked">AIRLINE NAME</th>
+            <th class="qb-locked">SECTOR</th>
+            <th class="qb-locked">TIME</th>
+            <th class="qb-locked">BAGGAGE</th>
+            <th class="qb-locked qb-no-print" style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="qb-flights-tbody">
+          ${data.flights.map((f,i) => qbFlightRow(f,i)).join('')}
+        </tbody>
+      </table>
+      <button class="qb-add-row" onclick="qbAddFlightRow()">+ Add Flight</button>
+    </div>
+
+    <!-- Pricing Table -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Package Pricing</div>
+      <table class="qb-table" id="qb-pricing-table">
+        <thead>
+          <tr>
+            <th class="qb-locked">Pax Type</th>
+            <th class="qb-locked">Flight Fare (INR)</th>
+            <th class="qb-locked">
+              Land Package
+              <select id="qb-currency-select" onchange="qbUpdateCurrency()" class="qb-no-print"
+                style="margin-left:6px;padding:3px 6px;border:1px solid rgba(255,255,255,0.5);border-radius:4px;font-size:12px;background:#fff;color:#c2410c;cursor:pointer;outline:none;font-weight:700">
+                <option value="&#8377; INR">&#8377; INR</option>
+                <option value="$ USD">$ USD</option>
+                <option value="&#8364; EUR">&#8364; EUR</option>
+                <option value="&#163; GBP">&#163; GBP</option>
+                <option value="&#165; JPY">&#165; JPY</option>
+                <option value="AED">AED</option>
+                <option value="&#3647; THB">&#3647; THB</option>
+                <option value="S$ SGD">S$ SGD</option>
+                <option value="A$ AUD">A$ AUD</option>
+                <option value="C$ CAD">C$ CAD</option>
+              </select>
+              <span id="qb-currency-print" class="qb-print-only" style="display:none;margin-left:6px;font-size:11px;font-weight:700;color:#fff">&#8377; INR</span>
+            </th>
+            <th class="qb-locked">Total</th>
+            <th class="qb-locked qb-no-print" style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="qb-pricing-tbody">
+          ${data.pricing.map((p,i) => qbPricingRow(p,i)).join('')}
+        </tbody>
+      </table>
+      <button class="qb-add-row" onclick="qbAddPricingRow()">+ Add Row</button>
+    </div>
+
+    <!-- Hotel Details -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Hotel Details: -</div>
+      <table class="qb-table" id="qb-hotels-table">
+        <thead>
+          <tr>
+            <th class="qb-locked">Destination</th>
+            <th class="qb-locked">Hotel Name</th>
+            <th class="qb-locked">Room Category</th>
+            <th class="qb-locked qb-no-print" style="width:30px"></th>
+          </tr>
+        </thead>
+        <tbody id="qb-hotels-tbody">
+          ${data.hotels.map((h,i) => qbHotelRow(h,i)).join('')}
+        </tbody>
+      </table>
+      <button class="qb-add-row" onclick="qbAddHotelRow()">+ Add Hotel</button>
+    </div>
+
+    <!-- Inclusions -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Land Package Inclusions:</div>
+      <ul class="qb-bullet-list" id="qb-inclusions-list">
+        ${data.inclusions.map((inc,i) => qbBulletItem(inc, 'inclusions', i)).join('')}
+      </ul>
+      <button class="qb-add-item" onclick="qbAddBullet('inclusions')">+ Add Inclusion</button>
+    </div>
+
+    <!-- Exclusions -->
+    <div class="qb-section">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Land Package Exclusions:</div>
+      <ul class="qb-bullet-list" id="qb-exclusions-list">
+        ${data.exclusions.map((exc,i) => qbBulletItem(exc, 'exclusions', i)).join('')}
+      </ul>
+      <button class="qb-add-item" onclick="qbAddBullet('exclusions')">+ Add Exclusion</button>
+    </div>
+
+    <!-- Payment Policy (LOCKED) -->
+    <div class="qb-section qb-locked">
+      <div style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Payment Policy:</div>
+      <ul class="qb-bullet-list">
+        <li><span class="qb-locked">Initial deposit – Rs 50% per person to confirm your booking with us plus full payment of air ticket.</span></li>
+        <li><span class="qb-locked">75% of the Total payment to be made before 30 days of the departure.</span></li>
+        <li><span class="qb-locked">100% payment to be made at least 20 days before departure.</span></li>
+      </ul>
+    </div>
+
+    <!-- Cancellation Policy (LOCKED) -->
+    <div class="qb-section qb-locked" style="margin-bottom:0;border-bottom:none">
+      <div style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Cancellation Policy for Land Package: -</div>
+      <ul class="qb-bullet-list">
+        <li><span class="qb-locked">25% cancellation fee if cancelled before 20 days prior to check-in.</span></li>
+        <li><span class="qb-locked">50% Cancellation fee if cancelled within 15 days prior to check-in.</span></li>
+        <li><span class="qb-locked">75% Cancellation fee if cancelled within 10 days prior to check-in.</span></li>
+        <li><span class="qb-locked">100% Cancellation fee if cancelled within 07 days OR No-Show of check-in.</span></li>
+      </ul>
+    </div>
+
+    <!-- Visa Checklist (after Cancellation Policy) -->
+    <div class="qb-section" id="qb-visa-section" style="margin-top:0">
+      <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">🛂 Visa Checklist:</div>
+      <ul class="qb-bullet-list" id="qb-visa-list">
+        ${(data.visaChecklist||['Valid Passport (minimum 6 months validity from travel date)','Passport size photographs (white background, 35mm x 45mm)','Confirmed flight tickets (to and from destination)','Hotel booking confirmation for entire stay','Bank statement (last 3 months with sufficient balance)','Travel insurance covering entire trip duration','Leave letter / NOC from employer (if employed)']).map((v,i) => qbBulletItem(v,'visa',i)).join('')}
+      </ul>
+      <button class="qb-add-item qb-no-print" onclick="qbAddBullet('visa')">+ Add Document</button>
+      <div style="margin-top:14px">
+        <div class="qb-locked" style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">📝 Additional Notes / Special Instructions:</div>
+        <div class="qb-editable" id="qb-visa-notes" contenteditable="true"
+          style="min-height:50px;font-size:12px;color:#374151;line-height:1.8;border:1px dashed #86efac;border-radius:6px;padding:8px 12px;background:#f0fdf4">
+          ${data.visaNotes||'Add any special visa requirements, processing time, or notes here...'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Day to Day Itinerary (LAST section before footer) -->
+    <div class="qb-section" id="qb-itinerary-section" style="transition:background .4s ease">
+      <div id="qb-itinerary-banner" style="font-size:16px;font-weight:900;color:#fff;letter-spacing:2px;text-align:center;padding:12px;border-radius:8px;margin-bottom:16px;background:linear-gradient(135deg,#c2410c,#9a3412);transition:background .4s ease">
+        🌍 DAY TO DAY ITINERARY 🌍
+      </div>
+      <div id="qb-itinerary-blocks">
+        ${data.itinerary.map((d,i) => qbDayBlock(d,i)).join('')}
+      </div>
+      <button class="qb-add-item qb-no-print" onclick="qbAddDay()">+ Add Day</button>
+    </div>
+
+    <!-- Custom Sections -->
+    <div id="qb-custom-sections">
+      ${(data.customSections||[]).map((s,i) => qbCustomSection(s,i)).join('')}
+    </div>
+
+    <!-- Fenix Footer -->
+    <div class="qb-locked" style="text-align:center;padding:16px;background:#fef3c7 !important;border-top:2px solid #f97316;font-size:11px;color:#92400e;font-weight:600">
+      Fenix Tours & Travels Pvt Ltd · www.fenixtours.co.in · All rights reserved
+    </div>
+  `;
+  // Init paste handler after render
+  setTimeout(qbInitPasteHandler, 100);
+  // Apply destination theme
+  setTimeout(qbApplyTheme, 150);
+}
+
+// ── Row/Item builders ──
+function qbFlightRow(f, i) {
+  return `<tr data-row="${i}">
+    <td><span class="qb-editable" contenteditable="true">${f.date||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.airline||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.sector||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.time||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${f.baggage||''}</span></td>
+    <td class="qb-no-print"><button class="qb-del-row" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>`;
+}
+
+function qbPricingRow(p, i) {
+  return `<tr data-row="${i}">
+    <td style="background:#fef3c7;font-weight:700"><span class="qb-editable" contenteditable="true">${p.paxType||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${p.flightFare||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${p.landPackage||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${p.total||''}</span></td>
+    <td class="qb-no-print"><button class="qb-del-row" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>`;
+}
+
+function qbHotelRow(h, i) {
+  return `<tr data-row="${i}">
+    <td style="font-weight:700"><span class="qb-editable" contenteditable="true">${h.destination||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${h.hotel||''}</span></td>
+    <td><span class="qb-editable" contenteditable="true">${h.room||''}</span></td>
+    <td class="qb-no-print"><button class="qb-del-row" onclick="this.closest('tr').remove()">✕</button></td>
+  </tr>`;
+}
+
+function qbBulletItem(text, listId, i) {
+  return `<li id="qb-${listId}-item-${i}">
+    <span class="qb-editable" contenteditable="true" style="flex:1">${text}</span>
+    <button class="qb-del-item" onclick="this.parentElement.remove()">✕</button>
+  </li>`;
+}
+
+function qbDayBlock(d, i) {
+  const theme = window._qbCurrentTheme || QB_DEST_THEMES.default;
+  return `<div class="qb-day-block" id="qb-day-${i}"
+    style="border-left:4px solid ${theme.border};background:${theme.sectionBg};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:12px">
+    <div class="qb-day-title qb-editable" contenteditable="true"
+      style="color:${theme.titleColor};font-size:14px;font-weight:800;font-family:Arial,sans-serif;margin:0 0 6px;text-decoration:underline"
+      oninput="qbApplyTheme()">${d.day}</div>
+    <div class="qb-editable" contenteditable="true"
+      style="font-size:12px;color:#374151;line-height:1.8;padding:4px 0">${d.content}</div>
+    <button class="qb-del-item qb-no-print" onclick="this.parentElement.remove()"
+      style="opacity:.5;font-size:11px;padding:2px 8px;border:1px solid #fca5a5;border-radius:4px;background:#fef2f2;color:#dc2626;cursor:pointer;margin-top:6px">✕ Remove Day</button>
+  </div>`;
+}
+
+function qbImageCell(img, i) {
+  return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:160px">
+    <img src="${img}" style="width:100%;height:160px;object-fit:cover" onerror="this.style.display='none'">
+    <button onclick="qbRemoveImage(${i})" class="qb-no-print" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
+    <button onclick="qbReplaceImage(${i})" class="qb-no-print" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">🔄 Replace</button>
+  </div>`;
+}
+
+function qbCustomSection(s, i) {
+  return `<div class="qb-section" id="qb-custom-${i}">
+    <div class="qb-custom-section-btns" style="float:right;display:flex;gap:4px">
+      <button onclick="document.getElementById('qb-custom-${i}').remove()" style="padding:2px 8px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:11px;cursor:pointer">✕ Remove</button>
+    </div>
+    <div class="qb-editable" contenteditable="true" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">${s.title}</div>
+    <div class="qb-editable" contenteditable="true" style="font-size:12px;color:#374151;line-height:1.7">${s.content}</div>
+  </div>`;
+}
+
+// ── Add actions ──
+function qbAddFlightRow() {
+  document.getElementById('qb-flights-tbody').insertAdjacentHTML('beforeend',
+    qbFlightRow({date:'',airline:'',sector:'',time:'',baggage:''}, Date.now()));
+}
+function qbAddPricingRow() {
+  document.getElementById('qb-pricing-tbody').insertAdjacentHTML('beforeend',
+    qbPricingRow({paxType:'',flightFare:'',landPackage:'',total:''}, Date.now()));
+}
+function qbAddHotelRow() {
+  document.getElementById('qb-hotels-tbody').insertAdjacentHTML('beforeend',
+    qbHotelRow({destination:'',hotel:'',room:''}, Date.now()));
+}
+function qbAddBullet(listId) {
+  const list = document.getElementById('qb-'+listId+'-list');
+  if(!list) return;
+  const i = Date.now();
+  list.insertAdjacentHTML('beforeend', qbBulletItem('', listId, i));
+  list.lastElementChild.querySelector('.qb-editable').focus();
+}
+function qbAddDay() {
+  const blocks = document.getElementById('qb-itinerary-blocks');
+  if(!blocks) return;
+  const i = blocks.children.length + 1;
+  blocks.insertAdjacentHTML('beforeend', qbDayBlock({day:'Day '+i+': Title', content:'Write itinerary details here...'}, Date.now()));
+}
+function qbAddCustomSection() {
+  const container = document.getElementById('qb-custom-sections');
+  if(!container) return;
+  const i = Date.now();
+  container.insertAdjacentHTML('beforeend',
+    qbCustomSection({title:'Custom Section Title', content:'Write your content here...'}, i));
+}
+
+// ── Image handling ──
+let _qbImages = [];
+function qbAddImage() {
+  const url = prompt('Enter image URL (or leave blank to upload):');
+  if(url) {
+    _qbImages.push(url);
+    qbRefreshImages();
+  } else {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.onchange = e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = ev => { _qbImages.push(ev.target.result); qbRefreshImages(); };
+      reader.readAsDataURL(file);
+    };
+    inp.click();
+  }
+}
+function qbRemoveImage(i) { _qbImages.splice(i,1); qbRefreshImages(); }
+function qbReplaceImage(i) {
+  const url = prompt('Enter new image URL:');
+  if(url) { _qbImages[i] = url; qbRefreshImages(); }
+}
+function qbRefreshImages() {
+  const grid = document.getElementById('qb-images-grid');
+  if(!grid) return;
+  grid.innerHTML = _qbImages.length
+    ? _qbImages.map((img,i) => qbImageCell(img,i)).join('')
+    : '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet</div>';
+}
+
+// ── Preview Mode removed — always edit mode ──
+function qbTogglePreview() { /* removed */ }
+
+// ── Collect data from DOM ──
+function qbCollectData() {
+  const get = id => document.getElementById(id)?.innerText?.trim() || '';
+  const rows = (tbodyId, fields) => {
+    const tbody = document.getElementById(tbodyId);
+    if(!tbody) return [];
+    return [...tbody.querySelectorAll('tr')].map(tr => {
+      const cells = [...tr.querySelectorAll('.qb-editable')];
+      const obj = {};
+      fields.forEach((f,i) => obj[f] = cells[i]?.innerText?.trim() || '');
+      return obj;
+    });
+  };
+  const bullets = listId => [...(document.getElementById('qb-'+listId+'-list')?.querySelectorAll('.qb-editable') || [])].map(el => el.innerText.trim());
+  const days = [...(document.getElementById('qb-itinerary-blocks')?.querySelectorAll('.qb-day-block') || [])].map(block => {
+    const divs = block.querySelectorAll('.qb-editable');
+    return { day: divs[0]?.innerText?.trim() || '', content: divs[1]?.innerText?.trim() || '' };
+  });
+  const customs = [...(document.getElementById('qb-custom-sections')?.children || [])].map(s => {
+    const divs = s.querySelectorAll('.qb-editable');
+    return { title: divs[0]?.innerText?.trim() || '', content: divs[1]?.innerText?.trim() || '' };
+  });
+
+  return {
+    id: qbCurrentId || ('qb_' + Date.now()),
+    packageTitle: get('qb-packageTitle'),
+    duration: get('qb-duration'),
+    subTitle: get('qb-subTitle'),
+    images: _qbImages,
+    flights: rows('qb-flights-tbody', ['date','airline','sector','time','baggage']),
+    pricing: rows('qb-pricing-tbody', ['paxType','flightFare','landPackage','total']),
+    hotels:  rows('qb-hotels-tbody',  ['destination','hotel','room']),
+    inclusions: bullets('inclusions'),
+    exclusions: bullets('exclusions'),
+    itinerary: days,
+    customSections: customs,
+    createdAt: new Date().toISOString(),
+    name: get('qb-packageTitle'),
+  };
+}
+
+// ── Save ──
+async function qbSaveQuote() {
+  const data = qbCollectData();
+  qbCurrentId = data.id;
+  try {
+    await db.collection('quotations').doc(data.id).set(data);
+  } catch(e) {
+    const local = JSON.parse(localStorage.getItem('qb_quotes') || '[]');
+    const idx = local.findIndex(x => x.id === data.id);
+    if(idx >= 0) local[idx] = data; else local.unshift(data);
+    localStorage.setItem('qb_quotes', JSON.stringify(local));
+  }
+  loadQbList();
+  const toast = document.createElement('div');
+  toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#10b981;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:999999';
+  toast.textContent = '✅ Quotation saved!';
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2000);
+}
+
+// ── Print / PDF ──
+function qbPrint() {
+  const canvas = document.getElementById('qb-canvas');
+  if(!canvas) { alert('No quotation to print.'); return; }
+  const html = canvas.innerHTML;
+  const win = window.open('', '', 'width=900,height=750');
+  if(!win) { alert('Please allow popups for printing.'); return; }
+  win.document.write(`<!DOCTYPE html><html><head><title></title><style>
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;background:#fff}
+    .qb-no-print,.qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
+    .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important}
+    .qb-locked{background:#fefce8!important}
+    .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
+    .qb-table th{background:#c2410c!important;color:#fff!important;padding:7px 10px;font-size:12px;border:1px solid #9a3412;text-align:center}
+    #qb-currency-label{display:inline!important;visibility:visible!important;color:#fff!important;font-weight:800!important}
+    #qb-currency-select{display:none!important}
+    .qb-table td{padding:7px 10px;border:1px solid #d1d5db;font-size:12px;vertical-align:top}
+    .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid}
+    .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
+    .qb-day-block{margin-bottom:16px;page-break-inside:avoid}
+    .qb-bullet-list{list-style:none;padding:0;margin:0}
+    .qb-bullet-list li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12px}
+    .qb-bullet-list li::before{content:"❖";color:#d97706;font-size:14px;flex-shrink:0;margin-top:1px}
+    img{max-width:100%;height:auto}
+    @page{size:A4;margin:8mm}
+  </style></head><body>${html}</body></html>`);
+  win.document.close();
+  setTimeout(() => { win.print(); setTimeout(() => win.close(), 1000); }, 500);
+}
+
+// ── Clean paste — strip Excel/Word formatting ──
+function qbInitPasteHandler() {
+  const doc = document.getElementById('qb-document');
+  if(!doc) return;
+  doc.addEventListener('paste', function(e) {
+    if(!e.target.closest('.qb-editable')) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    // Insert plain text only
+    const sel = window.getSelection();
+    if(!sel.rangeCount) return;
+    sel.deleteFromDocument();
+    const range = sel.getRangeAt(0);
+    const textNode = document.createTextNode(text);
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+}
+
+
+// ── Destination Theme Engine ──────────────────────────────────
+const QB_DEST_THEMES = {
+  // Asia
+  china:       { flag:'🇨🇳', accent:'#c0392b', accent2:'#f39c12', bg:'#fff5f5', dayBg:'linear-gradient(135deg,#c0392b,#8e1a0e)', dayColor:'#fff', border:'#c0392b', pattern:'🏯', sectionBg:'#fff5f5', titleColor:'#8e1a0e' },
+  japan:       { flag:'🇯🇵', accent:'#e91e63', accent2:'#ff9800', bg:'#fff0f3', dayBg:'linear-gradient(135deg,#e91e63,#ad1457)', dayColor:'#fff', border:'#e91e63', pattern:'🌸', sectionBg:'#fff0f3', titleColor:'#880e4f' },
+  dubai:       { flag:'🇦🇪', accent:'#c8960c', accent2:'#8B6914', bg:'#fffbf0', dayBg:'linear-gradient(135deg,#c8960c,#8B6914)', dayColor:'#fff', border:'#c8960c', pattern:'🏙️', sectionBg:'#fffbf0', titleColor:'#6d4c00' },
+  uae:         { flag:'🇦🇪', accent:'#c8960c', accent2:'#8B6914', bg:'#fffbf0', dayBg:'linear-gradient(135deg,#c8960c,#8B6914)', dayColor:'#fff', border:'#c8960c', pattern:'🏙️', sectionBg:'#fffbf0', titleColor:'#6d4c00' },
+  thailand:    { flag:'🇹🇭', accent:'#00838f', accent2:'#e65100', bg:'#e0f7fa', dayBg:'linear-gradient(135deg,#00838f,#006064)', dayColor:'#fff', border:'#00838f', pattern:'🛕', sectionBg:'#e0f7fa', titleColor:'#004d40' },
+  bali:        { flag:'🇮🇩', accent:'#2e7d32', accent2:'#f57f17', bg:'#f1f8e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🌴', sectionBg:'#f1f8e9', titleColor:'#1b5e20' },
+  indonesia:   { flag:'🇮🇩', accent:'#c62828', accent2:'#f57f17', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#c62828,#b71c1c)', dayColor:'#fff', border:'#c62828', pattern:'🌴', sectionBg:'#fff3e0', titleColor:'#7f0000' },
+  singapore:   { flag:'🇸🇬', accent:'#c62828', accent2:'#1565c0', bg:'#fce4ec', dayBg:'linear-gradient(135deg,#c62828,#880e4f)', dayColor:'#fff', border:'#c62828', pattern:'🦁', sectionBg:'#fce4ec', titleColor:'#880e4f' },
+  malaysia:    { flag:'🇲🇾', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🌴', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  maldives:    { flag:'🇲🇻', accent:'#00695c', accent2:'#0097a7', bg:'#e0f2f1', dayBg:'linear-gradient(135deg,#00695c,#004d40)', dayColor:'#fff', border:'#00695c', pattern:'🏖️', sectionBg:'#e0f2f1', titleColor:'#004d40' },
+  nepal:       { flag:'🇳🇵', accent:'#b71c1c', accent2:'#1565c0', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#b71c1c,#7f0000)', dayColor:'#fff', border:'#b71c1c', pattern:'🏔️', sectionBg:'#fff3e0', titleColor:'#7f0000' },
+  bhutan:      { flag:'🇧🇹', accent:'#e65100', accent2:'#4a148c', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🐉', sectionBg:'#fff8e1', titleColor:'#bf360c' },
+  srilanka:    { flag:'🇱🇰', accent:'#8d1c00', accent2:'#f9a825', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#8d1c00,#6d1500)', dayColor:'#fff', border:'#8d1c00', pattern:'🦁', sectionBg:'#fff8e1', titleColor:'#6d1500' },
+  vietnam:     { flag:'🇻🇳', accent:'#c62828', accent2:'#f9a825', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#c62828,#7f0000)', dayColor:'#fff', border:'#c62828', pattern:'🏮', sectionBg:'#fff3e0', titleColor:'#7f0000' },
+  cambodia:    { flag:'🇰🇭', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🛕', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  korea:       { flag:'🇰🇷', accent:'#1565c0', accent2:'#c62828', bg:'#e8eaf6', dayBg:'linear-gradient(135deg,#283593,#1a237e)', dayColor:'#fff', border:'#283593', pattern:'🎎', sectionBg:'#e8eaf6', titleColor:'#1a237e' },
+  // Middle East
+  jordan:      { flag:'🇯🇴', accent:'#c62828', accent2:'#4e342e', bg:'#fbe9e7', dayBg:'linear-gradient(135deg,#c62828,#7f0000)', dayColor:'#fff', border:'#c62828', pattern:'🏺', sectionBg:'#fbe9e7', titleColor:'#7f0000' },
+  turkey:      { flag:'🇹🇷', accent:'#c62828', accent2:'#e65100', bg:'#fce4ec', dayBg:'linear-gradient(135deg,#c62828,#880e4f)', dayColor:'#fff', border:'#c62828', pattern:'🕌', sectionBg:'#fce4ec', titleColor:'#880e4f' },
+  oman:        { flag:'🇴🇲', accent:'#2e7d32', accent2:'#c62828', bg:'#f1f8e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🏜️', sectionBg:'#f1f8e9', titleColor:'#1b5e20' },
+  // Europe
+  paris:       { flag:'🇫🇷', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🗼', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  france:      { flag:'🇫🇷', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🗼', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  italy:       { flag:'🇮🇹', accent:'#2e7d32', accent2:'#c62828', bg:'#e8f5e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🏛️', sectionBg:'#e8f5e9', titleColor:'#1b5e20' },
+  greece:      { flag:'🇬🇷', accent:'#1565c0', accent2:'#fdd835', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🏛️', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  switzerland: { flag:'🇨🇭', accent:'#c62828', accent2:'#fff', bg:'#fce4ec', dayBg:'linear-gradient(135deg,#c62828,#7f0000)', dayColor:'#fff', border:'#c62828', pattern:'🏔️', sectionBg:'#fce4ec', titleColor:'#7f0000' },
+  spain:       { flag:'🇪🇸', accent:'#f9a825', accent2:'#c62828', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🌞', sectionBg:'#fff8e1', titleColor:'#bf360c' },
+  uk:          { flag:'🇬🇧', accent:'#1565c0', accent2:'#c62828', bg:'#e8eaf6', dayBg:'linear-gradient(135deg,#1a237e,#283593)', dayColor:'#fff', border:'#1a237e', pattern:'🎡', sectionBg:'#e8eaf6', titleColor:'#1a237e' },
+  london:      { flag:'🇬🇧', accent:'#1565c0', accent2:'#c62828', bg:'#e8eaf6', dayBg:'linear-gradient(135deg,#1a237e,#283593)', dayColor:'#fff', border:'#1a237e', pattern:'🎡', sectionBg:'#e8eaf6', titleColor:'#1a237e' },
+  // Americas & Africa
+  usa:         { flag:'🇺🇸', accent:'#1565c0', accent2:'#c62828', bg:'#e3f2fd', dayBg:'linear-gradient(135deg,#1565c0,#0d47a1)', dayColor:'#fff', border:'#1565c0', pattern:'🗽', sectionBg:'#e3f2fd', titleColor:'#0d47a1' },
+  kenya:       { flag:'🇰🇪', accent:'#2e7d32', accent2:'#c62828', bg:'#f1f8e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🦁', sectionBg:'#f1f8e9', titleColor:'#1b5e20' },
+  egypt:       { flag:'🇪🇬', accent:'#c8960c', accent2:'#c62828', bg:'#fffbf0', dayBg:'linear-gradient(135deg,#c8960c,#8B6914)', dayColor:'#fff', border:'#c8960c', pattern:'🏜️', sectionBg:'#fffbf0', titleColor:'#6d4c00' },
+  // India domestic
+  goa:         { flag:'🇮🇳', accent:'#e65100', accent2:'#00897b', bg:'#fff3e0', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🏖️', sectionBg:'#fff3e0', titleColor:'#bf360c' },
+  kashmir:     { flag:'🇮🇳', accent:'#4a148c', accent2:'#1565c0', bg:'#f3e5f5', dayBg:'linear-gradient(135deg,#4a148c,#311b92)', dayColor:'#fff', border:'#4a148c', pattern:'🏔️', sectionBg:'#f3e5f5', titleColor:'#311b92' },
+  rajasthan:   { flag:'🇮🇳', accent:'#e65100', accent2:'#f9a825', bg:'#fff8e1', dayBg:'linear-gradient(135deg,#e65100,#bf360c)', dayColor:'#fff', border:'#e65100', pattern:'🏰', sectionBg:'#fff8e1', titleColor:'#bf360c' },
+  kerala:      { flag:'🇮🇳', accent:'#2e7d32', accent2:'#e65100', bg:'#e8f5e9', dayBg:'linear-gradient(135deg,#2e7d32,#1b5e20)', dayColor:'#fff', border:'#2e7d32', pattern:'🌴', sectionBg:'#e8f5e9', titleColor:'#1b5e20' },
+  // Default
+  default:     { flag:'✈️', accent:'#c2410c', accent2:'#f97316', bg:'#fff7ed', dayBg:'linear-gradient(135deg,#c2410c,#9a3412)', dayColor:'#fff', border:'#c2410c', pattern:'🌍', sectionBg:'#fff7ed', titleColor:'#9a3412' },
+};
+
+function qbDetectTheme(title) {
+  if(!title) return QB_DEST_THEMES.default;
+  const t = title.toLowerCase();
+  for(const [key, theme] of Object.entries(QB_DEST_THEMES)) {
+    if(key === 'default') continue;
+    if(t.includes(key)) return theme;
+  }
+  return QB_DEST_THEMES.default;
+}
+
+function qbApplyTheme() {
+  const title = document.getElementById('qb-packageTitle')?.innerText || '';
+  const theme = qbDetectTheme(title);
+
+  // Update itinerary header banner
+  const banner = document.getElementById('qb-itinerary-banner');
+  if(banner) {
+    banner.style.background = theme.dayBg;
+    banner.textContent = theme.pattern + ' DAY TO DAY ITINERARY ' + theme.pattern;
+  }
+
+  // Update each day block
+  document.querySelectorAll('.qb-day-block').forEach(block => {
+    block.style.borderLeft = '4px solid ' + theme.border;
+    block.style.background = theme.sectionBg;
+    block.style.borderRadius = '0 8px 8px 0';
+    block.style.padding = '12px 16px';
+    block.style.marginBottom = '12px';
+    const title = block.querySelector('.qb-day-title');
+    if(title) title.style.color = theme.titleColor;
+  });
+
+  // Update itinerary section background
+  const itin = document.getElementById('qb-itinerary-section');
+  if(itin) itin.style.background = theme.bg;
+
+  // Store theme for new days
+  window._qbCurrentTheme = theme;
+}
+// ── End Destination Theme Engine ──────────────────────────────
+
+// ═══════════════ END QUOTATION BUILDER MODULE ═══════════════
+
     <!-- DESTINATION KNOWLEDGE MAP TAB -->
     <div class="tab" id="tab-destinations">
 
