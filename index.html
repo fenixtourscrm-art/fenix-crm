@@ -7739,7 +7739,7 @@ function qbRenderDocument(data) {
     <!-- Image Section -->
     <div class="qb-section" id="qb-images-section">
       <div class="qb-locked" style="font-size:11px;font-weight:700;color:#92400e;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:8px">PACKAGE IMAGES</div>
-      <div id="qb-images-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div id="qb-images-grid" style="display:grid;grid-template-columns:${data.images.length===1?'1fr':'1fr 1fr'};gap:8px;margin-bottom:8px">
         ${data.images.map((img,i) => qbImageCell(img, i)).join('')}
         ${data.images.length === 0 ? '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet — use the button below to add</div>' : ''}
       </div>
@@ -7951,8 +7951,10 @@ function qbDayBlock(d, i) {
 }
 
 function qbImageCell(img, i) {
-  return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:160px">
-    <img src="${img}" style="width:100%;height:160px;object-fit:cover" onerror="this.style.display='none'">
+  const isSingle = _qbImages.length === 1;
+  const imgHeight = isSingle ? '280px' : '160px';
+  return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:${imgHeight}">
+    <img src="${img}" style="width:100%;height:${imgHeight};object-fit:cover" onerror="this.style.display='none'">
     <button onclick="qbRemoveImage(${i})" class="qb-no-print" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
     <button onclick="qbReplaceImage(${i})" class="qb-no-print" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">🔄 Replace</button>
   </div>`;
@@ -8030,6 +8032,8 @@ function qbReplaceImage(i) {
 function qbRefreshImages() {
   const grid = document.getElementById('qb-images-grid');
   if(!grid) return;
+  const cols = _qbImages.length === 1 ? '1fr' : '1fr 1fr';
+  grid.style.gridTemplateColumns = cols;
   grid.innerHTML = _qbImages.length
     ? _qbImages.map((img,i) => qbImageCell(img,i)).join('')
     : '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet</div>';
