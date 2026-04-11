@@ -7853,7 +7853,7 @@ function qbRenderDocument(data) {
     </div>
 
     <!-- Cancellation Policy (LOCKED) -->
-    <div class="qb-section qb-locked">
+    <div class="qb-section qb-locked" style="margin-bottom:0;border-bottom:none">
       <div style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">Cancellation Policy for Land Package: -</div>
       <ul class="qb-bullet-list">
         <li><span class="qb-locked">25% cancellation fee if cancelled before 20 days prior to check-in.</span></li>
@@ -7864,7 +7864,7 @@ function qbRenderDocument(data) {
     </div>
 
     <!-- Visa Checklist (after Cancellation Policy) -->
-    <div class="qb-section" id="qb-visa-section">
+    <div class="qb-section" id="qb-visa-section" style="margin-top:0">
       <div class="qb-locked" style="font-size:14px;font-weight:800;color:#c2410c;background:#fef3c7;padding:6px 14px;border-radius:6px;display:inline-block;margin-bottom:10px">🛂 Visa Checklist:</div>
       <ul class="qb-bullet-list" id="qb-visa-list">
         ${(data.visaChecklist||['Valid Passport (minimum 6 months validity from travel date)','Passport size photographs (white background, 35mm x 45mm)','Confirmed flight tickets (to and from destination)','Hotel booking confirmation for entire stay','Bank statement (last 3 months with sufficient balance)','Travel insurance covering entire trip duration','Leave letter / NOC from employer (if employed)']).map((v,i) => qbBulletItem(v,'visa',i)).join('')}
@@ -8122,6 +8122,8 @@ function qbPrint() {
     .qb-locked{background:#fefce8!important}
     .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
     .qb-table th{background:#c2410c!important;color:#fff!important;padding:7px 10px;font-size:12px;border:1px solid #9a3412;text-align:center}
+    #qb-currency-label{display:inline!important;visibility:visible!important;color:#fff!important;font-weight:800!important}
+    #qb-currency-select{display:none!important}
     .qb-table td{padding:7px 10px;border:1px solid #d1d5db;font-size:12px;vertical-align:top}
     .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:avoid}
     .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
@@ -17132,4 +17134,3 @@ function shareRoomingWhatsApp() {
 </script>
 </body>
 </html>
-            
