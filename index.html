@@ -4900,7 +4900,12 @@ function loadFromFirestore() {
         }
       } else {
         // Real-time update after initial render
-        try { renderAll(); } catch(e) {}
+        // Debounced — waits 800ms after last change before rendering
+        // This prevents render storm during Excel import (50 rows = 1 render instead of 50)
+        clearTimeout(window._renderAllDebounce);
+        window._renderAllDebounce = setTimeout(() => {
+          try { renderAll(); } catch(e) {}
+        }, 800);
       }
     }, err => {
       console.error("Firestore error on " + col + ":", err);
@@ -10943,7 +10948,7 @@ async function importClientExcel(event, importCategory) {
     const existingMobiles = new Set(clients.map(c => String(c.mobile||"").replace(/\D/g,"")));
 
     let imported = 0, skipped = 0, errors = 0;
-    const BATCH = 10;
+    const validRows = []; // collect first, batch-write after loop
 
     for(let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -10987,39 +10992,54 @@ async function importClientExcel(event, importCategory) {
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
       if(cleanMobile) existingMobiles.add(cleanMobile);
 
-      // Save to Firestore
-      try {
-        const data = {
-          firstName, lastName,
-          companyName: companyName || "",
-          mobile: cleanMobile || mobile || "",
-          email: email || "",
-          gender: gender || "Male",
-          occupation: occupation || "",
-          city: city || "",
-          state: state || "",
-          area: area || "",
-          pincode: pincode || "",
-          country: "India",
-          panNo: pan || "",
-          gstNo: gst || "",
-          kycDate: kycDate || "",
-          clientCategory: importCategory || "Regular",
-          importedFrom: file.name,
-        };
-        await fbAdd("clients", data);
-        imported++;
-      } catch(err) {
-        errors++;
-        console.warn("Row error:", err, row);
-      }
+      // Collect valid rows — will batch-write after loop
+      validRows.push({
+        firstName, lastName,
+        companyName: companyName || "",
+        mobile: cleanMobile || mobile || "",
+        email: email || "",
+        gender: gender || "Male",
+        occupation: occupation || "",
+        city: city || "",
+        state: state || "",
+        area: area || "",
+        pincode: pincode || "",
+        country: "India",
+        panNo: pan || "",
+        gstNo: gst || "",
+        kycDate: kycDate || "",
+        clientCategory: importCategory || "Regular",
+        importedFrom: file.name,
+      });
+      imported++;
 
       // Update progress
-      const pct = Math.round(((i+1) / rows.length) * 90) + 10;
-      setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+      const pct = Math.round(((i+1) / rows.length) * 60) + 10;
+      setProgress(pct, `Processing... ${i+1} of ${rows.length}`, `✅ ${imported} queued · ⏭️ ${skipped} skipped`);
+    }
 
-      // Batch delay to avoid Firebase rate limits
-      if((i+1) % BATCH === 0) await new Promise(r => setTimeout(r, 200));
+    // ── Batch write to Firestore (max 500 per batch) ──
+    // This means 1 Firestore operation instead of N individual writes
+    // Everyone else's onSnapshot fires ONCE at the end instead of N times
+    setProgress(75, "Saving to database...", `Writing ${validRows.length} clients...`);
+    const FIRESTORE_BATCH_LIMIT = 499;
+    for(let b = 0; b < validRows.length; b += FIRESTORE_BATCH_LIMIT) {
+      const chunk = validRows.slice(b, b + FIRESTORE_BATCH_LIMIT);
+      const batch = db.batch();
+      chunk.forEach(data => {
+        data.createdAt = new Date().toISOString();
+        data.createdBy = CURRENT_USER ? CURRENT_USER.id : 0;
+        const ref = db.collection("clients").doc();
+        batch.set(ref, data);
+      });
+      try {
+        await batch.commit();
+      } catch(err) {
+        errors += chunk.length;
+        console.warn("Batch write error:", err);
+      }
+      // Small pause between chunks if >499 rows
+      if(validRows.length > FIRESTORE_BATCH_LIMIT) await new Promise(r => setTimeout(r, 300));
     }
 
     setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
