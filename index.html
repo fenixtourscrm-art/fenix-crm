@@ -2382,11 +2382,10 @@ const cName=id=>{
   const sid=String(id);
   const cl=clients.find(x=>String(x.id)===sid);
   if(!cl) return "Unknown";
-  // Always use firstName + lastName only — never name/displayName/companyName as primary
   const firstName=(cl.firstName||'').trim();
   const lastName=(cl.lastName||'').trim();
   const fullName=[firstName,lastName].filter(Boolean).join(' ');
-  return fullName || cl.mobile || cl.companyName || "Unknown";
+  return fullName||cl.mobile||cl.companyName||"Unknown";
 };
 const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
@@ -3979,19 +3978,11 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Notes / Remarks</label><textarea id="e-notes" rows="2" placeholder="Additional notes...">${ex?ex.notes||"":""}</textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEnquiry(${isEdit})">Save Enquiry</button>`;
 
-    // Set pre-filled client
-    // Set client dropdown: use saved clientId when editing, or prefilledClientId for new
-    // String() cast ensures numeric IDs match string option values
+    // Set pre-filled client — String() cast ensures numeric IDs match string option values
     if(ex && ex.clientId) {
       document.getElementById("e-client").value = String(ex.clientId);
-      // Verify the selection landed — if not, clientId may not exist in clients array
-      const verifyEl = document.getElementById("e-client");
-      if(verifyEl && verifyEl.value !== String(ex.clientId)) {
-        console.warn("⚠️ Client ID not found in dropdown:", ex.clientId, "— client may have been deleted");
-      } else {
-        const matched = clients.find(x=>String(x.id)===String(ex.clientId));
-        console.log("Selected Client (edit):", matched ? {id:matched.id, firstName:matched.firstName, lastName:matched.lastName} : "NOT FOUND");
-      }
+      const matched = clients.find(x=>String(x.id)===String(ex.clientId));
+      console.log("Selected Client (edit):", matched ? {id:matched.id, firstName:matched.firstName, lastName:matched.lastName} : "NOT FOUND — id:"+ex.clientId);
     }
     else if(preClient) {
       document.getElementById("e-client").value = String(preClient);
@@ -4664,7 +4655,9 @@ function showUnsavedDialog() {
 // ── Draft save/restore (session memory for Add Client & Add Enquiry) ──
 const DRAFT_FIELDS = {
   client: ['c-company','c-cat','c-fn','c-ln','c-gen','c-mob','c-altmob','c-email','c-occ','c-country','c-state','c-city','c-area','c-pin','c-family-name','c-relation','c-is-primary'],
-  enquiry: ['e-client','e-category','e-rating','e-status','e-type','e-staff','e-notes','e-budget','e-dest-intl','e-dest-dom','e-dest-custom','e-start','e-end'],
+  // e-client intentionally excluded — draft restoring a stale clientId causes wrong client to appear
+  // The client dropdown is always freshly set from clientId (edit) or prefilledClientId (new)
+  enquiry: ['e-category','e-rating','e-status','e-type','e-staff','e-notes','e-budget','e-dest-intl','e-dest-dom','e-dest-custom','e-start','e-end'],
   booking: ['b-client','b-category','b-dest','b-staff','b-amt','b-paid','b-notes','b-status','b-pay-status'],
   task:    ['t-title','t-client','t-due','t-priority','t-assignee','t-notes'],
 };
@@ -4933,8 +4926,11 @@ function loadFromFirestore() {
           doInitialRender();
         }
       } else {
-        // Real-time update after initial render
-        try { renderAll(); } catch(e) {}
+        // Real-time update — debounced 800ms to prevent render storm during Excel import
+        clearTimeout(window._renderAllDebounce);
+        window._renderAllDebounce = setTimeout(() => {
+          try { renderAll(); } catch(e) {}
+        }, 800);
       }
     }, err => {
       console.error("Firestore error on " + col + ":", err);
@@ -10977,7 +10973,7 @@ async function importClientExcel(event, importCategory) {
     const existingMobiles = new Set(clients.map(c => String(c.mobile||"").replace(/\D/g,"")));
 
     let imported = 0, skipped = 0, errors = 0;
-    const BATCH = 10;
+    const validRows = []; // collect first, batch-write after loop
 
     for(let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -11021,39 +11017,52 @@ async function importClientExcel(event, importCategory) {
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
       if(cleanMobile) existingMobiles.add(cleanMobile);
 
-      // Save to Firestore
-      try {
-        const data = {
-          firstName, lastName,
-          companyName: companyName || "",
-          mobile: cleanMobile || mobile || "",
-          email: email || "",
-          gender: gender || "Male",
-          occupation: occupation || "",
-          city: city || "",
-          state: state || "",
-          area: area || "",
-          pincode: pincode || "",
-          country: "India",
-          panNo: pan || "",
-          gstNo: gst || "",
-          kycDate: kycDate || "",
-          clientCategory: importCategory || "Regular",
-          importedFrom: file.name,
-        };
-        await fbAdd("clients", data);
-        imported++;
-      } catch(err) {
-        errors++;
-        console.warn("Row error:", err, row);
-      }
+      // Collect valid rows — will batch-write after loop
+      validRows.push({
+        firstName, lastName,
+        companyName: companyName || "",
+        mobile: cleanMobile || mobile || "",
+        email: email || "",
+        gender: gender || "Male",
+        occupation: occupation || "",
+        city: city || "",
+        state: state || "",
+        area: area || "",
+        pincode: pincode || "",
+        country: "India",
+        panNo: pan || "",
+        gstNo: gst || "",
+        kycDate: kycDate || "",
+        clientCategory: importCategory || "Regular",
+        importedFrom: file.name,
+      });
+      imported++;
 
       // Update progress
-      const pct = Math.round(((i+1) / rows.length) * 90) + 10;
-      setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+      const pct = Math.round(((i+1) / rows.length) * 60) + 10;
+      setProgress(pct, `Processing... ${i+1} of ${rows.length}`, `✅ ${imported} queued · ⏭️ ${skipped} skipped`);
+    }
 
-      // Batch delay to avoid Firebase rate limits
-      if((i+1) % BATCH === 0) await new Promise(r => setTimeout(r, 200));
+    // Batch write — 1 Firestore operation instead of N individual writes
+    // Everyone's onSnapshot fires ONCE at the end instead of N times
+    setProgress(75, "Saving to database...", `Writing ${validRows.length} clients...`);
+    const FIRESTORE_BATCH_LIMIT = 499;
+    for(let b = 0; b < validRows.length; b += FIRESTORE_BATCH_LIMIT) {
+      const chunk = validRows.slice(b, b + FIRESTORE_BATCH_LIMIT);
+      const batch = db.batch();
+      chunk.forEach(data => {
+        data.createdAt = new Date().toISOString();
+        data.createdBy = CURRENT_USER ? CURRENT_USER.id : 0;
+        const ref = db.collection("clients").doc();
+        batch.set(ref, data);
+      });
+      try {
+        await batch.commit();
+      } catch(err) {
+        errors += chunk.length;
+        console.warn("Batch write error:", err);
+      }
+      if(validRows.length > FIRESTORE_BATCH_LIMIT) await new Promise(r => setTimeout(r, 300));
     }
 
     setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
