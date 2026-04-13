@@ -107,6 +107,7 @@ li:hover .qb-del-item{opacity:1}
   }
   .qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,
   #qb-legend,.qb-custom-section-btns,.qb-no-print,[class~='qb-no-print']{display:none !important}
+  .qb-meals-print{display:flex !important}
   .qb-editable{background:transparent !important;border:none !important;box-shadow:none !important}
   .qb-locked{background:#fefce8 !important}
   .qb-table th{background:#c2410c !important;color:#fff !important}
@@ -8021,6 +8022,29 @@ function qbBulletItem(text, listId, i) {
 
 function qbDayBlock(d, i) {
   const theme = window._qbCurrentTheme || QB_DEST_THEMES.default;
+  const meals = d.meals || {breakfast: null, lunch: null, dinner: null};
+  const mealBtn = (meal, label, icon) => {
+    const state = meals[meal]; // null=unset, true=included, false=excluded
+    const styles = {
+      null: `background:#f1f5f9;color:#94a3b8;border:1.5px solid #e2e8f0`,
+      true: `background:#dcfce7;color:#16a34a;border:1.5px solid #86efac`,
+      false: `background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5`,
+    };
+    const icons = {null: '—', true: '✅', false: '❌'};
+    return `<button class="qb-meal-btn qb-no-print" data-meal="${meal}"
+      onclick="qbToggleMeal(this,'${meal}')"
+      style="padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s;${styles[String(state)]}"
+    >${icon} ${label} <span class="qb-meal-icon">${icons[String(state)]}</span></button>`;
+  };
+  // Print-visible meal row (always shown, reflects current state)
+  const mealPrint = (meal, label, icon) => {
+    const state = meals[meal];
+    const color = state === true ? '#16a34a' : state === false ? '#dc2626' : '#94a3b8';
+    const icon2 = state === true ? '✅' : state === false ? '❌' : '—';
+    return `<span class="qb-meal-print-item" data-meal="${meal}"
+      style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:${color};margin-right:10px">
+      ${icon} ${label}: ${icon2}</span>`;
+  };
   return `<div class="qb-day-block" id="qb-day-${i}"
     style="border-left:4px solid ${theme.border};background:${theme.sectionBg};border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:12px">
     <div class="qb-day-title qb-editable" contenteditable="true"
@@ -8028,6 +8052,20 @@ function qbDayBlock(d, i) {
       oninput="qbApplyTheme()">${d.day}</div>
     <div class="qb-editable" contenteditable="true"
       style="font-size:12px;color:#374151;line-height:1.8;padding:4px 0">${d.content}</div>
+    <!-- Meal buttons (screen only) -->
+    <div class="qb-no-print" style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-right:2px">Meals:</span>
+      ${mealBtn('breakfast','Breakfast','🌅')}
+      ${mealBtn('lunch','Lunch','☀️')}
+      ${mealBtn('dinner','Dinner','🌙')}
+    </div>
+    <!-- Meal state (print only — always visible in PDF) -->
+    <div class="qb-meals-print" style="margin-top:6px;display:flex;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;margin-right:6px">Meals:</span>
+      ${mealPrint('breakfast','Breakfast','🌅')}
+      ${mealPrint('lunch','Lunch','☀️')}
+      ${mealPrint('dinner','Dinner','🌙')}
+    </div>
     <button class="qb-del-item qb-no-print" onclick="this.parentElement.remove()"
       style="opacity:.5;font-size:11px;padding:2px 8px;border:1px solid #fca5a5;border-radius:4px;background:#fef2f2;color:#dc2626;cursor:pointer;margin-top:6px">✕ Remove Day</button>
   </div>`;
@@ -8141,7 +8179,12 @@ function qbCollectData() {
   const bullets = listId => [...(document.getElementById('qb-'+listId+'-list')?.querySelectorAll('.qb-editable') || [])].map(el => el.innerText.trim());
   const days = [...(document.getElementById('qb-itinerary-blocks')?.querySelectorAll('.qb-day-block') || [])].map(block => {
     const divs = block.querySelectorAll('.qb-editable');
-    return { day: divs[0]?.innerText?.trim() || '', content: divs[1]?.innerText?.trim() || '' };
+    const meals = {};
+    block.querySelectorAll('.qb-meal-btn[data-meal]').forEach(btn => {
+      const state = btn.dataset.state || 'null';
+      meals[btn.dataset.meal] = state === 'true' ? true : state === 'false' ? false : null;
+    });
+    return { day: divs[0]?.innerText?.trim() || '', content: divs[1]?.innerText?.trim() || '', meals };
   });
   const customs = [...(document.getElementById('qb-custom-sections')?.children || [])].map(s => {
     const divs = s.querySelectorAll('.qb-editable');
@@ -8171,6 +8214,33 @@ function qbUpdateCurrency() {
   const sel = document.getElementById('qb-currency-select');
   const lbl = document.getElementById('qb-currency-label');
   if(sel && lbl) lbl.textContent = sel.value;
+}
+
+function qbToggleMeal(btn, meal) {
+  // Cycle: null → true → false → null
+  const cur = btn.dataset.state || 'null';
+  const next = cur === 'null' ? 'true' : cur === 'true' ? 'false' : 'null';
+  btn.dataset.state = next;
+  const styles = {
+    'null': 'background:#f1f5f9;color:#94a3b8;border:1.5px solid #e2e8f0',
+    'true': 'background:#dcfce7;color:#16a34a;border:1.5px solid #86efac',
+    'false': 'background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5',
+  };
+  const icons = {'null':'—','true':'✅','false':'❌'};
+  btn.style.cssText = `padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:.15s;${styles[next]}`;
+  const iconSpan = btn.querySelector('.qb-meal-icon');
+  if(iconSpan) iconSpan.textContent = icons[next];
+  // Also update the print-visible version in same day block
+  const block = btn.closest('.qb-day-block');
+  if(block) {
+    const printItem = block.querySelector(`.qb-meal-print-item[data-meal="${meal}"]`);
+    if(printItem) {
+      const color = next==='true'?'#16a34a':next==='false'?'#dc2626':'#94a3b8';
+      printItem.style.color = color;
+      const txt = printItem.innerHTML.replace(/(✅|❌|—)$/, icons[next]);
+      printItem.innerHTML = txt;
+    }
+  }
 }
 
 async function qbSaveQuote() {
@@ -8203,6 +8273,7 @@ function qbPrint() {
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#fff}
     .qb-no-print,.qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
+    .qb-meals-print{display:flex!important;flex-wrap:wrap;align-items:center;margin-top:6px}
     .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important}
     .qb-locked{background:#fefce8!important}
     .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
@@ -17220,4 +17291,3 @@ function shareRoomingWhatsApp() {
 </script>
 </body>
 </html>
- 
