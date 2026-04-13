@@ -4656,7 +4656,6 @@ function showUnsavedDialog() {
 const DRAFT_FIELDS = {
   client: ['c-company','c-cat','c-fn','c-ln','c-gen','c-mob','c-altmob','c-email','c-occ','c-country','c-state','c-city','c-area','c-pin','c-family-name','c-relation','c-is-primary'],
   // e-client intentionally excluded — draft restoring a stale clientId causes wrong client to appear
-  // The client dropdown is always freshly set from clientId (edit) or prefilledClientId (new)
   enquiry: ['e-category','e-rating','e-status','e-type','e-staff','e-notes','e-budget','e-dest-intl','e-dest-dom','e-dest-custom','e-start','e-end'],
   booking: ['b-client','b-category','b-dest','b-staff','b-amt','b-paid','b-notes','b-status','b-pay-status'],
   task:    ['t-title','t-client','t-due','t-priority','t-assignee','t-notes'],
@@ -6109,12 +6108,42 @@ function updateEnqForm(ex) {
       ${paxBlock}`;
     setTimeout(()=>{
       if(ex?.destination) {
-        const cs = document.getElementById('eq-country') || document.getElementById('eq-state');
+        // destination is saved as "State/Country — City1, City2" or just "State/Country"
+        // Split it back into state/country dropdown + individual city tags
+        const sepIdx = ex.destination.indexOf(' — ');
+        const countryState = sepIdx >= 0 ? ex.destination.substring(0, sepIdx) : ex.destination;
+        const citiesStr    = sepIdx >= 0 ? ex.destination.substring(sepIdx + 3) : '';
+
+        // Restore state/country dropdown
+        const csSel = isIntl
+          ? document.getElementById('eq-country')
+          : document.getElementById('eq-state');
+        if(csSel && countryState) {
+          csSel.value = countryState;
+          // Load city pool for this country/state
+          const pool = isIntl ? (BK_CITY_MAP[countryState]||[]) : (BK_DOM_CITY_MAP[countryState]||[]);
+          _eqCityPool = [...pool];
+          // Show city column
+          const col = document.getElementById('eq-city-col');
+          if(col) col.style.display = '';
+        }
+
+        // Restore city tags from saved string
+        if(citiesStr) {
+          const savedCities = citiesStr.split(',').map(c=>c.trim()).filter(Boolean);
+          _eqSelectedCities = [];
+          savedCities.forEach(city => {
+            if(!_eqSelectedCities.includes(city)) {
+              if(!_eqCityPool.includes(city)) _eqCityPool.push(city); // preserve custom cities
+              _eqSelectedCities.push(city);
+            }
+          });
+          eqRenderTags();
+        }
+
+        // Keep hidden dest field in sync
         const hiddenDest = document.getElementById('e-dest-custom');
         if(hiddenDest) hiddenDest.value = ex.destination;
-        // Show city col if editing
-        const col = document.getElementById('eq-city-col');
-        if(col && ex.destination) { col.style.display = ''; }
       }
       if(ex?.hotelPref) { const h=document.getElementById("e-hotel"); if(h) h.value=ex.hotelPref; }
     },10);
@@ -11038,13 +11067,11 @@ async function importClientExcel(event, importCategory) {
       });
       imported++;
 
-      // Update progress
       const pct = Math.round(((i+1) / rows.length) * 60) + 10;
       setProgress(pct, `Processing... ${i+1} of ${rows.length}`, `✅ ${imported} queued · ⏭️ ${skipped} skipped`);
     }
 
     // Batch write — 1 Firestore operation instead of N individual writes
-    // Everyone's onSnapshot fires ONCE at the end instead of N times
     setProgress(75, "Saving to database...", `Writing ${validRows.length} clients...`);
     const FIRESTORE_BATCH_LIMIT = 499;
     for(let b = 0; b < validRows.length; b += FIRESTORE_BATCH_LIMIT) {
@@ -11056,12 +11083,8 @@ async function importClientExcel(event, importCategory) {
         const ref = db.collection("clients").doc();
         batch.set(ref, data);
       });
-      try {
-        await batch.commit();
-      } catch(err) {
-        errors += chunk.length;
-        console.warn("Batch write error:", err);
-      }
+      try { await batch.commit(); }
+      catch(err) { errors += chunk.length; console.warn("Batch write error:", err); }
       if(validRows.length > FIRESTORE_BATCH_LIMIT) await new Promise(r => setTimeout(r, 300));
     }
 
