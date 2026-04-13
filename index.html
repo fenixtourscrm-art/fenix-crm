@@ -2019,13 +2019,14 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 // ────────────────────────────────────────────────────────────
 
 let STAFF = [
-  {id:1,name:"Ms. Rehana Ansari",role:"Managing Director",initials:"RA"},
-  {id:2,name:"Mr. Paresh Gajera",role:"Sales Executive",initials:"PG"},
-  {id:3,name:"Ms. Nusaiba Puthawala",role:"Visa Executive",initials:"NP"},
-  {id:4,name:"Mr. Ahyan Shaikh",role:"Operation Dept",initials:"AS"},
-  {id:5,name:"Mr. Taha Rangwala",role:"Accountant",initials:"TR"},
-  {id:6,name:"Ms. Ayesha Rangoonwala",role:"Marketing Executive",initials:"AR"},
-  {id:7,name:"Ms. Meghna Kukadia",role:"Manager",initials:"MK"},
+  {id:1,name:"Ms. Rehana Ansari",   role:"Managing Director",   initials:"RA", mobile:"+919898920537"},
+  {id:2,name:"Mr. Paresh Gajera",   role:"Sales Executive",     initials:"PG", mobile:"+919723330537"},
+  {id:3,name:"Ms. Nusaiba Puthawala",role:"Visa Executive",     initials:"NP", mobile:"+919723920537"},
+  {id:4,name:"Mr. Ahyan Shaikh",    role:"Operation Dept",      initials:"AS", mobile:"+919726920537"},
+  {id:5,name:"Mr. Taha Rangwala",   role:"Accountant",          initials:"TR", mobile:""},
+  {id:6,name:"Ms. Rozina Puthawala",role:"Marketing Executive", initials:"RP", mobile:""},
+  {id:7,name:"Ms. Meghna Kukadia",  role:"Manager",             initials:"MK", mobile:"+919726200537"},
+  {id:8,name:"Ms. Ayesha Rangoonwala",role:"Marketing Executive",initials:"AR", mobile:""},
 ];
 let mktCalls=[];
 let nxtStaff=10;
@@ -2378,15 +2379,7 @@ let targets=[];
 let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
-const cName=id=>{
-  const sid=String(id);
-  const cl=clients.find(x=>String(x.id)===sid);
-  if(!cl) return "Unknown";
-  const firstName=(cl.firstName||'').trim();
-  const lastName=(cl.lastName||'').trim();
-  const fullName=[firstName,lastName].filter(Boolean).join(' ');
-  return fullName||cl.mobile||cl.companyName||"Unknown";
-};
+const cName=id=>{const sid=String(id);const cl=clients.find(x=>String(x.id)===sid);if(!cl) return "Unknown";const n=`${cl.firstName||''} ${cl.lastName||''}`.trim();return n||cl.mobile||cl.companyName||"Unknown";};
 const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
@@ -3854,17 +3847,7 @@ function showSearchSuggestions(q){
 }
 
 // MODALS
-const cOpts=()=>[...clients]
-  .sort((a,b)=>{
-    const na=`${a.firstName||''} ${a.lastName||''}`.trim().toLowerCase();
-    const nb=`${b.firstName||''} ${b.lastName||''}`.trim().toLowerCase();
-    return na.localeCompare(nb);
-  })
-  .map(c=>{
-    const fullName=`${c.firstName||''} ${c.lastName||''}`.trim()||c.companyName||c.mobile||'Unknown';
-    const mobile=c.mobile?` · ${c.mobile}`:'';
-    return `<option value="${c.id}">${fullName}${mobile}</option>`;
-  }).join("");
+const cOpts=()=>clients.map(c=>`<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join("");
 const sOpts=()=>STAFF.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
 
 function openModal(type){
@@ -3959,7 +3942,7 @@ function openModal(type){
 
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid">
-      <div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client" onchange="(function(sel){const c=clients.find(x=>String(x.id)===String(sel.value));console.log('Selected Client:',c?{id:c.id,firstName:c.firstName,lastName:c.lastName,mobile:c.mobile}:'NOT FOUND — id:'+sel.value);})(this)">${cOpts()}</select></div>
+      <div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select></div>
       <div class="fg"><label>Service Category</label><select id="e-category" onchange="updateEnqForm()">${SERVICE_CATS.map(c=>`<option ${ex&&ex.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
     </div>
     <div id="enq-dynamic-fields"></div>
@@ -3978,17 +3961,10 @@ function openModal(type){
     <div class="form-grid g1"><div class="fg"><label>Notes / Remarks</label><textarea id="e-notes" rows="2" placeholder="Additional notes...">${ex?ex.notes||"":""}</textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEnquiry(${isEdit})">Save Enquiry</button>`;
 
-    // Set pre-filled client — String() cast ensures numeric IDs match string option values
-    if(ex && ex.clientId) {
-      document.getElementById("e-client").value = String(ex.clientId);
-      const matched = clients.find(x=>String(x.id)===String(ex.clientId));
-      console.log("Selected Client (edit):", matched ? {id:matched.id, firstName:matched.firstName, lastName:matched.lastName} : "NOT FOUND — id:"+ex.clientId);
-    }
-    else if(preClient) {
-      document.getElementById("e-client").value = String(preClient);
-      const matched = clients.find(x=>String(x.id)===String(preClient));
-      console.log("Selected Client (prefill):", matched ? {id:matched.id, firstName:matched.firstName, lastName:matched.lastName} : "NOT FOUND — id:"+preClient);
-    }
+    // Set pre-filled client
+    // Set client dropdown: use saved clientId when editing, or prefilledClientId for new
+    if(ex && ex.clientId) document.getElementById("e-client").value = ex.clientId;
+    else if(preClient) document.getElementById("e-client").value = preClient;
     if(ex && ex.staffId) document.getElementById("e-staff").value=ex.staffId;
     updateSourceSub();
     updateEnqForm(ex);
@@ -4271,7 +4247,7 @@ function openModal(type){
     const s=STAFF.find(x=>x.id===window._editStaffId);
     mb.innerHTML=`<div class="modal-title">Edit Staff Member <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Full Name</label><input id="es-name" value="${s?s.name:""}"/></div><div class="fg"><label>Role / Department</label><input id="es-role" value="${s?s.role:""}"/></div></div>
-    <div class="form-grid g1"><div class="fg"><label>Initials</label><input id="es-init" value="${s?s.initials:""}" maxlength="3"/></div></div>
+    <div class="form-grid"><div class="fg"><label>Initials</label><input id="es-init" value="${s?s.initials:""}" maxlength="3"/></div><div class="fg"><label>Mobile Number</label><input id="es-mobile" value="${s?s.mobile||"":""}" placeholder="e.g. +919898920537"/></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveEditStaff()">Save Changes</button>`;
   } else if(type==="editclient"){
     const c=clients.find(x=>x.id===window._editClientId);
@@ -4412,12 +4388,20 @@ function saveNewStaff(){
   STAFF.push({id:nxtStaff++,name,role:document.getElementById("ns-role").value,initials:document.getElementById("ns-init").value.toUpperCase()||name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()});
   closeOverlay();renderAll();renderStaff();
 }
-function saveEditStaff(){
+async function saveEditStaff(){
   const s=STAFF.find(x=>x.id===window._editStaffId);
   if(!s)return;
-  s.name=document.getElementById("es-name").value;
-  s.role=document.getElementById("es-role").value;
-  s.initials=document.getElementById("es-init").value.toUpperCase();
+  s.name     = document.getElementById("es-name").value.trim();
+  s.role     = document.getElementById("es-role").value.trim();
+  s.initials = document.getElementById("es-init").value.toUpperCase().trim();
+  s.mobile   = (document.getElementById("es-mobile")?.value||"").trim();
+  // Persist to Firebase so changes survive page refresh
+  try {
+    await db.collection("staff_config").doc(String(s.id)).set({
+      id: s.id, name: s.name, role: s.role, initials: s.initials, mobile: s.mobile,
+      updatedAt: new Date().toISOString()
+    });
+  } catch(e) { console.warn("Staff save error:", e); }
   closeOverlay();renderAll();renderStaff();
 }
 function toggleCustomDataType(sel) {
@@ -4655,8 +4639,7 @@ function showUnsavedDialog() {
 // ── Draft save/restore (session memory for Add Client & Add Enquiry) ──
 const DRAFT_FIELDS = {
   client: ['c-company','c-cat','c-fn','c-ln','c-gen','c-mob','c-altmob','c-email','c-occ','c-country','c-state','c-city','c-area','c-pin','c-family-name','c-relation','c-is-primary'],
-  // e-client intentionally excluded — draft restoring a stale clientId causes wrong client to appear
-  enquiry: ['e-category','e-rating','e-status','e-type','e-staff','e-notes','e-budget','e-dest-intl','e-dest-dom','e-dest-custom','e-start','e-end'],
+  enquiry: ['e-client','e-category','e-rating','e-status','e-type','e-staff','e-notes','e-budget','e-dest-intl','e-dest-dom','e-dest-custom','e-start','e-end'],
   booking: ['b-client','b-category','b-dest','b-staff','b-amt','b-paid','b-notes','b-status','b-pay-status'],
   task:    ['t-title','t-client','t-due','t-priority','t-assignee','t-notes'],
 };
@@ -4727,7 +4710,7 @@ renderStaff();
 // ═══════════════════════════════════════════════
 const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","authDomain":"fenix-tours-crm.firebaseapp.com","projectId":"fenix-tours-crm","storageBucket":"fenix-tours-crm.firebasestorage.app","messagingSenderId":"934959201330","appId":"1:934959201330:web:7356588b8ef7b967f9502b"};
 
-const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "booking@fenixtours.co.in": {"id": 6, "name": "Ms. Ayesha Rangoonwala", "role": "Marketing Executive", "initials": "AR", "isOwner": false}, "manager@fenixtours.co.in": {"id": 7, "name": "Ms. Meghna Kukadia", "role": "Manager", "initials": "MK", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
+const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "booking@fenixtours.co.in": {"id": 6, "name": "Ms. Rozina Puthawala", "role": "Marketing Executive", "initials": "RP", "isOwner": false}, "manager@fenixtours.co.in": {"id": 7, "name": "Ms. Meghna Kukadia", "role": "Manager", "initials": "MK", "isOwner": false}, "hrfenixtours@gmail.com": {"id": 8, "name": "Ms. Ayesha Rangoonwala", "role": "Marketing Executive", "initials": "AR", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
 const PERM_MAP  = {
   "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
   "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
@@ -4735,7 +4718,8 @@ const PERM_MAP  = {
   "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "6": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","followup","quiz","ai","destinations","bugreports","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": false},
-  "7": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": true}
+  "7": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": true},
+  "8": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","followup","quiz","ai","destinations","bugreports","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": false}
 }
 
 try {
@@ -4809,13 +4793,14 @@ auth.onAuthStateChanged(function(user) {
   CURRENT_USER = staff;
   USER_PERMS   = PERM_MAP[staff.id];
   STAFF = [
-    {"id":1,"name":"Ms. Rehana Ansari",    "role":"Managing Director",  "initials":"RA"},
-    {"id":2,"name":"Mr. Paresh Gajera",    "role":"Sales Executive",    "initials":"PG"},
-    {"id":3,"name":"Ms. Nusaiba Puthawala","role":"Visa Executive",     "initials":"NP"},
-    {"id":4,"name":"Mr. Ahyan Shaikh",     "role":"Operation Dept",     "initials":"AS"},
-    {"id":5,"name":"Mr. Taha Rangwala",    "role":"Accountant",         "initials":"TR"},
-    {"id":6,"name":"Ms. Ayesha Rangoonwala","role":"Marketing Executive","initials":"AR"},
-    {"id":7,"name":"Ms. Meghna Kukadia","role":"Manager","initials":"MK"},
+    {"id":1,"name":"Ms. Rehana Ansari",    "role":"Managing Director",   "initials":"RA", "mobile":"+919898920537"},
+    {"id":2,"name":"Mr. Paresh Gajera",    "role":"Sales Executive",     "initials":"PG", "mobile":"+919723330537"},
+    {"id":3,"name":"Ms. Nusaiba Puthawala","role":"Visa Executive",      "initials":"NP", "mobile":"+919723920537"},
+    {"id":4,"name":"Mr. Ahyan Shaikh",     "role":"Operation Dept",      "initials":"AS", "mobile":"+919726920537"},
+    {"id":5,"name":"Mr. Taha Rangwala",    "role":"Accountant",          "initials":"TR", "mobile":""},
+    {"id":6,"name":"Ms. Rozina Puthawala", "role":"Marketing Executive", "initials":"RP", "mobile":""},
+    {"id":7,"name":"Ms. Meghna Kukadia",   "role":"Manager",             "initials":"MK", "mobile":"+919726200537"},
+    {"id":8,"name":"Ms. Ayesha Rangoonwala","role":"Marketing Executive","initials":"AR", "mobile":""},
   ];
 
   document.getElementById("fb-login-screen").style.display = "none";
@@ -4845,6 +4830,31 @@ function loadFromFirestore() {
   // Unsubscribe previous listeners
   _unsubscribers.forEach(fn => fn());
   _unsubscribers = [];
+
+  // Load saved staff overrides from Firebase first (persists settings changes)
+  db.collection("staff_config").get().then(snap => {
+    snap.forEach(doc => {
+      const d = doc.data();
+      const s = STAFF.find(x => String(x.id) === String(d.id));
+      if(s) {
+        if(d.name)     s.name     = d.name;
+        if(d.role)     s.role     = d.role;
+        if(d.initials) s.initials = d.initials;
+        if(d.mobile !== undefined) s.mobile = d.mobile;
+      }
+    });
+    // Update sidebar if current user was affected
+    if(CURRENT_USER) {
+      const updated = STAFF.find(x => x.id === CURRENT_USER.id);
+      if(updated) {
+        CURRENT_USER.name = updated.name;
+        CURRENT_USER.role = updated.role;
+        document.getElementById("user-name").textContent = updated.name;
+        document.getElementById("user-role").textContent = updated.role;
+      }
+    }
+    renderStaff();
+  }).catch(e => console.warn("staff_config load error:", e));
 
   function doInitialRender() {
     if(initialRenderDone) return;
@@ -4925,11 +4935,8 @@ function loadFromFirestore() {
           doInitialRender();
         }
       } else {
-        // Real-time update — debounced 800ms to prevent render storm during Excel import
-        clearTimeout(window._renderAllDebounce);
-        window._renderAllDebounce = setTimeout(() => {
-          try { renderAll(); } catch(e) {}
-        }, 800);
+        // Real-time update after initial render
+        try { renderAll(); } catch(e) {}
       }
     }, err => {
       console.error("Firestore error on " + col + ":", err);
@@ -6108,42 +6115,12 @@ function updateEnqForm(ex) {
       ${paxBlock}`;
     setTimeout(()=>{
       if(ex?.destination) {
-        // destination is saved as "State/Country — City1, City2" or just "State/Country"
-        // Split it back into state/country dropdown + individual city tags
-        const sepIdx = ex.destination.indexOf(' — ');
-        const countryState = sepIdx >= 0 ? ex.destination.substring(0, sepIdx) : ex.destination;
-        const citiesStr    = sepIdx >= 0 ? ex.destination.substring(sepIdx + 3) : '';
-
-        // Restore state/country dropdown
-        const csSel = isIntl
-          ? document.getElementById('eq-country')
-          : document.getElementById('eq-state');
-        if(csSel && countryState) {
-          csSel.value = countryState;
-          // Load city pool for this country/state
-          const pool = isIntl ? (BK_CITY_MAP[countryState]||[]) : (BK_DOM_CITY_MAP[countryState]||[]);
-          _eqCityPool = [...pool];
-          // Show city column
-          const col = document.getElementById('eq-city-col');
-          if(col) col.style.display = '';
-        }
-
-        // Restore city tags from saved string
-        if(citiesStr) {
-          const savedCities = citiesStr.split(',').map(c=>c.trim()).filter(Boolean);
-          _eqSelectedCities = [];
-          savedCities.forEach(city => {
-            if(!_eqSelectedCities.includes(city)) {
-              if(!_eqCityPool.includes(city)) _eqCityPool.push(city); // preserve custom cities
-              _eqSelectedCities.push(city);
-            }
-          });
-          eqRenderTags();
-        }
-
-        // Keep hidden dest field in sync
+        const cs = document.getElementById('eq-country') || document.getElementById('eq-state');
         const hiddenDest = document.getElementById('e-dest-custom');
         if(hiddenDest) hiddenDest.value = ex.destination;
+        // Show city col if editing
+        const col = document.getElementById('eq-city-col');
+        if(col && ex.destination) { col.style.display = ''; }
       }
       if(ex?.hotelPref) { const h=document.getElementById("e-hotel"); if(h) h.value=ex.hotelPref; }
     },10);
@@ -7947,8 +7924,55 @@ function qbRenderDocument(data) {
     </div>
 
     <!-- Fenix Footer -->
-    <div class="qb-locked" style="text-align:center;padding:16px;background:#fef3c7 !important;border-top:2px solid #f97316;font-size:11px;color:#92400e;font-weight:600">
-      Fenix Tours & Travels Pvt Ltd · www.fenixtours.co.in · All rights reserved
+    <div class="qb-locked" style="background:#0f172a !important;padding:0;border-top:3px solid #f97316;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+
+      <!-- Top bar: contact row -->
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 24px 10px;gap:12px;flex-wrap:wrap">
+
+        <!-- LEFT: Owner (always Rehana) -->
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:10px;font-weight:800;color:#f97316;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px">Managing Director</div>
+          <div style="font-size:13px;font-weight:800;color:#fff">Ms. Rehana Ansari</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px">📞 +91 98989 20537</div>
+        </div>
+
+        <!-- CENTER: Company name -->
+        <div style="flex:1;min-width:160px;text-align:center">
+          <div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:.05em">FENIX TOURS & TRAVELS</div>
+          <div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:.1em;margin-top:2px">Pvt. Ltd.</div>
+          <div style="font-size:10px;color:#64748b;margin-top:4px">🌐 www.fenixtours.co.in</div>
+        </div>
+
+        <!-- RIGHT: Staff who created quotation (auto from CURRENT_USER) -->
+        <div style="flex:1;min-width:160px;text-align:right" id="qb-footer-staff">
+          ${(()=>{
+            const staffId = CURRENT_USER ? CURRENT_USER.id : 0;
+            const s = STAFF.find(x => x.id === staffId);
+            if(!s || s.id === 1) return ''; // Don't duplicate if owner is logged in
+            return `<div style="font-size:10px;font-weight:800;color:#f97316;text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px">${s.role}</div>
+            <div style="font-size:13px;font-weight:800;color:#fff">${s.name}</div>
+            ${s.mobile ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">📞 ${s.mobile}</div>` : ''}`;
+          })()}
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div style="height:1px;background:rgba(255,255,255,0.08);margin:0 24px"></div>
+
+      <!-- Bottom bar: social + copyright -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 24px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:10px;color:#475569">© ${new Date().getFullYear()} Fenix Tours & Travels Pvt Ltd · All rights reserved</div>
+        <div style="display:flex;gap:14px;align-items:center">
+          <a href="https://www.facebook.com/share/1B1pFPbviU/" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#94a3b8;font-size:10px;font-weight:700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+            Facebook
+          </a>
+          <a href="https://www.instagram.com/fenixtourahmedabad" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#94a3b8;font-size:10px;font-weight:700">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="url(#ig-grad)"><defs><linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="25%" style="stop-color:#e6683c"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="75%" style="stop-color:#cc2366"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            Instagram
+          </a>
+        </div>
+      </div>
     </div>
   `;
   // Init paste handler after render
@@ -11002,7 +11026,7 @@ async function importClientExcel(event, importCategory) {
     const existingMobiles = new Set(clients.map(c => String(c.mobile||"").replace(/\D/g,"")));
 
     let imported = 0, skipped = 0, errors = 0;
-    const validRows = []; // collect first, batch-write after loop
+    const BATCH = 10;
 
     for(let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -11046,46 +11070,39 @@ async function importClientExcel(event, importCategory) {
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
       if(cleanMobile) existingMobiles.add(cleanMobile);
 
-      // Collect valid rows — will batch-write after loop
-      validRows.push({
-        firstName, lastName,
-        companyName: companyName || "",
-        mobile: cleanMobile || mobile || "",
-        email: email || "",
-        gender: gender || "Male",
-        occupation: occupation || "",
-        city: city || "",
-        state: state || "",
-        area: area || "",
-        pincode: pincode || "",
-        country: "India",
-        panNo: pan || "",
-        gstNo: gst || "",
-        kycDate: kycDate || "",
-        clientCategory: importCategory || "Regular",
-        importedFrom: file.name,
-      });
-      imported++;
+      // Save to Firestore
+      try {
+        const data = {
+          firstName, lastName,
+          companyName: companyName || "",
+          mobile: cleanMobile || mobile || "",
+          email: email || "",
+          gender: gender || "Male",
+          occupation: occupation || "",
+          city: city || "",
+          state: state || "",
+          area: area || "",
+          pincode: pincode || "",
+          country: "India",
+          panNo: pan || "",
+          gstNo: gst || "",
+          kycDate: kycDate || "",
+          clientCategory: importCategory || "Regular",
+          importedFrom: file.name,
+        };
+        await fbAdd("clients", data);
+        imported++;
+      } catch(err) {
+        errors++;
+        console.warn("Row error:", err, row);
+      }
 
-      const pct = Math.round(((i+1) / rows.length) * 60) + 10;
-      setProgress(pct, `Processing... ${i+1} of ${rows.length}`, `✅ ${imported} queued · ⏭️ ${skipped} skipped`);
-    }
+      // Update progress
+      const pct = Math.round(((i+1) / rows.length) * 90) + 10;
+      setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
 
-    // Batch write — 1 Firestore operation instead of N individual writes
-    setProgress(75, "Saving to database...", `Writing ${validRows.length} clients...`);
-    const FIRESTORE_BATCH_LIMIT = 499;
-    for(let b = 0; b < validRows.length; b += FIRESTORE_BATCH_LIMIT) {
-      const chunk = validRows.slice(b, b + FIRESTORE_BATCH_LIMIT);
-      const batch = db.batch();
-      chunk.forEach(data => {
-        data.createdAt = new Date().toISOString();
-        data.createdBy = CURRENT_USER ? CURRENT_USER.id : 0;
-        const ref = db.collection("clients").doc();
-        batch.set(ref, data);
-      });
-      try { await batch.commit(); }
-      catch(err) { errors += chunk.length; console.warn("Batch write error:", err); }
-      if(validRows.length > FIRESTORE_BATCH_LIMIT) await new Promise(r => setTimeout(r, 300));
+      // Batch delay to avoid Firebase rate limits
+      if((i+1) % BATCH === 0) await new Promise(r => setTimeout(r, 200));
     }
 
     setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
@@ -12027,8 +12044,9 @@ function renderLeaderboard() {
     {id:'3', name:'Ms. Nusaiba Puthawala', initials:'NP'},
     {id:'4', name:'Mr. Ahyan Shaikh', initials:'AS'},
     {id:'5', name:'Mr. Taha Rangwala', initials:'TR'},
-    {id:'6', name:'Ms. Ayesha Rangoonwala', initials:'AR'},
+    {id:'6', name:'Ms. Rozina Puthawala', initials:'RP'},
     {id:'7', name:'Ms. Meghna Kukadia', initials:'MK'},
+    {id:'8', name:'Ms. Ayesha Rangoonwala', initials:'AR'},
   ];
 
   const rows = STAFF_LIST.map(s => {
