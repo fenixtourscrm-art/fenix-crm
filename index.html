@@ -76,7 +76,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 /* preview mode removed */
 /* Scrollable editor */
 #tab-quotes{padding-bottom:80px}
-#qb-canvas{width:794px;min-width:794px;margin:0 auto;background:#fff;font-family:Arial,sans-serif;border:3px solid #f97316;border-radius:4px;box-shadow:0 2px 16px rgba(0,0,0,0.08)}
+#qb-canvas{width:794px;min-width:794px;margin:0 auto;background:#fff;font-family:Arial,sans-serif;border:none;box-shadow:0 2px 16px rgba(0,0,0,0.08)}
 .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:auto}
 .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
 .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
@@ -1599,7 +1599,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
         <!-- A4 Canvas -->
         <div style="overflow-x:auto;overflow-y:visible;padding-bottom:20px">
-          <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(249,115,22,0.2);border:3px solid #f97316;position:relative">
+          <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.10);border:none;position:relative">
             <!-- Watermark — very faint, shows if copied/screenshotted -->
             <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.06">
               ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18-5}%;left:-5%;width:130%;font-size:30px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.25em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>`).join('')}
@@ -8342,7 +8342,7 @@ function qbPrint() {
   win.document.write(`<!DOCTYPE html><html><head><title></title><style>
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#fff;position:relative}
-    #qb-canvas,body>div:not(.qb-watermark){border:3px solid #f97316 !important}
+    
     .qb-no-print,.qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
     .qb-meals-print{display:flex!important;flex-wrap:wrap;align-items:center;margin-top:6px}
     .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important}
