@@ -3198,16 +3198,18 @@ async function markJunk(id){
   const reason=prompt("Reason for marking as Junk?\n1. Budget issue\n2. No response\n3. Went to another agency\n4. Trip cancelled\n5. Other\n\nType the reason:");
   if(reason===null)return;
   try {
-    await fbUpdate("enquiries",id,{status:"Junk",lostReason:reason||"Not specified"});
-    e.status="Junk"; e.lostReason=reason||"Not specified"; renderAll();
+    await fbUpdate("enquiries",id,{status:"Junk",lostReason:reason||"Not specified",followUpDate:""});
+    e.status="Junk"; e.lostReason=reason||"Not specified"; e.followUpDate=""; renderAll();
+    renderFollowUpCalendar();
   } catch(err){ alert("Failed: "+err.message); }
 }
 async function markCancelled(id){
   const e=enquiries.find(x=>x.id===id);if(!e)return;
   if(!confirm("Are you sure you want to cancel this enquiry?\n\nClient: "+cName(e.clientId)+"\nDestination: "+(e.destination||"—")+"\n\nThe enquiry will be marked as Cancelled but will remain in the system.")) return;
   try {
-    await fbUpdate("enquiries",id,{status:"Cancelled"});
-    e.status="Cancelled"; renderAll();
+    await fbUpdate("enquiries",id,{status:"Cancelled",followUpDate:""});
+    e.status="Cancelled"; e.followUpDate=""; renderAll();
+    renderFollowUpCalendar();
   } catch(err){ alert("Failed: "+err.message); }
 }
 
@@ -3497,7 +3499,7 @@ function renderTasks(){
       <div style="font-weight:700;font-size:12px;color:#0f172a;text-decoration:${t.done?"line-through":"none"}">${t.title}</div>
       <div style="font-size:10px;color:#64748b;margin-top:2px">👤 Assigned to: <strong style="color:#ea580c">${sName(t.assignedTo)}</strong> · by ${t.createdByName||sName(t.assignedBy)}${t.clientId?` · ${cName(t.clientId)}`:""}</div>
       ${t.completedBy?`<div style="font-size:9px;color:#16a34a;margin-top:1px">✅ Completed by ${t.completedBy}</div>`:""}
-      <div style="font-size:10px;color:${!t.done&&t.dueDate<today()?"#dc2626":"#94a3b8"};margin-top:2px">${!t.done&&t.dueDate<today()?"⚠️ OVERDUE – ":""}Due: ${t.dueDate} · <span class="badge ${t.priority==="High"?"b-aplus":t.priority==="Medium"?"b-a":"b-c"}">${t.priority}</span></div>
+      <div style="font-size:10px;color:${!t.done&&t.dueDate<today()?"#dc2626":"#94a3b8"};margin-top:2px">${!t.done&&t.dueDate<today()?"⚠️ OVERDUE – ":""}Due: ${t.dueDate}${t.dueTime ? ` · 🕐 ${t.dueTime}` : ''} · <span class="badge ${t.priority==="High"?"b-aplus":t.priority==="Medium"?"b-a":"b-c"}">${t.priority}</span></div>
     </div>
     <button class="btn btn-warn" onclick="del('tasks','${t.id}')">✕</button>
   </div>`).join("")||`<div class="empty">No tasks</div>`;
@@ -4487,7 +4489,8 @@ function renderFollowUpCalendar(){
   const _fuIsOwner = CURRENT_USER && CURRENT_USER.id===1;
   for(let d=1;d<=dim;d++){
     const ds=`${s.y}-${String(s.m+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
-    const dayEnqs=enquiries.filter(e=>e.followUpDate===ds&&(_fuIsOwner||e.staffId===CURRENT_USER?.id||e.followUpStaff===CURRENT_USER?.id));
+    const EXCLUDED_STATUSES = ['Junk','Cancelled','Lost','Booked'];
+    const dayEnqs=enquiries.filter(e=>e.followUpDate===ds && !EXCLUDED_STATUSES.includes(e.status) &&(_fuIsOwner||e.staffId===CURRENT_USER?.id||e.followUpStaff===CURRENT_USER?.id));
     const dayFuTasks=tasks.filter(t=>t.isFollowUp&&t.dueDate===ds&&!t.done&&(_fuIsOwner||t.assignedTo===CURRENT_USER?.id));
     const totalCount = dayEnqs.length + dayFuTasks.length;
     const isT=td.getFullYear()===s.y&&td.getMonth()===s.m&&td.getDate()===d;
@@ -4504,7 +4507,8 @@ function renderFollowUpCalendar(){
 }
 function showFUDay(dateStr){
   const _fuDayOwner = CURRENT_USER && CURRENT_USER.id===1;
-  const dayEnqs=enquiries.filter(e=>e.followUpDate===dateStr&&(_fuDayOwner||e.staffId===CURRENT_USER?.id||e.followUpStaff===CURRENT_USER?.id));
+  const EXCLUDED_STATUSES_FU = ['Junk','Cancelled','Lost','Booked'];
+  const dayEnqs=enquiries.filter(e=>e.followUpDate===dateStr && !EXCLUDED_STATUSES_FU.includes(e.status) &&(_fuDayOwner||e.staffId===CURRENT_USER?.id||e.followUpStaff===CURRENT_USER?.id));
   const det=document.getElementById("fu-day-details");
   const dayFuTasks = tasks.filter(t=>t.isFollowUp&&t.dueDate===dateStr&&(_fuDayOwner||t.assignedTo===CURRENT_USER?.id));
   const totalItems = dayEnqs.length + dayFuTasks.length;
@@ -6037,9 +6041,17 @@ async function saveFollowUpPopup() {
       const e = enquiries.find(x => x.id === enqId);
       await fbUpdate("enquiries", enqId, { followUpDate:date, followUpTime:time, followUpStatus:status, notes, followUpStaff:staffId });
       if(e) { e.followUpDate=date; e.followUpTime=time; e.followUpStatus=status; e.notes=notes; }
+
+      // Mark previous open follow-up tasks for this enquiry as done
+      // so old dates don't keep showing on the calendar
+      const prevTasks = tasks.filter(t => t.isFollowUp && t.enqId === enqId && !t.done);
+      for(const pt of prevTasks) {
+        await fbUpdate("tasks", pt.id, { done: true, completedBy: CURRENT_USER?.name || "Staff" });
+        pt.done = true;
+      }
     }
 
-    // Also save to a standalone follow-ups collection (feeds the calendar)
+    // Add new follow-up task entry (history log)
     await fbAdd("tasks", {
       title: `Follow-up: ${document.getElementById("fu-client-name")?.value} — ${notes.substring(0,60)}`,
       assignedTo: staffId,
@@ -10652,7 +10664,7 @@ function buildNotifications() {
     });
 
   // ── Today's follow-ups ──
-  enquiries.filter(e => e.followUpDate===today && (e.followUpStaff===uid||e.staffId===uid) && e.status!=='Booked')
+  enquiries.filter(e => e.followUpDate===today && (e.followUpStaff===uid||e.staffId===uid) && e.status!=='Booked' && e.status!=='Junk' && e.status!=='Cancelled')
     .forEach(e => {
       notifs.push({ id:'fu_td_'+e.id, type:'followup', icon:'📅', color:'#0369a1', bg:'#f0f9ff',
         title:'Follow-Up Today', body:`Follow-up with ${cName(e.clientId)}`,
@@ -11087,7 +11099,7 @@ setInterval(() => {
     // Check for newly overdue follow-ups
     const today = new Date().toISOString().slice(0,10);
     const uid = CURRENT_USER.id;
-    enquiries.filter(e => e.followUpDate === today && (e.followUpStaff===uid||e.staffId===uid) && e.status!=='Booked')
+    enquiries.filter(e => e.followUpDate === today && (e.followUpStaff===uid||e.staffId===uid) && e.status!=='Booked' && e.status!=='Junk' && e.status!=='Cancelled')
       .forEach(e => {
         const alertId = 'interval_fu_' + e.id + '_' + today;
         if(!_seenNotifIds.has(alertId)) {
