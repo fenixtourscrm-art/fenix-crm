@@ -827,15 +827,23 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
+    <div class="nav-item" id="nav-attendance" onclick="showTab('attendance',this)" style="display:none"><span class="nav-icon">🕐</span>Staff Attendance</div>
     <div class="nav-item" onclick="showTab('bugreports',this)"><span class="nav-icon">🐛</span>Bug Reports<span class="nav-badge" id="bug-badge" style="display:none">!</span></div>
   </nav>
   <div class="sidebar-footer">
     <div class="agent-row">
       <div class="avatar" id="user-avatar">--</div>
-      <div>
+      <div style="flex:1;min-width:0">
         <div class="agent-name" id="user-name">Loading...</div>
         <div class="agent-role" id="user-role"></div>
+        <div id="user-login-time" style="font-size:9px;color:#94a3b8;margin-top:1px"></div>
       </div>
+      <button onclick="fbSignOut()" title="Sign Out"
+        style="background:none;border:1px solid #e2e8f0;border-radius:6px;padding:4px 7px;cursor:pointer;color:#94a3b8;font-size:11px;flex-shrink:0;transition:.15s"
+        onmouseover="this.style.borderColor='#ef4444';this.style.color='#ef4444'"
+        onmouseout="this.style.borderColor='#e2e8f0';this.style.color='#94a3b8'">
+        ⏻
+      </button>
     </div>
   </div>
 </div>
@@ -1618,6 +1626,22 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     </div>
 
     <!-- TRASH / RECYCLE BIN TAB -->
+    <!-- ── ATTENDANCE TAB ── -->
+    <div class="tab" id="tab-attendance">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div class="section-title" style="margin:0">🕐 Staff Attendance</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="date" id="att-from" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:Inter,sans-serif">
+          <input type="date" id="att-to" style="padding:6px 10px;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:Inter,sans-serif">
+          <button onclick="renderAttendance()" class="btn btn-primary" style="padding:6px 14px">🔍 Filter</button>
+          <button onclick="document.getElementById('att-from').value='';document.getElementById('att-to').value='';renderAttendance()" class="btn btn-ghost" style="padding:6px 12px">Reset</button>
+        </div>
+      </div>
+      <div id="att-table-wrap">
+        <div style="font-size:13px;color:#94a3b8;text-align:center;padding:40px">Loading attendance...</div>
+      </div>
+    </div>
+
     <div class="tab" id="tab-trash">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
         <div>
@@ -2406,7 +2430,7 @@ const sBadge=s=>{const styles={"Active":"background:#eff6ff;color:#1d4ed8;border
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List"};
+const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List",attendance:"🕐 Staff Attendance"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -2429,6 +2453,7 @@ function showTab(tab,el){
   }
   if(tab==="bugreports"){loadBugReports();}
   if(tab==="quiz"){initQuiz();}
+  if(tab==="attendance"){ renderAttendance(); }
   if(tab==="quotes"){initQuotationBuilder();}
   if(tab==="currency"){initCurrencyTab();}
   if(tab==="fieldmkt"){initFieldMkt();}
@@ -4733,13 +4758,13 @@ const FIREBASE_CONFIG = {"apiKey":"AIzaSyDudr9WtoxVXEduqlCKU4g1P3THlEUrY_k","aut
 
 const STAFF_MAP = {"rehana@fenixtours.co.in": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}, "inquiry@fenixtours.co.in": {"id": 2, "name": "Mr. Paresh Gajera", "role": "Sales Executive", "initials": "PG", "isOwner": false}, "booking1@fenixtours.co.in": {"id": 3, "name": "Ms. Nusaiba Puthawala", "role": "Visa Executive", "initials": "NP", "isOwner": false}, "ahyanshaikh3@gmail.com": {"id": 4, "name": "Mr. Ahyan Shaikh", "role": "Operation Dept", "initials": "AS", "isOwner": false}, "accounts@fenixtours.co.in": {"id": 5, "name": "Mr. Taha Rangwala", "role": "Accountant", "initials": "TR", "isOwner": false}, "booking@fenixtours.co.in": {"id": 6, "name": "Ms. Rozina Puthawala", "role": "Marketing Executive", "initials": "RP", "isOwner": false}, "manager@fenixtours.co.in": {"id": 7, "name": "Ms. Meghna Kukadia", "role": "Manager", "initials": "MK", "isOwner": false}, "hrfenixtours@gmail.com": {"id": 8, "name": "Ms. Ayesha Rangoonwala", "role": "Marketing Executive", "initials": "AR", "isOwner": false}, "fenixtourscrm@gmail.com": {"id": 1, "name": "Ms. Rehana Ansari", "role": "Managing Director", "initials": "RA", "isOwner": true}};
 const PERM_MAP  = {
-  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
+  "1": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency","attendance"], "canDelete": true,  "canEditClients": true,  "canSetTargets": true},
   "2": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "3": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "4": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "5": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": false, "canEditClients": false, "canSetTargets": false},
   "6": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","followup","quiz","ai","destinations","bugreports","trash","currency","quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": false},
-  "7": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency"], "canDelete": true, "canEditClients": true, "canSetTargets": true},
+  "7": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","targets","followup","bugreports","quiz","ai","settings","quotes","destinations","trash","currency","attendance"], "canDelete": true, "canEditClients": true, "canSetTargets": true},
   "8": {"sections": ["dashboard","data","enquiries","bookings","tasks","reports","marketing","followup","quiz","ai","destinations","bugreports","trash","currency","quotes"], "canDelete": true, "canEditClients": true, "canSetTargets": false}
 }
 
@@ -4780,7 +4805,28 @@ function fbSignIn() {
 // Register as ready so the early stub can call it once Firebase is initialised
 window._fbSignInReady = fbSignIn;
 
-function fbSignOut() {
+async function fbSignOut() {
+  if(!confirm('Sign out of Fenix CRM?')) return;
+  try {
+    // Record logout time if we have a session record
+    if(CURRENT_USER && window._attSessionId) {
+      const logoutTime = new Date().toISOString();
+      const loginTime  = window._attLoginTime;
+      let duration = '';
+      if(loginTime) {
+        const mins = Math.round((new Date(logoutTime) - new Date(loginTime)) / 60000);
+        const h = Math.floor(mins/60), m = mins%60;
+        duration = h>0 ? `${h}h ${m}m` : `${m}m`;
+      }
+      await db.collection('staff_attendance').doc(window._attSessionId).update({
+        logoutTime, duration, status: 'logged_out'
+      }).catch(()=>{});
+    }
+  } catch(e) {}
+  // Clear session drafts so next user on same device starts fresh
+  ['fenix_draft_enquiry','fenix_draft_booking','fenix_draft_client','fenix_draft_task'].forEach(k => sessionStorage.removeItem(k));
+  window._attSessionId = null;
+  window._attLoginTime = null;
   auth.signOut();
 }
 
@@ -4838,9 +4884,151 @@ auth.onAuthStateChanged(function(user) {
     if(m && !USER_PERMS.sections.includes(m[1])) el.style.display="none";
   });
 
+  // Show attendance nav item for Rehana and Meghna
+  if(staff.id === 1 || staff.id === 7) {
+    const navAtt = document.getElementById('nav-attendance');
+    if(navAtt) navAtt.style.display = '';
+  }
+
+  // Record login time to Firebase
+  const loginTime = new Date().toISOString();
+  window._attLoginTime = loginTime;
+  const loginDateKey = loginTime.slice(0,10); // YYYY-MM-DD
+  // Use date+staffId as doc — only keep first login of the day
+  const attDocId = `${loginDateKey}_${staff.id}`;
+  window._attSessionId = attDocId;
+  db.collection('staff_attendance').doc(attDocId).get().then(doc => {
+    if(!doc.exists) {
+      // First login of the day — create record
+      db.collection('staff_attendance').doc(attDocId).set({
+        staffId: staff.id,
+        staffName: staff.name,
+        staffRole: staff.role,
+        date: loginDateKey,
+        loginTime,
+        logoutTime: '',
+        duration: '',
+        status: 'active',
+        device: navigator.userAgent.includes('Mobile') ? 'Mobile' : 'Desktop',
+        browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Firefox') ? 'Firefox' : 'Browser',
+      }).catch(()=>{});
+    } else {
+      // Already logged in today — just update status to active (re-login)
+      db.collection('staff_attendance').doc(attDocId).update({
+        status: 'active', logoutTime: '', duration: ''
+      }).catch(()=>{});
+    }
+  }).catch(()=>{});
+
+  // Show login time in sidebar
+  const loginTimeEl = document.getElementById('user-login-time');
+  if(loginTimeEl) {
+    const fmt = new Date(loginTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});
+    loginTimeEl.textContent = `Since ${fmt}`;
+  }
+
   // Load all data from Firestore
   loadFromFirestore();
 });
+
+// ── Staff Attendance ──────────────────────────────
+async function renderAttendance() {
+  const wrap = document.getElementById('att-table-wrap');
+  if(!wrap) return;
+  wrap.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:13px">Loading...</div>';
+
+  const today = new Date().toISOString().slice(0,10);
+  const from  = document.getElementById('att-from')?.value || today;
+  const to    = document.getElementById('att-to')?.value   || today;
+
+  // Set default date inputs to today
+  if(!document.getElementById('att-from').value) document.getElementById('att-from').value = today;
+  if(!document.getElementById('att-to').value)   document.getElementById('att-to').value   = today;
+
+  try {
+    // Fetch records in date range — client-side sort to avoid Firestore composite index
+    const snap = await db.collection('staff_attendance')
+      .where('date','>=', from)
+      .where('date','<=', to)
+      .get();
+
+    const records = snap.docs.map(d => ({id:d.id,...d.data()}))
+      .sort((a,b) => b.date.localeCompare(a.date));
+
+    if(!records.length) {
+      wrap.innerHTML = `<div style="text-align:center;padding:40px;color:#94a3b8">
+        <div style="font-size:32px;margin-bottom:8px">📭</div>
+        <div style="font-size:13px">No attendance records for this period.</div>
+      </div>`;
+      return;
+    }
+
+    // Group by date
+    const byDate = {};
+    records.forEach(r => {
+      if(!byDate[r.date]) byDate[r.date] = [];
+      byDate[r.date].push(r);
+    });
+
+    let html = '';
+    Object.keys(byDate).sort((a,b)=>b.localeCompare(a)).forEach(date => {
+      const dayRecs = byDate[date];
+      const fmtDate = new Date(date+'T12:00:00').toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'short',year:'numeric'});
+      const isToday = date === today;
+
+      html += `<div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;display:flex;align-items:center;gap:8px">
+          📅 ${fmtDate} ${isToday ? '<span style="background:#dcfce7;color:#16a34a;font-size:10px;padding:1px 8px;border-radius:99px;font-weight:700">Today</span>' : ''}
+        </div>
+        <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse">
+            <thead>
+              <tr style="background:#f8fafc">
+                <th style="padding:10px 14px;text-align:left;font-size:10px;font-weight:700;color:#64748b;letter-spacing:.08em;border-bottom:1px solid #e2e8f0">STAFF</th>
+                <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;color:#64748b;letter-spacing:.08em;border-bottom:1px solid #e2e8f0">LOGIN</th>
+                <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;color:#64748b;letter-spacing:.08em;border-bottom:1px solid #e2e8f0">LOGOUT</th>
+                <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;color:#64748b;letter-spacing:.08em;border-bottom:1px solid #e2e8f0">DURATION</th>
+                <th style="padding:10px 14px;text-align:center;font-size:10px;font-weight:700;color:#64748b;letter-spacing:.08em;border-bottom:1px solid #e2e8f0">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${dayRecs.map((r,i) => {
+                const fmtLogin  = r.loginTime  ? new Date(r.loginTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true})  : '—';
+                const fmtLogout = r.logoutTime ? new Date(r.logoutTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}) : '—';
+                const isActive  = r.status === 'active';
+                const staffEntry = STAFF.find(s => s.id === r.staffId);
+                const initials   = staffEntry ? staffEntry.initials : r.staffName?.split(' ').filter(w=>/^[A-Z]/.test(w)).map(w=>w[0]).join('').slice(0,2) || '??';
+                return `<tr style="border-bottom:${i<dayRecs.length-1?'1px solid #f1f5f9':'none'}">
+                  <td style="padding:10px 14px">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0">${initials}</div>
+                      <div>
+                        <div style="font-size:12px;font-weight:700;color:#0f172a">${r.staffName}</div>
+                        <div style="font-size:10px;color:#94a3b8">${r.staffRole||''} · ${r.browser||''} · ${r.device||''}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style="padding:10px 14px;text-align:center;font-size:12px;font-weight:700;color:#0f172a">🟢 ${fmtLogin}</td>
+                  <td style="padding:10px 14px;text-align:center;font-size:12px;font-weight:700;color:${isActive?'#94a3b8':'#0f172a'}">${isActive ? '—' : '🔴 '+fmtLogout}</td>
+                  <td style="padding:10px 14px;text-align:center;font-size:12px;color:#64748b;font-weight:600">${r.duration || (isActive ? '<span style="color:#f97316">Active</span>' : '—')}</td>
+                  <td style="padding:10px 14px;text-align:center">
+                    <span style="background:${isActive?'#dcfce7':'#f1f5f9'};color:${isActive?'#16a34a':'#64748b'};font-size:10px;font-weight:700;padding:3px 10px;border-radius:99px">
+                      ${isActive ? '🟢 Online' : '🔴 Logged Out'}
+                    </span>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    });
+
+    wrap.innerHTML = html;
+  } catch(err) {
+    wrap.innerHTML = `<div style="color:#dc2626;font-size:13px;padding:20px">Error loading attendance: ${err.message}</div>`;
+  }
+}
 
 // ── Load Data ────────────────────────────────────
 function loadFromFirestore() {
