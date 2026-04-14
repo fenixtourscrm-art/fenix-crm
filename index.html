@@ -76,7 +76,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 /* preview mode removed */
 /* Scrollable editor */
 #tab-quotes{padding-bottom:80px}
-#qb-canvas{width:794px;min-width:794px;margin:0 auto;background:#fff;font-family:Arial,sans-serif}
+#qb-canvas{width:794px;min-width:794px;margin:0 auto;background:#fff;font-family:Arial,sans-serif;border:2px solid #e2e8f0;border-radius:4px;box-shadow:0 2px 16px rgba(0,0,0,0.08)}
 .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:auto}
 .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
 .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
@@ -111,8 +111,14 @@ li:hover .qb-del-item{opacity:1}
   .qb-editable{background:transparent !important;border:none !important;box-shadow:none !important}
   .qb-locked{background:#fefce8 !important}
   .qb-table th{background:#c2410c !important;color:#fff !important}
-  .qb-section{page-break-inside:auto}
-  .qb-day-block{page-break-inside:avoid}
+  .qb-section{page-break-inside:auto;break-inside:auto}
+  .qb-day-block{page-break-inside:avoid;break-inside:avoid}
+  .qb-title-section{break-inside:avoid}
+  .qb-bullet-list li{break-inside:avoid}
+  table{break-inside:auto;width:100%}
+  tr{break-inside:avoid;break-after:auto}
+  thead{display:table-header-group}
+  tfoot{display:table-footer-group}
   @page{size:A4;margin:10mm}
 }
 .dest-tooltip{background:#fff!important;border:1.5px solid #e2e8f0!important;border-radius:10px!important;padding:8px 12px!important;box-shadow:0 4px 16px rgba(0,0,0,0.12)!important;font-family:Inter,sans-serif!important}
@@ -1569,6 +1575,12 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
       </div>
 
+      <!-- Staff Quotation Stats -->
+      <div id="qb-staff-stats" style="margin-bottom:16px;display:none">
+        <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">QUOTATIONS BY STAFF</div>
+        <div id="qb-staff-stats-grid" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+
       <!-- Saved Quotes List -->
       <div id="qb-list-wrap" style="margin-bottom:16px">
         <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">SAVED QUOTATIONS</div>
@@ -1587,8 +1599,12 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
         <!-- A4 Canvas -->
         <div style="overflow-x:auto;overflow-y:visible;padding-bottom:20px">
-          <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid #e2e8f0">
-            <div id="qb-document"></div>
+          <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid #e2e8f0;position:relative">
+            <!-- Watermark — very faint, shows if copied/screenshotted -->
+            <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.04">
+              ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18}%;left:-10%;width:120%;font-size:28px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.3em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>`).join('')}
+            </div>
+            <div id="qb-document" style="position:relative;z-index:1"></div>
           </div>
         </div>
 
@@ -7615,6 +7631,19 @@ async function loadThContent() {
 // ═══════════════════════════════════════════════════════
 
 let qbCurrentId = null;
+let qbCurrentQuoteNo = null;
+
+function qbGenerateQuoteNo() {
+  const d = new Date();
+  const dateKey = d.getFullYear().toString() +
+    String(d.getMonth()+1).padStart(2,'0') +
+    String(d.getDate()).padStart(2,'0');
+  // Use timestamp last 4 digits as sequence
+  const seq = String(Date.now()).slice(-4);
+  const no = 'QT-' + dateKey + '-' + seq;
+  qbCurrentQuoteNo = no;
+  return no;
+}
 let qbPreviewMode = false;
 let qbSavedQuotes = [];
 
@@ -7695,7 +7724,7 @@ async function loadQbList() {
   const el = document.getElementById('qb-list');
   if(!el) return;
   try {
-    const snap = await db.collection('quotations').orderBy('createdAt','desc').limit(20).get();
+    const snap = await db.collection('quotations').orderBy('createdAt','desc').limit(50).get();
     qbSavedQuotes = snap.docs.map(d => ({id: d.id, ...d.data()}));
   } catch(e) {
     qbSavedQuotes = JSON.parse(localStorage.getItem('qb_quotes') || '[]');
@@ -7703,24 +7732,60 @@ async function loadQbList() {
 
   if(!qbSavedQuotes.length) {
     el.innerHTML = '<div style="font-size:12px;color:#94a3b8">No saved quotations yet. Click "+ New Quotation" to start.</div>';
+    document.getElementById('qb-staff-stats').style.display = 'none';
     return;
   }
 
-  el.innerHTML = qbSavedQuotes.map(q => `
+  // ── Staff stats panel (owner only) ──
+  const isOwner = CURRENT_USER && CURRENT_USER.id === 1;
+  const statsWrap = document.getElementById('qb-staff-stats');
+  const statsGrid = document.getElementById('qb-staff-stats-grid');
+  if(isOwner && statsWrap && statsGrid) {
+    statsWrap.style.display = '';
+    const counts = {};
+    qbSavedQuotes.forEach(q => {
+      const name = q.createdByName || 'Unknown';
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    statsGrid.innerHTML = Object.entries(counts)
+      .sort((a,b) => b[1] - a[1])
+      .map(([name, count]) => {
+        const initials = name.split(' ').filter(w => /^[A-Z]/.test(w)).slice(0,2).map(w=>w[0]).join('');
+        return `<div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;min-width:160px">
+          <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#f97316,#dc2626);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0">${initials}</div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#0f172a">${name.replace('Ms. ','').replace('Mr. ','')}</div>
+            <div style="font-size:11px;color:#f97316;font-weight:800">${count} quotation${count>1?'s':''}</div>
+          </div>
+        </div>`;
+      }).join('');
+  } else if(statsWrap) {
+    statsWrap.style.display = 'none';
+  }
+
+  // ── Saved quotes list ──
+  // Non-owners only see their own quotes
+  const visibleQuotes = isOwner
+    ? qbSavedQuotes
+    : qbSavedQuotes.filter(q => q.createdBy === CURRENT_USER?.id);
+
+  el.innerHTML = visibleQuotes.length ? visibleQuotes.map(q => `
     <div style="display:flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:8px 12px;cursor:pointer;transition:.15s"
       onclick="qbLoadQuote('${q.id}')"
       onmouseover="this.style.borderColor='#0369a1'" onmouseout="this.style.borderColor='#e2e8f0'">
       <span style="font-size:18px">📄</span>
-      <div>
-        <div style="font-size:12px;font-weight:700;color:#0f172a">${q.packageTitle || q.name}</div>
-        <div style="font-size:10px;color:#94a3b8">${new Date(q.createdAt).toLocaleDateString('en-IN')}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${q.packageTitle || q.name || '—'}</div>
+        <div style="font-size:10px;color:#94a3b8">${q.quoteNo ? q.quoteNo+' · ' : ''}${new Date(q.createdAt).toLocaleDateString('en-IN')}${q.createdByName && isOwner ? ' · '+q.createdByName.replace('Ms. ','').replace('Mr. ','') : ''}</div>
       </div>
       <button onclick="event.stopPropagation();qbDeleteQuote('${q.id}')" style="margin-left:6px;padding:2px 6px;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:4px;font-size:10px;cursor:pointer">✕</button>
-    </div>`).join('');
+    </div>`).join('')
+  : '<div style="font-size:12px;color:#94a3b8">No quotations yet.</div>';
 }
 
 function qbNewQuote() {
   qbCurrentId = null;
+  qbCurrentQuoteNo = null;
   const data = qbDefaultData();
   qbCurrentId = data.id;
   qbRenderDocument(data);
@@ -7731,6 +7796,7 @@ function qbLoadQuote(id) {
   const q = qbSavedQuotes.find(x => x.id === id);
   if(!q) return;
   qbCurrentId = id;
+  qbCurrentQuoteNo = q.quoteNo || null;
   qbRenderDocument(q);
   document.getElementById('qb-builder').style.display = '';
   document.getElementById('qb-builder').scrollIntoView({behavior:'smooth'});
@@ -7759,6 +7825,7 @@ function qbRenderDocument(data) {
       <div style="position:absolute;right:24px;text-align:right;font-size:11px;color:#64748b">
         <div style="font-weight:700;color:#374151;font-size:12px">${new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
         <div style="color:#94a3b8">Travel Quotation</div>
+        <div style="font-size:10px;font-weight:800;color:#c2410c;margin-top:3px;letter-spacing:.05em">${data.quoteNo || qbGenerateQuoteNo()}</div>
       </div>
     </div>
 
@@ -7925,32 +7992,32 @@ function qbRenderDocument(data) {
     </div>
 
     <!-- Fenix Footer -->
-    <div class="qb-locked" style="background:#0f172a !important;padding:0;border-top:3px solid #f97316;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+    <div class="qb-locked" style="background:#1e293b !important;padding:0;border-top:3px solid #f97316;-webkit-print-color-adjust:exact;print-color-adjust:exact">
 
       <!-- Top bar: contact row -->
       <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 24px 10px;gap:12px;flex-wrap:wrap">
 
         <!-- LEFT: Owner (always Rehana) -->
         <div style="flex:1;min-width:160px">
-          <div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:3px">Ms. Rehana Ansari</div>
+          <div style="font-size:14px;font-weight:900;color:#f1f5f9;margin-bottom:3px">Ms. Rehana Ansari</div>
           <div style="font-size:12px;color:#f97316;font-weight:800;margin-bottom:3px">📞 +91 98989 20537</div>
           <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em">Managing Director</div>
         </div>
 
         <!-- CENTER: Company name -->
         <div style="flex:1;min-width:160px;text-align:center">
-          <div style="font-size:14px;font-weight:900;color:#fff;letter-spacing:.05em">FENIX TOURS & TRAVELS</div>
+          <div style="font-size:14px;font-weight:900;color:#f1f5f9;letter-spacing:.05em">FENIX TOURS & TRAVELS</div>
           <div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:.1em;margin-top:2px">Pvt. Ltd.</div>
-          <div style="font-size:10px;color:#64748b;margin-top:4px">🌐 www.fenixtours.co.in</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:4px">🌐 www.fenixtours.co.in</div>
         </div>
 
-        <!-- RIGHT: Staff who created quotation (auto from CURRENT_USER) -->
+        <!-- RIGHT: Staff who created quotation -->
         <div style="flex:1;min-width:160px;text-align:right" id="qb-footer-staff">
           ${(()=>{
             const staffId = CURRENT_USER ? CURRENT_USER.id : 0;
             const s = STAFF.find(x => x.id === staffId);
-            if(!s || s.id === 1) return ''; // Don't duplicate if owner is logged in
-            return `<div style="font-size:14px;font-weight:900;color:#fff;margin-bottom:3px">${s.name}</div>
+            if(!s || s.id === 1) return '';
+            return `<div style="font-size:14px;font-weight:900;color:#f1f5f9;margin-bottom:3px">${s.name}</div>
             ${s.mobile ? `<div style="font-size:12px;color:#f97316;font-weight:800;margin-bottom:3px">📞 ${s.mobile}</div>` : ''}
             <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em">${s.role}</div>`;
           })()}
@@ -7958,18 +8025,18 @@ function qbRenderDocument(data) {
       </div>
 
       <!-- Divider -->
-      <div style="height:1px;background:rgba(255,255,255,0.08);margin:0 24px"></div>
+      <div style="height:1px;background:rgba(255,255,255,0.12);margin:0 24px"></div>
 
       <!-- Bottom bar: social + copyright -->
       <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 24px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:10px;color:#475569">© ${new Date().getFullYear()} Fenix Tours & Travels Pvt Ltd · All rights reserved</div>
+        <div style="font-size:10px;color:#64748b">© ${new Date().getFullYear()} Fenix Tours & Travels Pvt Ltd · All rights reserved</div>
         <div style="display:flex;gap:14px;align-items:center">
           <a href="https://www.facebook.com/share/1B1pFPbviU/" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#94a3b8;font-size:10px;font-weight:700">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
             Facebook
           </a>
           <a href="https://www.instagram.com/fenixtourahmedabad" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#94a3b8;font-size:10px;font-weight:700">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="url(#ig-grad)"><defs><linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="25%" style="stop-color:#e6683c"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="75%" style="stop-color:#cc2366"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="url(#ig-grad2)"><defs><linearGradient id="ig-grad2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
             Instagram
           </a>
         </div>
@@ -8193,6 +8260,7 @@ function qbCollectData() {
 
   return {
     id: qbCurrentId || ('qb_' + Date.now()),
+    quoteNo: qbCurrentQuoteNo || qbGenerateQuoteNo(),
     packageTitle: get('qb-packageTitle'),
     duration: get('qb-duration'),
     subTitle: get('qb-subTitle'),
@@ -8206,6 +8274,8 @@ function qbCollectData() {
     customSections: customs,
     createdAt: new Date().toISOString(),
     name: get('qb-packageTitle'),
+    createdBy: CURRENT_USER ? CURRENT_USER.id : 0,
+    createdByName: CURRENT_USER ? CURRENT_USER.name : 'Unknown',
   };
 }
 
@@ -8271,7 +8341,7 @@ function qbPrint() {
   if(!win) { alert('Please allow popups for printing.'); return; }
   win.document.write(`<!DOCTYPE html><html><head><title></title><style>
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0}
-    body{font-family:Arial,sans-serif;background:#fff}
+    body{font-family:Arial,sans-serif;background:#fff;position:relative}
     .qb-no-print,.qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
     .qb-meals-print{display:flex!important;flex-wrap:wrap;align-items:center;margin-top:6px}
     .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important}
@@ -8281,15 +8351,31 @@ function qbPrint() {
     #qb-currency-label{display:inline!important;visibility:visible!important;color:#fff!important;font-weight:800!important;font-size:11px!important}
     #qb-currency-select{display:none!important}
     .qb-table td{padding:7px 10px;border:1px solid #d1d5db;font-size:12px;vertical-align:top}
-    .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:auto}
-    .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
-    .qb-day-block{margin-bottom:16px;page-break-inside:avoid}
+    .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:auto;break-inside:auto}
+    .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9;break-inside:avoid}
+    .qb-day-block{margin-bottom:16px;page-break-inside:avoid;break-inside:avoid}
+    .qb-bullet-list li{break-inside:avoid}
+    table{break-inside:auto;width:100%}
+    tr{break-inside:avoid;break-after:auto}
+    thead{display:table-header-group}
+    tfoot{display:table-footer-group}
     .qb-bullet-list{list-style:none;padding:0;margin:0}
     .qb-bullet-list li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12px}
     .qb-bullet-list li::before{content:"❖";color:#d97706;font-size:14px;flex-shrink:0;margin-top:1px}
     img{max-width:100%;height:auto}
+    .qb-watermark{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.04;overflow:hidden}
+    .qb-watermark div{position:absolute;font-size:28px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.3em;font-family:Arial,sans-serif}
+    #qb-document{position:relative;z-index:1}
     @page{size:A4;margin:8mm}
-  </style></head><body>${html}</body></html>`);
+  </style></head><body>
+  <div class="qb-watermark">
+    <div style="top:5%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
+    <div style="top:23%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
+    <div style="top:41%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
+    <div style="top:59%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
+    <div style="top:77%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
+  </div>
+  ${html}</body></html>`);
   win.document.close();
   setTimeout(() => { win.print(); setTimeout(() => win.close(), 1000); }, 500);
 }
