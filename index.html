@@ -1611,7 +1611,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
           <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.10);border:none;position:relative">
             <!-- Watermark — very faint, shows if copied/screenshotted -->
             <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.06">
-              ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18-5}%;left:-5%;width:130%;font-size:30px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.25em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>`).join('')}
+              ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18-5}%;left:-5%;width:160%;font-size:20px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.12em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>`).join('')}
             </div>
             <div id="qb-document" style="position:relative;z-index:1"></div>
           </div>
@@ -8614,17 +8614,17 @@ function qbPrint() {
     .qb-bullet-list li::before{content:"❖";color:#d97706;font-size:14px;flex-shrink:0;margin-top:1px}
     img{max-width:100%;height:auto}
     .qb-watermark{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.06;overflow:hidden}
-    .qb-watermark div{position:absolute;font-size:30px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.25em;font-family:Arial,sans-serif}
+    .qb-watermark div{position:absolute;font-size:20px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.12em;font-family:Arial,sans-serif}
     #qb-document{position:relative;z-index:1}
     @page{size:A4;margin:8mm}
   </style></head><body>
   <div class="qb-watermark">
-    <div style="top:2%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
-    <div style="top:20%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
-    <div style="top:38%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
-    <div style="top:56%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
-    <div style="top:74%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
-    <div style="top:92%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
+    <div style="top:2%;left:-8%;width:160%">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>
+    <div style="top:20%;left:-8%;width:160%">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>
+    <div style="top:38%;left:-8%;width:160%">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>
+    <div style="top:56%;left:-8%;width:160%">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>
+    <div style="top:74%;left:-8%;width:160%">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>
+    <div style="top:92%;left:-8%;width:160%">FENIX TOURS &amp; TRAVELS PVT LTD &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS PVT LTD</div>
   </div>
   ${html}</body></html>`);
   win.document.close();
