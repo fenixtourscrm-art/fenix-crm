@@ -1601,8 +1601,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <div style="overflow-x:auto;overflow-y:visible;padding-bottom:20px">
           <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid #e2e8f0;position:relative">
             <!-- Watermark — very faint, shows if copied/screenshotted -->
-            <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.04">
-              ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18}%;left:-10%;width:120%;font-size:28px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.3em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>`).join('')}
+            <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.06">
+              ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18-5}%;left:-5%;width:130%;font-size:30px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.25em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>`).join('')}
             </div>
             <div id="qb-document" style="position:relative;z-index:1"></div>
           </div>
@@ -7842,7 +7842,6 @@ function qbRenderDocument(data) {
 
     <!-- Image Section -->
     <div class="qb-section" id="qb-images-section">
-      <div class="qb-locked" style="font-size:11px;font-weight:700;color:#92400e;padding:3px 8px;border-radius:4px;display:inline-block;margin-bottom:8px">PACKAGE IMAGES</div>
       <div id="qb-images-grid" style="display:grid;grid-template-columns:${data.images.length===1?'1fr':'1fr 1fr'};gap:8px;margin-bottom:8px">
         ${data.images.map((img,i) => qbImageCell(img, i)).join('')}
         ${data.images.length === 0 ? '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet — use the button below to add</div>' : ''}
@@ -8009,6 +8008,7 @@ function qbRenderDocument(data) {
           <div style="font-size:14px;font-weight:900;color:#f1f5f9;letter-spacing:.05em">FENIX TOURS & TRAVELS</div>
           <div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:.1em;margin-top:2px">Pvt. Ltd.</div>
           <div style="font-size:10px;color:#94a3b8;margin-top:4px">🌐 www.fenixtours.co.in</div>
+          <div style="font-size:9px;color:#64748b;margin-top:4px;line-height:1.5">601-D & C, Dynasty Plaza, Stadium Circle,<br>Navrangpura, Ahmedabad, Gujarat 380009</div>
         </div>
 
         <!-- RIGHT: Staff who created quotation -->
@@ -8363,21 +8363,37 @@ function qbPrint() {
     .qb-bullet-list li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:12px}
     .qb-bullet-list li::before{content:"❖";color:#d97706;font-size:14px;flex-shrink:0;margin-top:1px}
     img{max-width:100%;height:auto}
-    .qb-watermark{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.04;overflow:hidden}
-    .qb-watermark div{position:absolute;font-size:28px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.3em;font-family:Arial,sans-serif}
+    .qb-watermark{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:0.06;overflow:hidden}
+    .qb-watermark div{position:absolute;font-size:30px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.25em;font-family:Arial,sans-serif}
     #qb-document{position:relative;z-index:1}
     @page{size:A4;margin:8mm}
   </style></head><body>
   <div class="qb-watermark">
-    <div style="top:5%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
-    <div style="top:23%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
-    <div style="top:41%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
-    <div style="top:59%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
-    <div style="top:77%;left:-10%;width:120%">FENIX TOURS &amp; TRAVELS &nbsp; FENIX TOURS &amp; TRAVELS &nbsp;</div>
+    <div style="top:2%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
+    <div style="top:20%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
+    <div style="top:38%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
+    <div style="top:56%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
+    <div style="top:74%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
+    <div style="top:92%;left:-5%;width:130%">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>
   </div>
   ${html}</body></html>`);
   win.document.close();
-  setTimeout(() => { win.print(); setTimeout(() => win.close(), 1000); }, 500);
+  // Wait for content to fully render before triggering print dialog
+  // Do NOT auto-close the window — letting browser close it naturally prevents CRM freeze
+  win.onload = function() {
+    setTimeout(() => {
+      win.focus();
+      win.print();
+      // User closes the print window themselves — no forced close
+    }, 600);
+  };
+  // Fallback if onload already fired
+  setTimeout(() => {
+    if(win && !win.closed) {
+      win.focus();
+      win.print();
+    }
+  }, 1200);
 }
 
 // ── Clean paste — strip Excel/Word formatting ──
