@@ -76,7 +76,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#1e293b;height:100v
 /* preview mode removed */
 /* Scrollable editor */
 #tab-quotes{padding-bottom:80px}
-#qb-canvas{width:794px;min-width:794px;margin:0 auto;background:#fff;font-family:Arial,sans-serif;border:2px solid #e2e8f0;border-radius:4px;box-shadow:0 2px 16px rgba(0,0,0,0.08)}
+#qb-canvas{width:794px;min-width:794px;margin:0 auto;background:#fff;font-family:Arial,sans-serif;border:3px solid #f97316;border-radius:4px;box-shadow:0 2px 16px rgba(0,0,0,0.08)}
 .qb-section{padding:20px 32px;border-bottom:1px solid #f1f5f9;page-break-inside:auto}
 .qb-title-section{text-align:center;padding:28px 32px 16px;border-bottom:1px solid #f1f5f9}
 .qb-table{width:100%;border-collapse:collapse;margin:8px 0}
@@ -1599,7 +1599,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
         <!-- A4 Canvas -->
         <div style="overflow-x:auto;overflow-y:visible;padding-bottom:20px">
-          <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,0.12);border:1px solid #e2e8f0;position:relative">
+          <div id="qb-canvas" style="background:#fff;width:794px;margin:0 auto;box-shadow:0 4px 24px rgba(249,115,22,0.2);border:3px solid #f97316;position:relative">
             <!-- Watermark — very faint, shows if copied/screenshotted -->
             <div style="position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0;opacity:0.06">
               ${Array(6).fill(0).map((_,i)=>`<div style="position:absolute;top:${i*18-5}%;left:-5%;width:130%;font-size:30px;font-weight:900;color:#c2410c;white-space:nowrap;transform:rotate(-30deg);letter-spacing:.25em;font-family:Arial,sans-serif">FENIX TOURS &amp; TRAVELS &nbsp;&nbsp; FENIX TOURS &amp; TRAVELS</div>`).join('')}
@@ -7991,24 +7991,24 @@ function qbRenderDocument(data) {
     </div>
 
     <!-- Fenix Footer -->
-    <div class="qb-locked" style="background:#1e293b !important;padding:0;border-top:3px solid #f97316;-webkit-print-color-adjust:exact;print-color-adjust:exact">
+    <div class="qb-locked" style="background:#fff !important;padding:0;border-top:3px solid #f97316;-webkit-print-color-adjust:exact;print-color-adjust:exact">
 
       <!-- Top bar: contact row -->
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 24px 10px;gap:12px;flex-wrap:wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 24px;gap:12px;flex-wrap:wrap">
 
         <!-- LEFT: Owner (always Rehana) -->
         <div style="flex:1;min-width:160px">
-          <div style="font-size:14px;font-weight:900;color:#f1f5f9;margin-bottom:3px">Ms. Rehana Ansari</div>
-          <div style="font-size:12px;color:#f97316;font-weight:800;margin-bottom:3px">📞 +91 98989 20537</div>
-          <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em">Managing Director</div>
+          <div style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:2px">Ms. Rehana Ansari</div>
+          <div style="font-size:12px;color:#f97316;font-weight:800;margin-bottom:2px">📞 +91 98989 20537</div>
+          <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.12em">Managing Director</div>
         </div>
 
         <!-- CENTER: Company name -->
-        <div style="flex:1;min-width:160px;text-align:center;background:#fff;border-radius:10px;padding:12px 16px;margin:0 8px">
+        <div style="flex:1;min-width:160px;text-align:center;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;padding:0 16px">
           <div style="font-size:14px;font-weight:900;color:#c2410c;letter-spacing:.05em">FENIX TOURS & TRAVELS</div>
-          <div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:.1em;margin-top:2px">Pvt. Ltd.</div>
-          <div style="font-size:10px;color:#0369a1;margin-top:6px;font-weight:600">🌐 www.fenixtours.co.in</div>
-          <div style="font-size:9px;color:#64748b;margin-top:5px;line-height:1.6">601-D & C, Dynasty Plaza, Stadium Circle,<br>Navrangpura, Ahmedabad, Gujarat 380009</div>
+          <div style="font-size:10px;color:#f97316;font-weight:700;letter-spacing:.1em;margin-top:1px">Pvt. Ltd.</div>
+          <div style="font-size:10px;color:#0369a1;margin-top:4px;font-weight:600">🌐 www.fenixtours.co.in</div>
+          <div style="font-size:9px;color:#64748b;margin-top:3px;line-height:1.6">601-D & C, Dynasty Plaza, Stadium Circle,<br>Navrangpura, Ahmedabad, Gujarat 380009</div>
         </div>
 
         <!-- RIGHT: Staff who created quotation -->
@@ -8017,25 +8017,25 @@ function qbRenderDocument(data) {
             const staffId = CURRENT_USER ? CURRENT_USER.id : 0;
             const s = STAFF.find(x => x.id === staffId);
             if(!s || s.id === 1) return '';
-            return `<div style="font-size:14px;font-weight:900;color:#f1f5f9;margin-bottom:3px">${s.name}</div>
-            ${s.mobile ? `<div style="font-size:12px;color:#f97316;font-weight:800;margin-bottom:3px">📞 ${s.mobile}</div>` : ''}
-            <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em">${s.role}</div>`;
+            return `<div style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:2px">${s.name}</div>
+            ${s.mobile ? `<div style="font-size:12px;color:#f97316;font-weight:800;margin-bottom:2px">📞 ${s.mobile}</div>` : ''}
+            <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.12em">${s.role}</div>`;
           })()}
         </div>
       </div>
 
       <!-- Divider -->
-      <div style="height:1px;background:rgba(255,255,255,0.12);margin:0 24px"></div>
+      <div style="height:1px;background:#e2e8f0;margin:0 24px"></div>
 
       <!-- Bottom bar: social + copyright -->
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 24px;flex-wrap:wrap;gap:8px">
-        <div style="font-size:10px;color:#64748b">© ${new Date().getFullYear()} Fenix Tours & Travels Pvt Ltd · All rights reserved</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 24px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:10px;color:#94a3b8">© ${new Date().getFullYear()} Fenix Tours & Travels Pvt Ltd · All rights reserved</div>
         <div style="display:flex;gap:14px;align-items:center">
-          <a href="https://www.facebook.com/share/1B1pFPbviU/" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#94a3b8;font-size:10px;font-weight:700">
+          <a href="https://www.facebook.com/share/1B1pFPbviU/" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#374151;font-size:10px;font-weight:700">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
             Facebook
           </a>
-          <a href="https://www.instagram.com/fenixtourahmedabad" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#94a3b8;font-size:10px;font-weight:700">
+          <a href="https://www.instagram.com/fenixtourahmedabad" target="_blank" style="display:flex;align-items:center;gap:5px;text-decoration:none;color:#374151;font-size:10px;font-weight:700">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="url(#ig-grad2)"><defs><linearGradient id="ig-grad2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#f09433"/><stop offset="50%" style="stop-color:#dc2743"/><stop offset="100%" style="stop-color:#bc1888"/></linearGradient></defs><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
             Instagram
           </a>
@@ -8342,6 +8342,7 @@ function qbPrint() {
   win.document.write(`<!DOCTYPE html><html><head><title></title><style>
     *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;box-sizing:border-box;margin:0;padding:0}
     body{font-family:Arial,sans-serif;background:#fff;position:relative}
+    #qb-canvas,body>div:not(.qb-watermark){border:3px solid #f97316 !important}
     .qb-no-print,.qb-add-row,.qb-del-row,.qb-add-item,.qb-del-item,#qb-legend,.qb-custom-section-btns{display:none!important}
     .qb-meals-print{display:flex!important;flex-wrap:wrap;align-items:center;margin-top:6px}
     .qb-editable{background:transparent!important;border:none!important;box-shadow:none!important}
