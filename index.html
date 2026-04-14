@@ -8723,30 +8723,18 @@ function qbInitPasteHandler() {
     const skipTitleCase = isDayContent || isBaggageCol || isTimeCol || isDateCol;
 
     // ── Sentence case for day content ──
-    // Rule: First letter always capital, rest stays as typed (no forced lowercase)
-    // but if someone types ALL CAPS we convert to sentence case
+    // Rule: First letter of each sentence always capital, everything else forced lowercase
     if(isDayContent && el.innerText.length > 0) {
       const original = el.innerText;
-      // Enforce: first character must be uppercase
-      // Also convert fully-uppercase words (accidental caps lock) to lowercase except first char
-      const sentences = original.split(/([.!?]\s+)/);
-      let converted = sentences.map((seg, idx) => {
-        // If it's a separator (punctuation), return as-is
-        if(/^[.!?]\s+$/.test(seg)) return seg;
-        if(!seg) return seg;
-        // First letter uppercase, rest: if ALL CAPS convert to lowercase
-        const firstChar = seg.charAt(0).toUpperCase();
-        const rest = seg.slice(1);
-        // If rest is all uppercase (caps lock), force lowercase
-        const fixedRest = rest === rest.toUpperCase() && rest.length > 1 && /[A-Z]{2,}/.test(rest)
-          ? rest.toLowerCase()
-          : rest;
-        return firstChar + fixedRest;
-      }).join('');
+      const sel3 = window.getSelection();
+      const offset = sel3?.anchorOffset || 0;
+
+      // Split into sentences, capitalize first letter, force rest to lowercase
+      const converted = original
+        .toLowerCase()
+        .replace(/(^\s*\w|[.!?]\s+\w)/g, c => c.toUpperCase());
 
       if(original !== converted) {
-        const sel3 = window.getSelection();
-        const offset = sel3?.anchorOffset || 0;
         el.innerText = converted;
         try {
           const range2 = document.createRange();
@@ -8758,7 +8746,7 @@ function qbInitPasteHandler() {
           sel4.addRange(range2);
         } catch(ex) {}
       }
-      return; // don't run title case on day content
+      return;
     }
 
     if(!skipTitleCase && el.innerText.length > 0) {
