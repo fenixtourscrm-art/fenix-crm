@@ -8650,11 +8650,17 @@ function qbPrint() {
 function qbInitPasteHandler() {
   const doc = document.getElementById('qb-document');
   if(!doc) return;
+
+  // ── Block copy/cut from the entire quotation canvas ──
+  doc.addEventListener('copy',  e => { e.preventDefault(); });
+  doc.addEventListener('cut',   e => { e.preventDefault(); });
+  doc.addEventListener('contextmenu', e => { e.preventDefault(); });
+
+  // ── Paste: strip formatting, plain text only ──
   doc.addEventListener('paste', function(e) {
     if(!e.target.closest('.qb-editable')) return;
     e.preventDefault();
     const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-    // Insert plain text only
     const sel = window.getSelection();
     if(!sel.rangeCount) return;
     sel.deleteFromDocument();
@@ -8665,6 +8671,96 @@ function qbInitPasteHandler() {
     range.collapse(true);
     sel.removeAllRanges();
     sel.addRange(range);
+  });
+
+  // ── Input rules: numbers-only + title case ──
+  doc.addEventListener('input', function(e) {
+    const el = e.target;
+    if(!el.classList.contains('qb-editable')) return;
+
+    const tag  = el.closest('td, li, div');
+    const row  = el.closest('tr');
+    const td   = el.closest('td');
+
+    // Identify column index in table rows
+    let colIdx = -1;
+    if(row && td) {
+      colIdx = [...row.querySelectorAll('td')].indexOf(td);
+    }
+
+    // ── Number-only fields ──
+    // Pricing table: col 1 = Flight Fare, col 2 = Land Package, col 3 = Total
+    const isPricingRow = row?.closest('#qb-pricing-table');
+    const isNumberField = isPricingRow && (colIdx === 1 || colIdx === 2 || colIdx === 3);
+
+    if(isNumberField) {
+      const pos = window.getSelection()?.anchorOffset || 0;
+      const cleaned = el.innerText.replace(/[^0-9.,]/g, '');
+      if(el.innerText !== cleaned) {
+        el.innerText = cleaned;
+        // Restore caret position
+        try {
+          const range = document.createRange();
+          const sel2  = window.getSelection();
+          const node  = el.firstChild || el;
+          range.setStart(node, Math.min(pos, (node.textContent||'').length));
+          range.collapse(true);
+          sel2.removeAllRanges();
+          sel2.addRange(range);
+        } catch(ex) {}
+      }
+      return; // skip title case for number fields
+    }
+
+    // ── Title Case: first letter of every word capitalised ──
+    // Applied to: package title, duration, subtitle, day titles,
+    // airline, sector, destination, hotel name, room, inclusions, exclusions
+    // Skip: day content (free text notes), remarks, baggage (can be "30KG+7KG")
+    const isDayContent  = el.closest('.qb-day-block') && !el.classList.contains('qb-day-title');
+    const isBaggageCol  = row?.closest('#qb-flights-table') && colIdx === 4;
+    const isTimeCol     = row?.closest('#qb-flights-table') && colIdx === 3;
+    const isDateCol     = row?.closest('#qb-flights-table') && colIdx === 0;
+    const skipTitleCase = isDayContent || isBaggageCol || isTimeCol || isDateCol;
+
+    if(!skipTitleCase && el.innerText.length > 0) {
+      const original = el.innerText;
+      // Convert: first letter of each word to uppercase
+      const converted = original.replace(/(?:^|\s)\S/g, c => c.toUpperCase());
+      if(original !== converted) {
+        // Store caret position
+        const sel3 = window.getSelection();
+        const offset = sel3?.anchorOffset || 0;
+        el.innerText = converted;
+        // Restore caret at end of word being typed
+        try {
+          const range2 = document.createRange();
+          const sel4   = window.getSelection();
+          const tnode  = el.firstChild || el;
+          range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
+          range2.collapse(true);
+          sel4.removeAllRanges();
+          sel4.addRange(range2);
+        } catch(ex) {}
+      }
+    }
+  });
+
+  // ── Keydown: block non-numeric keys in number fields ──
+  doc.addEventListener('keydown', function(e) {
+    const el = e.target;
+    if(!el.classList.contains('qb-editable')) return;
+    const row    = el.closest('tr');
+    const td     = el.closest('td');
+    let colIdx   = -1;
+    if(row && td) colIdx = [...row.querySelectorAll('td')].indexOf(td);
+    const isPricingRow   = row?.closest('#qb-pricing-table');
+    const isNumberField  = isPricingRow && (colIdx === 1 || colIdx === 2 || colIdx === 3);
+    if(!isNumberField) return;
+    // Allow: digits, decimal, comma, backspace, delete, arrows, tab, enter, home, end
+    const allowed = ['Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Tab','Enter','Home','End'];
+    if(allowed.includes(e.key)) return;
+    if(/^[0-9.,]$/.test(e.key)) return;
+    e.preventDefault();
   });
 }
 
