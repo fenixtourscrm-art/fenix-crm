@@ -3576,8 +3576,10 @@ function renderTasks(){
     ? upcomingFU.map(e => fuCard(e, false)).join('')
     : `<div class="empty" style="font-size:12px;color:#94a3b8;padding:10px 0">No upcoming follow-ups</div>`;
 
-  // ── Assigned Tasks ──
-  const visibleTasks = isOwner ? [...tasks] : tasks.filter(t => t.assignedTo === CURRENT_USER?.id);
+  // ── Assigned Tasks — exclude isFollowUp records (those are follow-up history, shown above) ──
+  const visibleTasks = isOwner
+    ? tasks.filter(t => !t.isFollowUp)
+    : tasks.filter(t => t.assignedTo === CURRENT_USER?.id && !t.isFollowUp);
   const sorted = visibleTasks.sort((a,b)=>a.done-b.done||(a.dueDate||"").localeCompare(b.dueDate||""));
   document.getElementById("tasks-list").innerHTML=sorted.map(t=>`<div class="task-item ${t.done?"done":t.dueDate<todayStr?"overdue":""}">
     <div class="chk ${t.done?"checked":""}" onclick="toggleTask('${t.id}')">${t.done?"✓":""}</div>
