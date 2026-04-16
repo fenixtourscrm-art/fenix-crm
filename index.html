@@ -3077,14 +3077,15 @@ function toggleEnqStaffMenu(btn) {
   if(menu.style.display !== "none") { menu.style.display="none"; if(arrow) arrow.textContent="▾"; return; }
   const allStaff = typeof STAFF !== "undefined" ? STAFF : [];
   const list = document.getElementById("enq-staff-list");
+  const activeEnqsForStaff = enquiries.filter(e => e.status === enqStatusFilter || enqStatusFilter === "all" ? !["Lost","Junk","Cancelled"].includes(e.status) : e.status === enqStatusFilter);
   if(list) {
     list.innerHTML = [
       `<div onclick="selectEnqStaff(null)" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
         <span style="display:flex;align-items:center;gap:8px">👥 All Staff</span>
-        <span style="background:#f1f5f9;color:#64748b;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">${enquiries.length}</span>
+        <span style="background:#f1f5f9;color:#64748b;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:700">${activeEnqsForStaff.length}</span>
       </div>`,
       ...allStaff.map(s => {
-        const cnt = enquiries.filter(e => e.staffId === s.id).length;
+        const cnt = activeEnqsForStaff.filter(e => e.staffId === s.id).length;
         return `<div onclick="selectEnqStaff(${s.id},'${s.name.replace(/'/g,"\'")}')" style="padding:9px 16px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;display:flex;align-items:center;justify-content:space-between" onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
           <span style="display:flex;align-items:center;gap:8px">
             <div style="width:24px;height:24px;border-radius:50%;background:#0369a1;color:#fff;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;flex-shrink:0">${s.initials||s.name[0]}</div>
@@ -3242,8 +3243,9 @@ async function markLost(id){
   const reason=prompt("Reason for marking as Lost?\n1. Budget issue\n2. No response\n3. Went to another agency\n4. Trip cancelled\n5. Other\n\nType the reason:");
   if(reason===null)return;
   try {
-    await fbUpdate("enquiries",id,{status:"Lost",lostReason:reason||"Not specified"});
-    e.status="Lost"; e.lostReason=reason||"Not specified"; renderAll();
+    await fbUpdate("enquiries",id,{status:"Lost",lostReason:reason||"Not specified",followUpDate:"",followUpTime:""});
+    e.status="Lost"; e.lostReason=reason||"Not specified"; e.followUpDate=""; e.followUpTime=""; renderAll();
+    renderFollowUpCalendar();
   } catch(err){ alert("Failed: "+err.message); }
 }
 async function markJunk(id){
@@ -4041,7 +4043,7 @@ function openModal(type){
     const eid=window._editEnqId;
     const ex=isEdit?enquiries.find(x=>x.id===eid):null;
     const preClient=window._prefilledClientId||"";
-    const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Lost","Confirmed Booking"];
+    const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Confirmed Booking"];
     // SERVICE_CATS is defined globally
 
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
@@ -4052,7 +4054,7 @@ function openModal(type){
     <div id="enq-dynamic-fields"></div>
     <div class="form-grid">
       <div class="fg"><label>Lead Rating</label><select id="e-rating">${RATINGS.map(r=>`<option ${ex&&ex.rating===r?"selected":""}>${r}</option>`).join("")}</select></div>
-      <div class="fg"><label>Enquiry Status</label><select id="e-status">${["Active","Lost","Booked","Junk","Cancelled"].map(s=>`<option ${ex&&ex.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
+      <div class="fg"><label>Enquiry Status</label><select id="e-status">${["Active","Lost","Junk","Cancelled"].map(s=>`<option ${ex&&ex.status===s?"selected":""}>${s}</option>`).join("")}</select></div>
     </div>
     <div class="form-grid">
       <div class="fg"><label>Enquiry Type</label><select id="e-type">${ENQ_TYPES.map(t=>`<option ${ex&&ex.type===t?"selected":""}>${t}</option>`).join("")}</select></div>
@@ -5516,7 +5518,6 @@ async function saveEnquiry(isEdit) {
     staffId          : parseInt(gv("e-staff"))||0,
     notes            : gv("e-notes"),
     adults, childBed, childNoBed, infant, pax,
-    createdAt        : new Date().toISOString(),
     enquiryNo        : generateENQNumber(),
     primaryClientId  : window._familyEnqPrimaryId || "",
     primaryClientName: window._familyEnqPrimaryName || "",
@@ -5585,8 +5586,9 @@ async function saveEnquiry(isEdit) {
   try {
     if(isEdit) {
       const e=enquiries.find(x=>x.id===window._editEnqId);
-      // CRITICAL: preserve existing enquiryNo — never regenerate on edit
+      // CRITICAL: preserve existing enquiryNo and createdAt — never regenerate on edit
       if(e.enquiryNo) data.enquiryNo = e.enquiryNo;
+      if(e.createdAt) data.createdAt = e.createdAt;
       data.lastEditedBy = CURRENT_USER ? CURRENT_USER.name : "Unknown";
       data.lastEditedAt = new Date().toISOString();
       await fbUpdate("enquiries", e.id, data); Object.assign(e,data);
@@ -5597,6 +5599,7 @@ async function saveEnquiry(isEdit) {
       if(_saving) return;
       _saving = true;
       try {
+        data.createdAt = new Date().toISOString();
         await fbAdd("enquiries", data);
         window._prefilledClientId=null;
         window._familyEnqPrimaryId=null; window._familyEnqPrimaryName=null; window._familyEnqRelation=null;
@@ -6118,7 +6121,7 @@ function openFollowUpPopup(enqId, clientId) {
   window._fuClientId = cl?.id  || null;
 
   const todayStr  = new Date().toISOString().split("T")[0];
-  const FU_STATUSES = ["New Enquiry","Follow-up Pending","Quotation Sent","Confirmed Booking","Lost"];
+  const FU_STATUSES = ["New Enquiry","Follow-up Pending","Quotation Sent","Confirmed Booking"];
   const clientName = cl ? `${cl.firstName} ${cl.lastName}` : "";
   const clientMob  = cl?.mobile || "";
 
