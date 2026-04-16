@@ -3159,7 +3159,11 @@ function renderEnquiries(){
           : ((e.adults||0)+(e.childBed||0)+(e.childNoBed||0)+(e.infant||0))||e.pax||1;
         const enqTime=e.createdAt?new Date(e.createdAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true}):'';
         const isCancelled = e.status==="Cancelled";
-        rows+=`<tr style="border-left:3px solid ${isCancelled?'#94a3b8':fuColor};${isCancelled?'background:#f8fafc;opacity:0.75':''}">
+        const isLost = e.status==="Lost";
+        const isHidden = isCancelled || isLost;
+        const rowBorderColor = isCancelled?'#94a3b8':isLost?'#ef4444':fuColor;
+        const rowStyle = isCancelled?'background:#f8fafc;opacity:0.75':isLost?'background:#fff5f5;opacity:0.75':'';
+        rows+=`<tr style="border-left:3px solid ${rowBorderColor};${rowStyle}">
     <td style="white-space:nowrap">
       ${e.enquiryNo
         ? `<div onclick="openEnquiryDetail('${e.id}')" style="font-size:9px;font-weight:800;color:#7c3aed;font-family:monospace;background:#faf5ff;border:1px solid #e9d5ff;border-radius:5px;padding:2px 6px;white-space:nowrap;cursor:pointer;display:inline-block" title="View enquiry detail">${e.enquiryNo}</div>`
@@ -3167,15 +3171,17 @@ function renderEnquiries(){
     </td>
     <td>${tBadge(e.type)}${enqTime?`<div style="font-size:9px;color:#94a3b8;margin-top:2px">🕐 ${enqTime}</div>`:''}</td>
     <td class="col-sticky-first">
-      <strong style="font-size:12px">${cName(e.clientId)}</strong>
-      ${e.primaryClientName ? `<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>` : ""}
+      ${isHidden
+        ? `<strong style="font-size:12px;color:#94a3b8;letter-spacing:2px;filter:blur(4px);user-select:none">${cName(e.clientId)}</strong>${e.primaryClientName?`<div style="font-size:9px;color:#cbd5e1;margin-top:2px;filter:blur(4px);user-select:none">${e.familyRelation||"Family"}</div>`:""}`
+        : `<strong style="font-size:12px">${cName(e.clientId)}</strong>${e.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600;margin-top:2px">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>`:""}`
+      }
     </td>
-    <td style="font-size:11px">${(e.source||'').split("–")[0].trim()}</td>
+    <td style="font-size:11px">${isHidden?'<span style="color:#cbd5e1">—</span>':(e.source||'').split("–")[0].trim()}</td>
     <td><span class="badge" style="background:#f0fdf4;color:#166534;font-size:9px">${e.category||e.destType}</span></td>
-    <td style="font-size:12px;font-weight:600">${e.destination}</td>
-    <td style="font-size:11px;text-align:center">${totalPax||e.pax}<br><span style="font-size:9px;color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${e.adults||0}A ${e.childBed||0}CB`}</span></td>
-    <td style="font-size:11px;font-weight:600">${e.budget}</td>
-    <td>${rBadge(e.rating)}</td>
+    <td style="font-size:12px;font-weight:600">${isHidden?'<span style="color:#cbd5e1">—</span>':e.destination}</td>
+    <td style="font-size:11px;text-align:center">${isHidden?'<span style="color:#cbd5e1">—</span>':`${totalPax||e.pax}<br><span style="font-size:9px;color:#94a3b8">${isVisaPassport ? totalPax+"A" : `${e.adults||0}A ${e.childBed||0}CB`}</span>`}</td>
+    <td style="font-size:11px;font-weight:600">${isHidden?'<span style="color:#cbd5e1">—</span>':e.budget}</td>
+    <td>${isHidden?'<span style="color:#cbd5e1">—</span>':rBadge(e.rating)}</td>
     <td>
       <div style="display:flex;align-items:center;gap:5px">
         <div style="width:7px;height:7px;border-radius:50%;background:${fuColor};flex-shrink:0"></div>
