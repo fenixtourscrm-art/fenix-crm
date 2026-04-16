@@ -1023,8 +1023,8 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <!-- Status / type filters -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn btn-ghost enq-filter active-filter" onclick="filterEnq('all',this)">All Status</button>
-          <button class="btn btn-ghost enq-filter" onclick="filterEnq('Active',this)">Active</button>
+          <button class="btn btn-ghost enq-filter" onclick="filterEnq('all',this)">All Status</button>
+          <button class="btn btn-ghost enq-filter active-filter" onclick="filterEnq('Active',this)">Active</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Lost',this)">Lost</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Booked',this)">Booked</button>
           <button class="btn btn-ghost enq-filter" onclick="filterEnq('Junk',this)">Junk</button>
@@ -1135,10 +1135,30 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <!-- TASKS -->
     <div class="tab" id="tab-tasks">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-        <div class="section-title" style="margin:0">Assigned Tasks</div>
+        <div class="section-title" style="margin:0">📋 Tasks & Follow-ups</div>
         <button class="btn btn-primary" onclick="openModal('task')">+ Add Task</button>
       </div>
-      <div id="tasks-list"></div>
+      <!-- Today's Follow-ups Section -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:8px 12px;background:#eff6ff;border-radius:8px;border-left:3px solid #3b82f6">
+          📅 Today's Follow-ups
+        </div>
+        <div id="tasks-followups-today"></div>
+      </div>
+      <!-- Upcoming Follow-ups Section -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:800;color:#d97706;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:8px 12px;background:#fffbeb;border-radius:8px;border-left:3px solid #f59e0b">
+          🔜 Upcoming Follow-ups
+        </div>
+        <div id="tasks-followups-upcoming"></div>
+      </div>
+      <!-- Assigned Tasks Section -->
+      <div>
+        <div style="font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;padding:8px 12px;background:#f8fafc;border-radius:8px;border-left:3px solid #64748b">
+          ✅ Assigned Tasks
+        </div>
+        <div id="tasks-list"></div>
+      </div>
     </div>
 
     <!-- DAILY REPORTS -->
@@ -3032,13 +3052,14 @@ function editClient(id){
 // ENQUIRIES
 let enqFilter="all", catFilter="all", enqStaffFilter=null;
 // Separate filter state — each is independent, combined with AND logic
-let enqStatusFilter="all", enqTypeFilter="all", enqRatingFilter="all";
+let enqStatusFilter="Active", enqTypeFilter="all", enqRatingFilter="all";
+const ARCHIVED_STATUSES = ["Lost","Junk","Cancelled"];
 const RATINGS_LIST = ["A+","A","B+","B","C"];
 function filterEnq(f,el){
   const STATUSES=["Active","Lost","Booked","Junk","Cancelled"];
   const TYPES=["New","Old","Repeated"];
   const RATINGS=["A+","A","B+","B","C"];
-  if(f==="all"){ enqStatusFilter="all"; enqTypeFilter="all"; enqRatingFilter="all"; }
+  if(f==="all"){ enqStatusFilter="Active"; enqTypeFilter="all"; enqRatingFilter="all"; }
   else if(STATUSES.includes(f)) enqStatusFilter=f;
   else if(TYPES.includes(f))    enqTypeFilter=f;
   else if(RATINGS.includes(f))  enqRatingFilter=f;
@@ -3516,25 +3537,57 @@ function renderVisa(){} // Merged into Bookings
 
 // TASKS
 function renderTasks(){
-  // Owner sees all tasks, staff sees only their assigned tasks
   const isOwner = CURRENT_USER && (CURRENT_USER.id === 1);
-  if(!CURRENT_USER) return; // not logged in yet
-  const visibleTasks = isOwner
-    ? [...tasks]
-    : tasks.filter(t => t.assignedTo === CURRENT_USER?.id);
+  if(!CURRENT_USER) return;
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // ── Follow-ups ──
+  const _isFuOwner = CURRENT_USER && (CURRENT_USER.id===1||CURRENT_USER.id===6||CURRENT_USER.id===7);
+  const activeEnqs = enquiries.filter(e => !['Lost','Junk','Cancelled','Booked'].includes(e.status));
+  const myEnqs = _isFuOwner ? activeEnqs : activeEnqs.filter(e => e.staffId===CURRENT_USER?.id || e.followUpStaff===CURRENT_USER?.id);
+
+  const todayFU = myEnqs.filter(e => e.followUpDate === todayStr).sort((a,b) => (a.followUpTime||'').localeCompare(b.followUpTime||''));
+  const upcomingFU = myEnqs.filter(e => e.followUpDate && e.followUpDate > todayStr).sort((a,b) => a.followUpDate.localeCompare(b.followUpDate)).slice(0, 10);
+
+  const fuCard = (e, isToday) => {
+    const fuColors={"New Enquiry":"#10b981","Follow-up Pending":"#f59e0b","Quotation Sent":"#3b82f6","Lost":"#ef4444","Confirmed Booking":"#8b5cf6"};
+    const fuColor = fuColors[e.followUpStatus] || "#94a3b8";
+    return `<div class="task-item" style="border-left:3px solid ${fuColor};margin-bottom:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${fuColor};flex-shrink:0;margin-top:4px"></div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:12px;color:#0f172a">${cName(e.clientId)}</div>
+        <div style="font-size:10px;color:#64748b;margin-top:2px">✈️ ${e.destination||'—'} · ${e.followUpStatus||'New Enquiry'}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:1px">👤 ${sName(e.staffId||e.followUpStaff)}${isToday && e.followUpTime ? ` · 🕐 ${e.followUpTime}` : !isToday ? ` · 📅 ${e.followUpDate}` : ''}</div>
+        ${e.notes ? `<div style="font-size:10px;color:#0369a1;margin-top:2px;font-style:italic">💬 ${e.notes}</div>` : ''}
+      </div>
+      <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px" onclick="openFollowUpPopup('${e.id}','${e.clientId||''}')">📅 Update</button>
+    </div>`;
+  };
+
+  const fuTodayEl = document.getElementById('tasks-followups-today');
+  if(fuTodayEl) fuTodayEl.innerHTML = todayFU.length
+    ? todayFU.map(e => fuCard(e, true)).join('')
+    : `<div class="empty" style="font-size:12px;color:#94a3b8;padding:10px 0">No follow-ups scheduled for today</div>`;
+
+  const fuUpcomingEl = document.getElementById('tasks-followups-upcoming');
+  if(fuUpcomingEl) fuUpcomingEl.innerHTML = upcomingFU.length
+    ? upcomingFU.map(e => fuCard(e, false)).join('')
+    : `<div class="empty" style="font-size:12px;color:#94a3b8;padding:10px 0">No upcoming follow-ups</div>`;
+
+  // ── Assigned Tasks ──
+  const visibleTasks = isOwner ? [...tasks] : tasks.filter(t => t.assignedTo === CURRENT_USER?.id);
   const sorted = visibleTasks.sort((a,b)=>a.done-b.done||(a.dueDate||"").localeCompare(b.dueDate||""));
-  const isOwnerView = CURRENT_USER && CURRENT_USER.id === 1;
-  document.getElementById("tasks-list").innerHTML=sorted.map(t=>`<div class="task-item ${t.done?"done":t.dueDate<today()?"overdue":""}">
+  document.getElementById("tasks-list").innerHTML=sorted.map(t=>`<div class="task-item ${t.done?"done":t.dueDate<todayStr?"overdue":""}">
     <div class="chk ${t.done?"checked":""}" onclick="toggleTask('${t.id}')">${t.done?"✓":""}</div>
     <div class="pdot p${t.priority==="High"?"h":t.priority==="Medium"?"m":"l"}"></div>
     <div style="flex:1">
       <div style="font-weight:700;font-size:12px;color:#0f172a;text-decoration:${t.done?"line-through":"none"}">${t.title}</div>
       <div style="font-size:10px;color:#64748b;margin-top:2px">👤 Assigned to: <strong style="color:#ea580c">${sName(t.assignedTo)}</strong> · by ${t.createdByName||sName(t.assignedBy)}${t.clientId?` · ${cName(t.clientId)}`:""}</div>
       ${t.completedBy?`<div style="font-size:9px;color:#16a34a;margin-top:1px">✅ Completed by ${t.completedBy}</div>`:""}
-      <div style="font-size:10px;color:${!t.done&&t.dueDate<today()?"#dc2626":"#94a3b8"};margin-top:2px">${!t.done&&t.dueDate<today()?"⚠️ OVERDUE – ":""}Due: ${t.dueDate}${t.dueTime ? ` · 🕐 ${t.dueTime}` : ''} · <span class="badge ${t.priority==="High"?"b-aplus":t.priority==="Medium"?"b-a":"b-c"}">${t.priority}</span></div>
+      <div style="font-size:10px;color:${!t.done&&t.dueDate<todayStr?"#dc2626":"#94a3b8"};margin-top:2px">${!t.done&&t.dueDate<todayStr?"⚠️ OVERDUE – ":""}Due: ${t.dueDate}${t.dueTime ? ` · 🕐 ${t.dueTime}` : ''} · <span class="badge ${t.priority==="High"?"b-aplus":t.priority==="Medium"?"b-a":"b-c"}">${t.priority}</span></div>
     </div>
     <button class="btn btn-warn" onclick="del('tasks','${t.id}')">✕</button>
-  </div>`).join("")||`<div class="empty">No tasks</div>`;
+  </div>`).join("")||`<div class="empty">No tasks assigned</div>`;
 }
 
 
