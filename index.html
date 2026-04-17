@@ -1186,12 +1186,19 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-primary" onclick="openModal('marketing')">+ Add Marketing Call</button>
       </div>
       <div class="three-col" style="margin-bottom:20px">
-        <div class="kpi"><div class="kpi-icon">📞</div><div class="kpi-label">Total Marketing Calls</div><div class="kpi-value" id="mkt-calls">0</div><div class="kpi-sub">this month</div></div>
-        <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">New Clients</div><div class="kpi-value" id="mkt-clients">0</div><div class="kpi-sub">this month</div></div>
+        <div class="kpi"><div class="kpi-icon">📞</div><div class="kpi-label">Total Marketing Calls</div><div class="kpi-value" id="mkt-calls">0</div><div class="kpi-sub" id="mkt-calls-sub">this month</div></div>
+        <div class="kpi"><div class="kpi-icon">👥</div><div class="kpi-label">New Clients</div><div class="kpi-value" id="mkt-clients">0</div><div class="kpi-sub" id="mkt-clients-sub">this month</div></div>
         <div class="kpi"><div class="kpi-icon">📈</div><div class="kpi-label">Conversion Rate</div><div class="kpi-value" id="mkt-rate">0%</div><div class="kpi-sub">calls → clients</div></div>
       </div>
+      <!-- Month filter bar -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="btn btn-ghost" onclick="mktPrevMonth()" style="padding:5px 12px">‹ Prev</button>
+        <span id="mkt-month-label" style="font-size:13px;font-weight:700;color:#0f172a;min-width:120px;text-align:center"></span>
+        <button class="btn btn-ghost" onclick="mktNextMonth()" style="padding:5px 12px">Next ›</button>
+        <span style="font-size:11px;color:#94a3b8;margin-left:4px" id="mkt-entry-count"></span>
+      </div>
       <div class="card"><table><thead><tr>
-        <th>DATE</th><th>STAFF</th><th>CLIENT</th><th>MARKETING CALLS</th><th>NEW CLIENTS</th><th>NOTES</th><th>ACTION</th>
+        <th>DATE</th><th>STAFF</th><th>CLIENT</th><th>MARKETING CALLS</th><th>NEW CLIENTS</th><th>CALL OUTCOME</th><th>NOTES</th><th>ACTION</th>
       </tr></thead><tbody id="mkt-tbody"></tbody></table></div>
     </div>
 
@@ -4318,11 +4325,17 @@ function openModal(type){
       </div>
     </div>
     <div class="form-grid">
-      <div class="fg"><label>Marketing Calls Made</label><input type="number" id="m-calls" value="${exM?exM.calls:0}" min="0"/></div>
+      <div class="fg"><label>Marketing Calls Made</label><input type="number" id="m-calls" value="${exM?exM.calls:1}" min="1"/></div>
       <div class="fg"><label>New Clients Added</label><input type="number" id="m-clients" value="${exM?exM.newClients:0}" min="0"/></div>
     </div>
+    <div class="form-grid g1"><div class="fg"><label>Call Outcome</label>
+      <select id="m-outcome">
+        <option value="">-- Select Outcome --</option>
+        ${["Call Not Received","Cut Call by Passenger","Call Back Requested","Interested – Follow Up","Not Interested","Plan Cancelled","Booking Confirmed","Train Ticket Issue","Price Issue","Already Booked Elsewhere","Wrong Number","Number Not Reachable"].map(o=>`<option value="${o}" ${exM&&exM.outcome===o?"selected":""}>${o}</option>`).join("")}
+      </select>
+    </div></div>
     <div class="form-grid g1"><div class="fg"><label>Notes / Remarks</label>
-      <textarea id="m-notes" rows="2" placeholder="e.g. Called about Dubai package, interested...">${exM?exM.notes:""}</textarea>
+      <textarea id="m-notes" rows="2" placeholder="Any extra details...">${exM?exM.notes:""}</textarea>
     </div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMarketing(${isEditM})">
       ${isEditM?"💾 Update Entry":"+ Add Entry"}
@@ -4344,7 +4357,13 @@ function openModal(type){
     ${c?`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#92400e"><strong>Client:</strong> ${c.firstName} ${c.lastName} · ${c.mobile}</div>`:""}
     <div class="form-grid"><div class="fg"><label>Date</label><input type="date" id="mc-date" value="${today()}"/></div><div class="fg"><label>Staff Member</label><select id="mc-staff">${STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("")}</select></div></div>
     <div class="form-grid"><div class="fg"><label>Calls Made</label><input type="number" id="mc-calls" value="1" min="1"/></div><div class="fg"><label>New Clients From Call</label><input type="number" id="mc-clients" value="0" min="0"/></div></div>
-    <div class="form-grid g1"><div class="fg"><label>Notes / Discussion</label><textarea id="mc-notes" rows="3" placeholder="e.g. Called ${c?c.firstName+' today':'client'}, discussed Dubai package..."></textarea></div></div>
+    <div class="form-grid g1"><div class="fg"><label>Call Outcome</label>
+      <select id="mc-outcome">
+        <option value="">-- Select Outcome --</option>
+        ${["Call Not Received","Cut Call by Passenger","Call Back Requested","Interested – Follow Up","Not Interested","Plan Cancelled","Booking Confirmed","Train Ticket Issue","Price Issue","Already Booked Elsewhere","Wrong Number","Number Not Reachable"].map(o=>`<option value="${o}">${o}</option>`).join("")}
+      </select>
+    </div></div>
+    <div class="form-grid g1"><div class="fg"><label>Notes / Discussion</label><textarea id="mc-notes" rows="2" placeholder="Any extra details..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMktCall()">Save Call Log</button>`;
   } else if(type==="addstaff"){
     mb.innerHTML=`<div class="modal-title">Add Staff Member <button class="x" onclick="safeCloseOverlay()">✕</button></div>
@@ -4649,34 +4668,79 @@ function delStaff(id){
 }
 
 // ── MARKETING CALL LOG ──
+let _mktViewMonth = null; // null = current month
+
+function mktPrevMonth(){
+  const d = new Date((_mktViewMonth||thisMonth())+"-01");
+  d.setMonth(d.getMonth()-1);
+  _mktViewMonth = d.toISOString().slice(0,7);
+  renderMktCalls();
+}
+function mktNextMonth(){
+  const tm = thisMonth();
+  if(_mktViewMonth && _mktViewMonth >= tm){ return; } // can't go beyond current month
+  const d = new Date((_mktViewMonth||tm)+"-01");
+  d.setMonth(d.getMonth()+1);
+  _mktViewMonth = d.toISOString().slice(0,7);
+  renderMktCalls();
+}
+
 function renderMktCalls(){
   const tbody=document.getElementById("mkt-tbody");
   if(!tbody)return;
   const tm=thisMonth();
-  const mList=marketing.filter(m=>m.date.startsWith(tm));
-  const totalCalls=mList.reduce((s,m)=>s+m.calls,0);
-  const totalClients=mList.reduce((s,m)=>s+m.newClients,0);
+  const viewMonth = _mktViewMonth || tm;
+
+  // Update month label
+  const labelEl = document.getElementById("mkt-month-label");
+  if(labelEl){
+    const [y,m] = viewMonth.split("-");
+    const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    labelEl.textContent = monthNames[parseInt(m)-1]+" "+y + (viewMonth===tm?" (This Month)":"");
+  }
+
+  // KPI cards always show current month
+  const mListCurrent=marketing.filter(m=>m.date.startsWith(tm));
+  const totalCalls=mListCurrent.reduce((s,m)=>s+m.calls,0);
+  const totalClients=mListCurrent.reduce((s,m)=>s+m.newClients,0);
   const callsEl=document.getElementById("mkt-calls");
   const clientsEl=document.getElementById("mkt-clients");
   const rateEl=document.getElementById("mkt-rate");
   if(callsEl)callsEl.textContent=totalCalls;
   if(clientsEl)clientsEl.textContent=totalClients;
   if(rateEl)rateEl.textContent=totalCalls>0?Math.round(totalClients/totalCalls*100)+"%":"0%";
-  tbody.innerHTML=[...marketing].sort((a,b)=>b.date.localeCompare(a.date)).map(m=>{
+
+  // Table shows selected month only
+  const mListView=marketing.filter(m=>m.date.startsWith(viewMonth));
+  const countEl=document.getElementById("mkt-entry-count");
+  if(countEl) countEl.textContent = mListView.length+" entries · "+mListView.reduce((s,m)=>s+m.calls,0)+" calls";
+
+  // Outcome badge colours
+  const outcomeColor = {
+    "Call Not Received":"#ef4444","Cut Call by Passenger":"#f97316","Call Back Requested":"#f59e0b",
+    "Interested – Follow Up":"#10b981","Not Interested":"#6b7280","Plan Cancelled":"#ef4444",
+    "Booking Confirmed":"#059669","Train Ticket Issue":"#8b5cf6","Price Issue":"#f97316",
+    "Already Booked Elsewhere":"#6b7280","Wrong Number":"#94a3b8","Number Not Reachable":"#94a3b8"
+  };
+
+  tbody.innerHTML=[...mListView].sort((a,b)=>b.date.localeCompare(a.date)).map(m=>{
     const s=STAFF.find(x=>x.id===m.staffId);
     const c=m.clientId?clients.find(x=>x.id===m.clientId):null;
+    const outcome = m.outcome||"";
+    const oColor = outcomeColor[outcome]||"#64748b";
     return `<tr><td>${m.date}</td><td style="font-size:11px">${s?s.name:"?"}</td>
       ${c?`<td><strong>${c.firstName} ${c.lastName}</strong></td>`:`<td style="color:#94a3b8">—</td>`}
       <td style="text-align:center;font-weight:700;color:#f97316">${m.calls}</td>
       <td style="text-align:center;font-weight:700;color:#059669">${m.newClients}</td>
-      <td style="font-size:11px;max-width:200px">${m.notes}</td>
+      <td style="font-size:11px"><span style="background:${oColor}18;color:${oColor};padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap">${outcome||"—"}</span></td>
+      <td style="font-size:11px;max-width:160px;color:#64748b">${m.notes||"—"}</td>
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="editMarketing('${m.id}')">✏️</button>
           <button class="btn btn-warn" style="font-size:10px;padding:3px 8px" onclick="del('marketing','${m.id}')">✕</button>
         </div>
       </td></tr>`;
-  }).join("")||`<tr><td colspan="7" class="empty">No marketing entries</td></tr>`;
+  }).join("")||`<tr><td colspan="8" class="empty">No marketing entries for this month</td></tr>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -5880,8 +5944,9 @@ async function saveMarketing(isEdit) {
   const data = {
     date: document.getElementById("m-date").value,
     staffId: parseInt(document.getElementById("m-staff").value),
-    calls: parseInt(document.getElementById("m-calls").value)||0,
+    calls: parseInt(document.getElementById("m-calls").value)||1,
     newClients: parseInt(document.getElementById("m-clients").value)||0,
+    outcome: document.getElementById("m-outcome")?.value || "",
     notes: document.getElementById("m-notes").value,
     clientId: clientVal || null,
   };
@@ -5893,7 +5958,7 @@ async function saveMarketing(isEdit) {
       Object.assign(m, data);
       closeOverlay(); renderMarketing();
     } else {
-      await fbAdd("marketing", data);
+      const saved = await fbAdd("marketing", data);
       closeOverlay();
     }
   } catch(e) { alert("Save failed: "+e.message); }
@@ -5911,12 +5976,14 @@ async function saveMktCall() {
     staffId:parseInt(document.getElementById("mc-staff").value),
     calls:parseInt(document.getElementById("mc-calls").value)||1,
     newClients:parseInt(document.getElementById("mc-clients").value)||0,
+    outcome:document.getElementById("mc-outcome")?.value || "",
     notes:document.getElementById("mc-notes").value,
     clientId:window._mktClientId||null,
   };
   try {
     await fbAdd("marketing",data);
     window._mktClientId=null; closeOverlay();
+    renderMarketing();
   } catch(e) { alert("Save failed: "+e.message); }
 }
 
