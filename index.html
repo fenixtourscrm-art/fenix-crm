@@ -4735,7 +4735,8 @@ function renderMktCalls(){
       <td style="font-size:11px"><span style="background:${oColor}18;color:${oColor};padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap">${outcome||"—"}</span></td>
       <td style="font-size:11px;max-width:160px;color:#64748b">${m.notes||"—"}</td>
       <td>
-        <div style="display:flex;gap:4px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap">
+          ${c?`<button class="btn" style="font-size:10px;padding:3px 8px;background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0;white-space:nowrap" onclick="mktToEnquiry('${c.id}')" title="Create Enquiry for this client">🎯 Enquiry</button>`:""}
           <button class="btn btn-ghost" style="font-size:10px;padding:3px 8px" onclick="editMarketing('${m.id}')">✏️</button>
           <button class="btn btn-warn" style="font-size:10px;padding:3px 8px" onclick="del('marketing','${m.id}')">✕</button>
         </div>
@@ -5968,6 +5969,12 @@ async function saveMarketing(isEdit) {
 function editMarketing(id) {
   window._editMktId = id;
   openModal("editmarketing");
+}
+
+function mktToEnquiry(clientId) {
+  window._prefilledClientId = clientId;
+  showTab('enquiries', document.querySelector('[onclick*="enquiries"]'));
+  openModal('enquiry');
 }
 
 async function saveMktCall() {
