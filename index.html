@@ -2674,6 +2674,7 @@ function selectStaffFilter(staffName) {
 
   const title = document.getElementById("client-section-title");
   if(title) title.textContent = staffName ? `${staffName}'s Clients` : "All Clients";
+  _clientsRenderLimit = 500; // reset pagination on filter change
   renderClients();
 }
 
@@ -2697,6 +2698,7 @@ function filterClientCat(cat, el) {
   el.classList.add("active-filter");
   const title = document.getElementById("client-section-title");
   if(title) title.textContent = cat === "all" ? "All Clients" : cat + " Clients";
+  _clientsRenderLimit = 500; // reset pagination on filter change
   renderClients();
 }
 const CLIENT_CAT_STYLES = {
@@ -2883,6 +2885,13 @@ function clearBulkSelection() {
   document.getElementById('bulk-move-bar')?.remove();
 }
 
+// ─── Fix 3: render cap — only paint this many rows at a time ───
+let _clientsRenderLimit = 500;
+function loadMoreClients() {
+  _clientsRenderLimit += 500;
+  renderClients();
+}
+
 function renderClients(){
   // Show Fix Names button only for owner
   const fixBtn = document.getElementById('fix-names-btn');
@@ -2903,7 +2912,13 @@ function renderClients(){
   list.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
   // Update counts on filter tabs
   _updateClientCatCounts();
-  document.getElementById("clients-tbody").innerHTML=list.map(c=>{
+
+  // ─── Fix 3: slice to render limit so we never paint thousands of DOM rows ───
+  const totalCount = list.length;
+  const visibleList = list.slice(0, _clientsRenderLimit);
+  const hasMore = totalCount > visibleList.length;
+
+  const rowsHtml = visibleList.map(c=>{
     const cat = c.clientCategory || "Regular";
     const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
     return `<tr>
@@ -2937,7 +2952,28 @@ function renderClients(){
       </div>
     </td>
   </tr>`;
-  }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
+  }).join("");
+
+  // ─── Fix 3: footer row showing count + Load more button ───
+  const footerHtml = hasMore
+    ? `<tr><td colspan="12" style="padding:14px;text-align:center;background:#fff7ed;border-top:2px solid #fed7aa">
+         <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+           Showing ${visibleList.length.toLocaleString()} of ${totalCount.toLocaleString()} clients
+         </div>
+         <button onclick="loadMoreClients()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+           ⬇ Load more (next 500)
+         </button>
+       </td></tr>`
+    : (totalCount > 500
+        ? `<tr><td colspan="12" style="padding:10px;text-align:center;background:#f0fdf4;font-size:11px;color:#166534">
+             ✓ All ${totalCount.toLocaleString()} clients loaded
+           </td></tr>`
+        : "");
+
+  document.getElementById("clients-tbody").innerHTML =
+    (rowsHtml + footerHtml) ||
+    `<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
+
   // Recheck scroll arrows after data renders
   setTimeout(() => window._tblScrollUXRecheck?.(), 50);
 }
@@ -5272,8 +5308,9 @@ function loadFromFirestore() {
           clearTimeout(fallbackTimer);
           doInitialRender();
         }
-      } else {
+      } else if(!window._importInProgress) {
         // Real-time update after initial render
+        // Skipped during bulk import to prevent lag — single re-render at end instead
         try { renderAll(); } catch(e) {}
       }
     }, err => {
@@ -11714,8 +11751,21 @@ async function importClientExcel(event, importCategory) {
     const existingMobiles = new Set(clients.map(c => String(c.mobile||"").replace(/\D/g,"")));
 
     let imported = 0, skipped = 0, errors = 0;
-    const BATCH = 10;
 
+    // ─── Fix: suppress re-renders during bulk import ───
+    window._importInProgress = true;
+
+    // ─── Fix: Firestore batched writes (up to 500 per batch, we use 400 for safety) ───
+    const BATCH_SIZE = 400;
+    let currentBatch = db.batch();
+    let batchCount = 0;
+
+    // Common metadata for every imported client
+    const nowIso = new Date().toISOString();
+    const createdById = CURRENT_USER ? CURRENT_USER.id : 0;
+    const createdByName = CURRENT_USER ? CURRENT_USER.name : "Unknown";
+
+    try {
     for(let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
@@ -11758,7 +11808,7 @@ async function importClientExcel(event, importCategory) {
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
       if(cleanMobile) existingMobiles.add(cleanMobile);
 
-      // Save to Firestore
+      // Queue this client in the current Firestore batch
       try {
         const data = {
           firstName, lastName,
@@ -11777,20 +11827,42 @@ async function importClientExcel(event, importCategory) {
           kycDate: kycDate || "",
           clientCategory: importCategory || "Regular",
           importedFrom: file.name,
+          createdAt: nowIso,
+          createdBy: createdById,
+          createdByName: createdByName,
         };
-        await fbAdd("clients", data);
+        const newRef = db.collection("clients").doc(); // auto-generate ID
+        currentBatch.set(newRef, data);
+        batchCount++;
         imported++;
+
+        // Commit batch when full, then start a new one
+        if(batchCount >= BATCH_SIZE) {
+          await currentBatch.commit();
+          currentBatch = db.batch();
+          batchCount = 0;
+        }
       } catch(err) {
         errors++;
         console.warn("Row error:", err, row);
       }
 
-      // Update progress
-      const pct = Math.round(((i+1) / rows.length) * 90) + 10;
-      setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+      // Update progress (every 25 rows to avoid UI churn)
+      if(i % 25 === 0 || i === rows.length - 1) {
+        const pct = Math.round(((i+1) / rows.length) * 90) + 10;
+        setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+      }
+    }
 
-      // Batch delay to avoid Firebase rate limits
-      if((i+1) % BATCH === 0) await new Promise(r => setTimeout(r, 200));
+    // Commit any leftover items in the final batch
+    if(batchCount > 0) {
+      await currentBatch.commit();
+    }
+
+    } finally {
+      // ─── Fix: always clear the import flag and do one final render ───
+      window._importInProgress = false;
+      try { renderAll(); } catch(e) { console.warn("post-import render:", e); }
     }
 
     setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
@@ -11799,6 +11871,7 @@ async function importClientExcel(event, importCategory) {
     alert(`✅ Import complete!\n\n• ${imported} clients imported\n• ${skipped} skipped (duplicates or empty)\n• ${errors} errors`);
 
   } catch(err) {
+    window._importInProgress = false; // safety reset if outer try failed before flag set
     document.getElementById("import-overlay")?.remove();
     console.error("Import error:", err);
     alert("❌ Import failed: " + err.message + "\n\nMake sure the file is a valid .xls or .xlsx file.");
