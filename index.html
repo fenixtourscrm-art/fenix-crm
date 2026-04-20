@@ -2912,41 +2912,23 @@ function formatClientCreatedAt(iso) {
   return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}) + " " + timeStr;
 }
 
-function renderClients(){
-  // Show Fix Names button only for owner
-  const fixBtn = document.getElementById('fix-names-btn');
-  if(fixBtn) {
-    const needsFix = clients.some(cl => !cl.lastName && cl.firstName && cl.firstName.trim().includes(' '));
-    fixBtn.style.display = (CURRENT_USER?.id === 1 && needsFix) ? '' : 'none';
-  }
-  // Show Fix States button only for owner when imported clients have Andhra Pradesh
-  const stateBtn = document.getElementById('fix-states-btn');
-  if(stateBtn) {
-    const needsStateFix = clients.some(cl => cl.state === "Andhra Pradesh" && cl.importedFrom);
-    stateBtn.style.display = (CURRENT_USER?.id === 1 && needsStateFix) ? '' : 'none';
-  }
-  let list = [...clients]; // copy so sort doesn't mutate original
-  if(clientCatFilter !== "all") list = list.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
-  if(clientStaffFilter) list = list.filter(cl => cl.createdByName === clientStaffFilter);
-  // Sort: newest first (by createdAt desc)
-  list.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
-  // Update counts on filter tabs
-  _updateClientCatCounts();
-
-  // ─── Fix 3: slice to render limit so we never paint thousands of DOM rows ───
-  const totalCount = list.length;
-  const visibleList = list.slice(0, _clientsRenderLimit);
-  const hasMore = totalCount > visibleList.length;
-
-  const rowsHtml = visibleList.map(c=>{
-    const cat = c.clientCategory || "Regular";
-    const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
-    return `<tr>
-    <td style="padding:0 8px;width:36px;text-align:center">
-      <input type="checkbox" class="bulk-client-cb" data-id="${c.id}"
-        onchange="toggleBulkSelect('${c.id}',this)"
-        style="accent-color:#f97316;cursor:pointer;width:14px;height:14px">
-    </td>
+// ─── Shared client row builder — used by Client Data table AND Search Results ───
+// Keeping one function for both prevents the two views from drifting apart.
+// `opts.showCheckbox` = false for search (bulk ops don't make sense there)
+function _buildClientRowHtml(c, opts) {
+  opts = opts || {};
+  const showCheckbox = opts.showCheckbox !== false; // default true
+  const cat = c.clientCategory || "Regular";
+  const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
+  const cbCell = showCheckbox
+    ? `<td style="padding:0 8px;width:36px;text-align:center">
+         <input type="checkbox" class="bulk-client-cb" data-id="${c.id}"
+           onchange="toggleBulkSelect('${c.id}',this)"
+           style="accent-color:#f97316;cursor:pointer;width:14px;height:14px">
+       </td>`
+    : "";
+  return `<tr>
+    ${cbCell}
     <td class="col-sticky-first"><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-block;max-width:95px;overflow:hidden;text-overflow:ellipsis">${cs.icon} ${cat}</span></td>
     <td style="font-size:11px;font-weight:700">${c.companyName?`<span style="font-weight:800;color:#0369a1">${c.companyName}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
     <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
@@ -2973,7 +2955,77 @@ function renderClients(){
       </div>
     </td>
   </tr>`;
-  }).join("");
+}
+
+// ─── Shared table shell (colgroup + thead) for clients table ───
+// Reused by Client Data AND Search Results so columns stay aligned.
+function _buildClientsTableShell(tbodyHtml, opts) {
+  opts = opts || {};
+  const showCheckbox = opts.showCheckbox !== false;
+  const cbCol = showCheckbox ? `<col style="width:36px"/>` : "";
+  const cbTh  = showCheckbox ? `<th style="width:36px"></th>` : "";
+  return `<table class="tbl-base clients-table">
+    <colgroup>
+      ${cbCol}
+      <col class="c-cat"/>
+      <col class="c-company"/>
+      <col class="c-fname"/>
+      <col class="c-gender"/>
+      <col class="c-mobile"/>
+      <col class="c-email"/>
+      <col class="c-occ"/>
+      <col class="c-city"/>
+      <col class="c-state"/>
+      <col class="c-pin"/>
+      <col class="c-family"/>
+      <col class="c-actions"/>
+    </colgroup>
+    <thead><tr>
+      ${cbTh}
+      <th class="col-sticky-first">CATEGORY</th>
+      <th>COMPANY</th>
+      <th>NAME</th>
+      <th>GENDER</th>
+      <th>MOBILE / ALT</th>
+      <th>EMAIL</th>
+      <th>OCCUPATION</th>
+      <th>CITY</th>
+      <th>STATE</th>
+      <th>PIN</th>
+      <th>FAMILY</th>
+      <th class="col-sticky-last">ACTIONS</th>
+    </tr></thead>
+    <tbody>${tbodyHtml}</tbody>
+  </table>`;
+}
+
+function renderClients(){
+  // Show Fix Names button only for owner
+  const fixBtn = document.getElementById('fix-names-btn');
+  if(fixBtn) {
+    const needsFix = clients.some(cl => !cl.lastName && cl.firstName && cl.firstName.trim().includes(' '));
+    fixBtn.style.display = (CURRENT_USER?.id === 1 && needsFix) ? '' : 'none';
+  }
+  // Show Fix States button only for owner when imported clients have Andhra Pradesh
+  const stateBtn = document.getElementById('fix-states-btn');
+  if(stateBtn) {
+    const needsStateFix = clients.some(cl => cl.state === "Andhra Pradesh" && cl.importedFrom);
+    stateBtn.style.display = (CURRENT_USER?.id === 1 && needsStateFix) ? '' : 'none';
+  }
+  let list = [...clients]; // copy so sort doesn't mutate original
+  if(clientCatFilter !== "all") list = list.filter(cl => (cl.clientCategory||"Regular") === clientCatFilter);
+  if(clientStaffFilter) list = list.filter(cl => cl.createdByName === clientStaffFilter);
+  // Sort: newest first (by createdAt desc)
+  list.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
+  // Update counts on filter tabs
+  _updateClientCatCounts();
+
+  // ─── Fix 3: slice to render limit so we never paint thousands of DOM rows ───
+  const totalCount = list.length;
+  const visibleList = list.slice(0, _clientsRenderLimit);
+  const hasMore = totalCount > visibleList.length;
+
+  const rowsHtml = visibleList.map(c => _buildClientRowHtml(c, {showCheckbox: true})).join("");
 
   // ─── Fix 3: footer row showing count + Load more button ───
   const footerHtml = hasMore
@@ -3930,26 +3982,21 @@ function globalSearch(q){
 
   document.getElementById("search-results").innerHTML=`
     ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div>
-    <div class="card"><table><thead><tr><th>CATEGORY</th><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>FAMILY</th><th>ACTIONS</th></tr></thead>
-    <tbody>${fc.map(c=>`<tr>
-      <td><span style="background:#f1f5f9;color:#374151;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">${c.clientCategory||"Regular"}</span></td>
-      <td><strong>${c.firstName} ${c.lastName}</strong>${c.companyName?`<div style="font-size:10px;color:#0369a1">${c.companyName}</div>`:""}</td>
-      <td>${c.mobile}${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:""}</td>
-      <td style="font-size:11px">${c.email}</td><td>${c.city}</td>
-      <td style="font-size:11px;color:#7c3aed">${c.familyName?`👨‍👩‍👧 ${c.familyName}`:""}</td>
-      <td>${actionBtns(c)}</td>
-    </tr>`).join("")}</tbody></table></div>`:""
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="tbl-scroll clients-table-scroll">
+        ${_buildClientsTableShell(fc.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
+      </div>
+    </div>`:""
   }
     ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">Family Members (${familyMatches.length})</div>
-    <div class="card" style="border-left:4px solid #8b5cf6"><table><thead><tr><th>NAME</th><th>RELATION</th><th>MOBILE</th><th>FAMILY GROUP</th><th>FOUND VIA</th><th>ACTIONS</th></tr></thead>
-    <tbody>${familyMatches.map(c=>`<tr style="background:#faf5ff">
-      <td><strong>${c.firstName} ${c.lastName}</strong>${c.isPrimaryClient?` <span style="background:#8b5cf6;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">👑 Primary</span>`:""}</td>
-      <td style="font-size:11px;color:#7c3aed">${c.familyRelation||"—"}</td>
-      <td>${c.mobile}</td>
-      <td style="font-size:11px">${c.familyName}</td>
-      <td style="font-size:11px;color:#94a3b8">via ${c._foundViaFamily}</td>
-      <td>${familyActionBtns(c)}</td>
-    </tr>`).join("")}</tbody></table></div>`:""}
+    <div class="card" style="border-left:4px solid #8b5cf6;padding:0;overflow:hidden">
+      <div class="tbl-scroll clients-table-scroll">
+        ${_buildClientsTableShell(familyMatches.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
+      </div>
+      <div style="padding:8px 14px;background:#faf5ff;border-top:1px solid #e9d5ff;font-size:11px;color:#7c3aed">
+        ℹ️ These clients were found via their family link to a matching client. Click Profile to see full details.
+      </div>
+    </div>`:""}
     ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>CATEGORY</th><th>RATING</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th></tr></thead>
     <tbody>${fe.map(e=>`<tr>
