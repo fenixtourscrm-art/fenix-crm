@@ -5001,6 +5001,22 @@ function draftRestore(type) {
   const stored = sessionStorage.getItem('fenix_draft_' + type);
   if(!stored) return false;
   const draft = JSON.parse(stored);
+
+  // ─── Safety: if this modal was opened for a specific client (Generate Enquiry from a
+  // client's row), the draft MUST NOT override that client. If the draft belongs to a
+  // different client, discard it entirely — restoring its notes/destination/etc onto
+  // a new client would itself be a bug. ───
+  if(type === 'enquiry' && window._prefilledClientId) {
+    if(draft['e-client'] && draft['e-client'] !== window._prefilledClientId) {
+      // Different client — drop the draft and tell the caller there's nothing to restore
+      sessionStorage.removeItem('fenix_draft_enquiry');
+      return false;
+    }
+    // Same client (or draft has no client): restore everything EXCEPT e-client, which
+    // must stay pointing at the prefilled client (and is a hidden input in locked mode).
+    delete draft['e-client'];
+  }
+
   let any = false;
   Object.entries(draft).forEach(([id, val]) => {
     const el = document.getElementById(id);
@@ -5716,20 +5732,38 @@ async function saveEnquiry(isEdit) {
   // If the enquiry was opened via "Generate Enquiry" from a specific client, that client's ID
   // was stored in _prefilledClientId. If the dropdown silently fell back to a different client
   // (because the client list reloaded or the ID wasn't in the dropdown), save would use the
-  // WRONG client. Refuse to save if there's a mismatch — ask the user to pick explicitly.
+  // WRONG client. If there's a mismatch, default to saving for the INTENDED client — that's
+  // the safe choice when in doubt.
   if(!isEdit && window._prefilledClientId && window._prefilledClientId !== clientSel.value) {
     const intendedClient = clients.find(c => c.id === window._prefilledClientId);
     const actualClient   = clients.find(c => c.id === clientSel.value);
     const intendedName = intendedClient ? `${intendedClient.firstName||""} ${intendedClient.lastName||""}`.trim() : "(unknown)";
     const actualName   = actualClient   ? `${actualClient.firstName||""} ${actualClient.lastName||""}`.trim()   : "(unknown)";
-    const proceed = confirm(
-      `⚠️ CLIENT MISMATCH WARNING!\n\n` +
-      `You opened this enquiry for: ${intendedName}\n` +
-      `But the form is about to save for: ${actualName}\n\n` +
-      `Click OK to save for ${actualName}.\n` +
-      `Click Cancel to fix it first.`
-    );
-    if(!proceed) return;
+
+    if(intendedClient) {
+      // We have a valid intended client — offer to use it (safe default)
+      const useIntended = confirm(
+        `⚠️ CLIENT MISMATCH DETECTED\n\n` +
+        `You opened this enquiry for: ${intendedName}\n` +
+        `But the form is trying to save for: ${actualName}\n\n` +
+        `This usually happens due to a leftover draft from a previous session.\n\n` +
+        `👉 Click OK to save correctly for ${intendedName} (recommended).\n` +
+        `👉 Click Cancel if you actually meant ${actualName} — you'll need to unlock the client first.`
+      );
+      if(useIntended) {
+        // Force the save to use the intended (locked) client
+        clientSel.value = window._prefilledClientId;
+      } else {
+        // User explicitly wants the other client — but we can't silently allow that
+        // because the green lock panel said someone else. Refuse and make them unlock.
+        return alert(
+          `To save this enquiry for ${actualName}, please click "Change" on the green client panel first to unlock it, then select ${actualName} manually.\n\nThis prevents accidental wrong-client saves.`
+        );
+      }
+    } else {
+      // Intended client not found (deleted?) — refuse to proceed
+      return alert("⚠️ The client this enquiry was opened for could not be found. Please close this form and start again.");
+    }
   }
 
   // Verify the selected client actually exists in our client list (catches stale IDs)
