@@ -2892,6 +2892,26 @@ function loadMoreClients() {
   renderClients();
 }
 
+// ─── Helper: format client creation timestamp ───
+// Shows "Just now", "5 min ago", "2 hrs ago", "Yesterday 3:45 PM", or full date for older
+function formatClientCreatedAt(iso) {
+  if(!iso) return "";
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return "";
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHr = Math.floor(diffMs / 3600000);
+  const diffDay = Math.floor(diffMs / 86400000);
+  const timeStr = d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true});
+  if(diffMin < 1) return "Just now";
+  if(diffMin < 60) return `${diffMin} min ago`;
+  if(diffHr < 24 && now.getDate() === d.getDate()) return `Today ${timeStr}`;
+  if(diffDay === 1 || (diffHr < 48 && now.getDate() - d.getDate() === 1)) return `Yesterday ${timeStr}`;
+  if(diffDay < 7) return `${diffDay} days ago`;
+  return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}) + " " + timeStr;
+}
+
 function renderClients(){
   // Show Fix Names button only for owner
   const fixBtn = document.getElementById('fix-names-btn');
@@ -2933,6 +2953,7 @@ function renderClients(){
       <div style="min-width:0;overflow:hidden">
         <strong style="display:block;overflow:hidden;text-overflow:ellipsis">${c.firstName||''} ${c.lastName||''}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316">🔒</span>':""}
         ${c.createdByName?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">By ${c.createdByName}</div>`:""}
+        ${c.createdAt?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">🕒 ${formatClientCreatedAt(c.createdAt)}</div>`:""}
       </div>
     </div></td>
     <td>${c.gender||'—'}</td>
@@ -4001,6 +4022,23 @@ function showSearchSuggestions(q){
 const cOpts=()=>clients.map(c=>`<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join("");
 const sOpts=()=>STAFF.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
 
+// ─── Issue 2 fix helper: allow user to change locked client if truly needed ───
+// Replaces the green locked-client panel with a regular dropdown so the client can be changed
+function unlockEnqClient() {
+  const lockedPanel = document.getElementById("e-client")?.closest(".fg");
+  if(!lockedPanel) return;
+  const currentId = document.getElementById("e-client")?.value || "";
+  // Clear the prefilled ID so the save-time mismatch guard doesn't trigger falsely after unlock
+  window._prefilledClientId = null;
+  lockedPanel.innerHTML = `<label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select>`;
+  const sel = document.getElementById("e-client");
+  if(sel && currentId) {
+    sel.value = currentId;
+    // If the currentId doesn't exist in the dropdown, leave it empty rather than silent fallback
+    if(sel.value !== currentId) sel.value = "";
+  }
+}
+
 function openModal(type){
   const mb=document.getElementById("modal-body");
   // Track current modal type for guard system
@@ -4091,9 +4129,31 @@ function openModal(type){
     const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Confirmed Booking"];
     // SERVICE_CATS is defined globally
 
+    // ─── Issue 2 fix: if client is prefilled, show a LOCKED, clearly-visible client panel ───
+    // so staff can SEE which client this enquiry is for and the dropdown can't silently change it.
+    const prefilledClientObj = preClient ? clients.find(c => c.id === preClient) : null;
+    const lockedClientHtml = prefilledClientObj ? `
+      <div class="fg" style="grid-column:1/-1">
+        <label>Client <span style="color:#dc2626">*</span></label>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">
+            ${(prefilledClientObj.firstName||"?")[0]}${(prefilledClientObj.lastName||"")[0]||""}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:14px;color:#14532d">🔒 ${prefilledClientObj.firstName||""} ${prefilledClientObj.lastName||""}</div>
+            <div style="font-size:11px;color:#166534">📱 ${prefilledClientObj.mobile||"—"} · ${prefilledClientObj.city||"—"}</div>
+          </div>
+          <button type="button" onclick="unlockEnqClient()" style="padding:6px 12px;background:#fff;border:1.5px solid #16a34a;color:#16a34a;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
+            Change
+          </button>
+        </div>
+        <input type="hidden" id="e-client" value="${preClient}"/>
+      </div>
+    ` : null;
+
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid">
-      <div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select></div>
+      ${lockedClientHtml || `<div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select></div>`}
       <div class="fg"><label>Service Category</label><select id="e-category" onchange="updateEnqForm()">${SERVICE_CATS.map(c=>`<option ${ex&&ex.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
     </div>
     <div id="enq-dynamic-fields"></div>
@@ -4114,8 +4174,18 @@ function openModal(type){
 
     // Set pre-filled client
     // Set client dropdown: use saved clientId when editing, or prefilledClientId for new
-    if(ex && ex.clientId) document.getElementById("e-client").value = ex.clientId;
-    else if(preClient) document.getElementById("e-client").value = preClient;
+    // (Only applies when dropdown is shown — when client is locked, value is already set via hidden input)
+    const clientEl = document.getElementById("e-client");
+    if(clientEl && clientEl.tagName === "SELECT") {
+      if(ex && ex.clientId) clientEl.value = ex.clientId;
+      else if(preClient) clientEl.value = preClient;
+      // Verify the value actually got set (dropdown silently falls back to first option if ID missing)
+      const targetId = (ex && ex.clientId) || preClient;
+      if(targetId && clientEl.value !== targetId) {
+        console.warn("Client ID", targetId, "not found in dropdown — resetting to empty");
+        clientEl.value = "";
+      }
+    }
     if(ex && ex.staffId) document.getElementById("e-staff").value=ex.staffId;
     updateSourceSub();
     updateEnqForm(ex);
@@ -5583,6 +5653,33 @@ This links families by ID instead of name.`)) return;
 async function saveEnquiry(isEdit) {
   const clientSel = document.getElementById("e-client");
   if(!clientSel || !clientSel.value || clientSel.value==="0") return alert("⚠️ Please select a Client!");
+
+  // ─── SAFETY CHECK: prevent wrong-client bug ───
+  // If the enquiry was opened via "Generate Enquiry" from a specific client, that client's ID
+  // was stored in _prefilledClientId. If the dropdown silently fell back to a different client
+  // (because the client list reloaded or the ID wasn't in the dropdown), save would use the
+  // WRONG client. Refuse to save if there's a mismatch — ask the user to pick explicitly.
+  if(!isEdit && window._prefilledClientId && window._prefilledClientId !== clientSel.value) {
+    const intendedClient = clients.find(c => c.id === window._prefilledClientId);
+    const actualClient   = clients.find(c => c.id === clientSel.value);
+    const intendedName = intendedClient ? `${intendedClient.firstName||""} ${intendedClient.lastName||""}`.trim() : "(unknown)";
+    const actualName   = actualClient   ? `${actualClient.firstName||""} ${actualClient.lastName||""}`.trim()   : "(unknown)";
+    const proceed = confirm(
+      `⚠️ CLIENT MISMATCH WARNING!\n\n` +
+      `You opened this enquiry for: ${intendedName}\n` +
+      `But the form is about to save for: ${actualName}\n\n` +
+      `Click OK to save for ${actualName}.\n` +
+      `Click Cancel to fix it first.`
+    );
+    if(!proceed) return;
+  }
+
+  // Verify the selected client actually exists in our client list (catches stale IDs)
+  const selectedClient = clients.find(c => c.id === clientSel.value);
+  if(!selectedClient) {
+    return alert("⚠️ The selected client could not be found. Please close this form and try again.");
+  }
+
   const gv = id => document.getElementById(id)?.value?.trim() || "";
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
 
