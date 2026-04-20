@@ -2901,14 +2901,25 @@ function formatClientCreatedAt(iso) {
   const now = new Date();
   const diffMs = now - d;
   const diffMin = Math.floor(diffMs / 60000);
-  const diffHr = Math.floor(diffMs / 3600000);
-  const diffDay = Math.floor(diffMs / 86400000);
   const timeStr = d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true});
+
+  // "Just now" / "X min ago" — purely elapsed-time based, no calendar involved
   if(diffMin < 1) return "Just now";
   if(diffMin < 60) return `${diffMin} min ago`;
-  if(diffHr < 24 && now.getDate() === d.getDate()) return `Today ${timeStr}`;
-  if(diffDay === 1 || (diffHr < 48 && now.getDate() - d.getDate() === 1)) return `Yesterday ${timeStr}`;
-  if(diffDay < 7) return `${diffDay} days ago`;
+
+  // ─── Calendar-date based checks for "Today" and "Yesterday" ───
+  // Previous version used elapsed-hours which was WRONG — a client added 40 hours ago
+  // (e.g. Saturday evening when today is Monday) would incorrectly show as "Yesterday".
+  // Correct way: compare the actual calendar date, not hours.
+  // Build midnight-aligned dates so we can compare day-by-day regardless of time.
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfCreated = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfToday - startOfCreated) / 86400000); // whole-day difference
+
+  if(dayDiff === 0) return `Today ${timeStr}`;
+  if(dayDiff === 1) return `Yesterday ${timeStr}`;
+  if(dayDiff > 1 && dayDiff < 7) return `${dayDiff} days ago`;
+  // Anything older (or, defensively, future-dated clock skew) → show full date
   return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}) + " " + timeStr;
 }
 
