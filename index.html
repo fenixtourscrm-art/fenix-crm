@@ -11987,11 +11987,18 @@ async function importClientExcel(event, importCategory) {
       const kycDate     = getCol("KYC Date","kyc date");
       // phone handled in mobile fallback above
 
-      // Skip empty rows
-      if(!firstName && !lastName && !companyName) { skipped++; continue; }
-
-      // Clean mobile
+      // ─── Fix: skip a row ONLY if it has absolutely nothing usable.
+      // Previously this skipped rows that had a mobile but no name, which meant
+      // Excel files containing just phone numbers were fully discarded.
+      // Now: as long as there's at least a name, company, OR mobile, keep it.
+      // Clean mobile first so we can check it in the empty-row test.
       const cleanMobile = String(mobile||"").replace(/\D/g,"").slice(-10);
+
+      // Truly empty row — nothing to save
+      if(!firstName && !lastName && !companyName && !cleanMobile) {
+        skipped++;
+        continue;
+      }
 
       // Skip duplicate mobiles
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
