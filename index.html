@@ -11967,6 +11967,20 @@ async function importClientExcel(event, importCategory) {
         return "";
       };
 
+      // ─── Fuzzy matcher for common misspellings (e.g. "MOBAIL" instead of "MOBILE") ───
+      // Only runs when exact matches failed — won't change behavior for properly named columns.
+      // Takes an array of prefixes (like ["mob","phon"]) and returns first matching column value.
+      const getColByPrefix = (prefixes) => {
+        for(const prefix of prefixes) {
+          const found = Object.keys(row).find(r => {
+            const clean = r.toLowerCase().trim().replace(/[^a-z]/g,""); // strip spaces, dots, digits
+            return clean.startsWith(prefix);
+          });
+          if(found && row[found] !== undefined && row[found] !== "") return String(row[found]).trim();
+        }
+        return "";
+      };
+
       // Support both separate first/last name columns AND combined "Name" column
       const firstName   = toTitleCase(getCol("First Name","firstname","first_name","fname") ||
                           getCol("Account Name","Name","name","account name","full name","fullname").split(/\s+/)[0] || "");
@@ -11974,8 +11988,13 @@ async function importClientExcel(event, importCategory) {
                           (() => { const n = getCol("Account Name","Name","name","account name","full name","fullname").trim().split(/\s+/); return n.slice(1).join(" "); })();
       const lastName    = toTitleCase(lastNameRaw);
       const companyName = toTitleCase(getCol("Company Name","company","company name","firm","organisation","organization","firm name"));
-      const mobile      = getCol("Mobile","mobile","Mobile No","Mobile Number","mob","phone","Phone","Phone No","contact");
-      const email       = getCol("Email","email","e-mail","E-mail","E Mail","mail");
+      // Mobile: try exact matches first (including common misspellings), then fuzzy prefix match
+      const mobile      = getCol("Mobile","mobile","Mobile No","Mobile Number","mob","phone","Phone","Phone No","contact",
+                                  "MOBAIL","Mobail","mobail","MOBIEL","Mobiel","mobiel","MOBILR","Mobilr","mobilr",
+                                  "Cell","cell","Cell No","Cellphone","WhatsApp","WhatsApp No","Whatsapp")
+                          || getColByPrefix(["mob","phon","cell","whats"]);
+      const email       = getCol("Email","email","e-mail","E-mail","E Mail","mail")
+                          || getColByPrefix(["email","mail","eml"]);
       const city        = toTitleCase(getCol("City","city","town"));
       const state       = toTitleCase(getCol("State","state"));
       const pincode     = getCol("Pincode","pincode","pin code","pin","zip","zipcode","postal code");
@@ -12064,7 +12083,23 @@ async function importClientExcel(event, importCategory) {
     setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
     await new Promise(r => setTimeout(r, 1500));
     document.getElementById("import-overlay")?.remove();
-    alert(`✅ Import complete!\n\n• ${imported} clients imported\n• ${skipped} skipped (duplicates or empty)\n• ${errors} errors`);
+
+    // ─── Diagnostic: if 0 imported from a non-empty file, show column headers found ───
+    // so the user can quickly spot misspellings (e.g. "MOBAIL" instead of "Mobile")
+    if(imported === 0 && rows.length > 0) {
+      const headersFound = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "(none detected)";
+      alert(
+        `⚠️ Import completed but 0 clients were saved.\n\n` +
+        `• ${skipped} rows were skipped (duplicates or empty)\n` +
+        `• ${errors} errors\n\n` +
+        `Column headers detected in your file:\n${headersFound}\n\n` +
+        `The import expects columns like: Mobile (or Phone), First Name, Last Name, Email, City.\n` +
+        `If your file uses a different name (e.g. "MOBAIL" or "Contact No"), either rename the column in Excel, ` +
+        `or tell me what names your file uses so I can add support for them.`
+      );
+    } else {
+      alert(`✅ Import complete!\n\n• ${imported} clients imported\n• ${skipped} skipped (duplicates or empty)\n• ${errors} errors`);
+    }
 
   } catch(err) {
     window._importInProgress = false; // safety reset if outer try failed before flag set
