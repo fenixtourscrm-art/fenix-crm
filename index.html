@@ -2448,7 +2448,34 @@ let targets=[];
 let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
-const cName=id=>{const sid=String(id);const cl=clients.find(x=>String(x.id)===sid);if(!cl) return "Unknown";const n=`${cl.firstName||''} ${cl.lastName||''}`.trim();return n||cl.mobile||cl.companyName||"Unknown";};
+// ─── Global cached lookup of clientId → display name ───
+// Rebuilt whenever the clients array changes (see snapshot handler below).
+// This turns cName() from O(n) (linear scan of 5500 clients) into O(1).
+// Without this cache, renderEnquiries/renderBookings froze the whole page.
+let _clientNameCache = new Map();
+function _rebuildClientNameCache() {
+  const m = new Map();
+  for(let i = 0; i < clients.length; i++) {
+    const c = clients[i];
+    const nm = `${c.firstName||""} ${c.lastName||""}`.trim() || c.mobile || c.companyName || "Unknown";
+    m.set(String(c.id), nm);
+  }
+  _clientNameCache = m;
+}
+const cName=id=>{
+  if(id === undefined || id === null || id === "") return "Unknown";
+  const sid=String(id);
+  const cached = _clientNameCache.get(sid);
+  if(cached) return cached;
+  // Fallback: cache miss (e.g. cache not built yet, or client deleted) — do the slow lookup
+  // and populate the cache so next call is fast.
+  const cl=clients.find(x=>String(x.id)===sid);
+  if(!cl) return "Unknown";
+  const n=`${cl.firstName||''} ${cl.lastName||''}`.trim();
+  const name = n||cl.mobile||cl.companyName||"Unknown";
+  _clientNameCache.set(sid, name);
+  return name;
+};
 const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
@@ -2892,6 +2919,19 @@ function loadMoreClients() {
   renderClients();
 }
 
+// Same pattern for enquiries and bookings — without these caps, rendering 500+ enquiries
+// and 200+ bookings at once was freezing the whole page.
+let _enqRenderLimit = 300;
+function loadMoreEnquiries() {
+  _enqRenderLimit += 300;
+  renderEnquiries();
+}
+let _bkRenderLimit = 300;
+function loadMoreBookings() {
+  _bkRenderLimit += 300;
+  renderBookingList();
+}
+
 // ─── Helper: format client creation timestamp ───
 // Shows "Just now", "5 min ago", "2 hrs ago", "Yesterday 3:45 PM", or full date for older
 function formatClientCreatedAt(iso) {
@@ -3193,9 +3233,10 @@ function filterEnq(f,el){
   enqFilter=f; // keep for backward compat
   document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));
   el.classList.add("active-filter");
+  _enqRenderLimit = 300; // reset pagination on filter change
   renderEnquiries();
 }
-function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
+function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");_enqRenderLimit = 300;renderEnquiries();}
 
 function toggleEnqStaffMenu(btn) {
   const menu = document.getElementById("enq-staff-menu");
@@ -3269,6 +3310,13 @@ function renderEnquiries(){
 
   // Sort newest first
   list=[...list].sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
+
+  // ─── Render cap: only paint this many rows at a time to prevent page freeze ───
+  // With 500+ enquiries each calling cName() plus heavy HTML per row, rendering them all
+  // at once was crashing the page. We show newest first; oldest accessed via Load more.
+  const enqTotalCount = list.length;
+  list = list.slice(0, _enqRenderLimit);
+  const enqHasMore = enqTotalCount > list.length;
 
   // Group by date
   const groups={};
@@ -3360,6 +3408,17 @@ function renderEnquiries(){
   </tr>`;
       });
     });
+  }
+  // ─── Render cap footer ───
+  if(enqHasMore) {
+    rows += `<tr><td colspan="14" style="padding:14px;text-align:center;background:#fff7ed;border-top:2px solid #fed7aa">
+      <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+        Showing ${(enqTotalCount - (enqTotalCount - list.length)).toLocaleString()} of ${enqTotalCount.toLocaleString()} enquiries
+      </div>
+      <button onclick="loadMoreEnquiries()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+        ⬇ Load more (next 300)
+      </button>
+    </td></tr>`;
   }
   document.getElementById("enq-tbody").innerHTML=rows;
 }
@@ -3546,18 +3605,21 @@ function setBkMonthFilter(f, el) {
   bkMonthFilter = f;
   document.querySelectorAll(".bk-month-filter").forEach(b=>b.classList.remove("active-filter"));
   if(el) el.classList.add("active-filter");
+  _bkRenderLimit = 300; // reset pagination on filter change
   renderBookingList();
 }
 function setBkFilter(cat,el){
   bkFilter=cat;
   document.querySelectorAll(".bk-card").forEach(c=>c.classList.remove("active"));
   if(el)el.classList.add("active");
+  _bkRenderLimit = 300; // reset pagination on filter change
   renderBookingList();
 }
 function setDIFilter(di,el){
   bkDiFilter=di;
   document.querySelectorAll(".di-btn").forEach(b=>b.classList.remove("active"));
   if(el)el.classList.add("active");
+  _bkRenderLimit = 300; // reset pagination on filter change
   renderBookingList();
 }
 function openBookingModal(){
@@ -3610,7 +3672,14 @@ function renderBookingList(){
   const title=document.getElementById("bk-list-title");
   if(title)title.textContent=catLabel+monthLabel+" ("+list.length+")";
 
-  document.getElementById("book-tbody").innerHTML=list.map(b=>{
+  // ─── Render cap: slice to prevent page freeze with many bookings ───
+  // Sort newest first so the most relevant bookings show at the top
+  list = list.sort((a,b)=>(b.createdAt||b.travelDate||"").localeCompare(a.createdAt||a.travelDate||""));
+  const bkTotalCount = list.length;
+  const bkVisible = list.slice(0, _bkRenderLimit);
+  const bkHasMore = bkTotalCount > bkVisible.length;
+
+  const bkRowsHtml = bkVisible.map(b=>{
     const st=CAT_STYLES[b.category]||{bg:"#f1f5f9",color:"#374151"};
     const icon=BK_CATS.find(c=>c.id===b.category)?.icon||"📁";
     const isVisaPassport = b.category==="Visa"||b.category==="Passport";
@@ -3656,7 +3725,22 @@ function renderBookingList(){
         <button class="btn" style="font-size:9px;padding:3px 6px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;white-space:nowrap" onclick="revertToEnquiry('${b.id}')">↩ Inquiry</button>
       </div></td>
     </tr>`;
-  }).join("")||`<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
+  }).join("");
+
+  const bkFooterHtml = bkHasMore
+    ? `<tr><td colspan="10" style="padding:14px;text-align:center;background:#fff7ed;border-top:2px solid #fed7aa">
+         <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+           Showing ${bkVisible.length.toLocaleString()} of ${bkTotalCount.toLocaleString()} bookings
+         </div>
+         <button onclick="loadMoreBookings()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+           ⬇ Load more (next 300)
+         </button>
+       </td></tr>`
+    : "";
+
+  document.getElementById("book-tbody").innerHTML =
+    (bkRowsHtml + bkFooterHtml) ||
+    `<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
 }
 
 function editBk(id){window._editBkId=id;openModal("editbooking");}
@@ -5515,7 +5599,7 @@ function loadFromFirestore() {
         }
         return {id: d.id, ...data, _searchIndex};
       });
-      if(col==="clients")   clients    = docs;
+      if(col==="clients")   { clients = docs; _rebuildClientNameCache(); }
       if(col==="enquiries") enquiries  = docs;
       if(col==="bookings")  allBookings= docs;
       if(col==="tasks")     tasks      = docs;
@@ -6443,7 +6527,7 @@ async function del(arr,id) {
                  : data.name||data.clientName||data.destination||data.title||id;
     }
     await trashMove(col, id, data, sectionLabels[arr]||arr, itemName);
-    if(arr==="clients")   clients   =clients.filter(x=>x.id!==id);
+    if(arr==="clients")   { clients = clients.filter(x=>x.id!==id); _rebuildClientNameCache(); }
     if(arr==="enquiries") enquiries =enquiries.filter(x=>x.id!==id);
     if(arr==="bookings")  allBookings=allBookings.filter(x=>x.id!==id);
     if(arr==="tasks")     tasks     =tasks.filter(x=>x.id!==id);
@@ -10970,7 +11054,7 @@ async function restoreItem(trashId) {
     // Refresh the restored item's section in local data immediately
     const col = item.originalCollection;
     const restoredData = { ...item.originalData, id: item.originalDocId };
-    if(col === 'clients')    { clients.push(restoredData); renderClients(); }
+    if(col === 'clients')    { clients.push(restoredData); _rebuildClientNameCache(); renderClients(); }
     else if(col === 'enquiries') { enquiries.push(restoredData); renderEnquiries(); }
     else if(col === 'bookings')  { allBookings.push(restoredData); renderBookings(); }
     else if(col === 'tasks')     { tasks.push(restoredData); renderTasks(); }
@@ -13607,6 +13691,7 @@ async function _fmktMoveToClient(visitId) {
       const ref = await db.collection("clients").add(newClient);
       clientId = ref.id;
       clients.push({ id: clientId, ...newClient });
+      _rebuildClientNameCache();
       alert(`✅ New client created: ${firstName} ${lastName}`);
     }
 
@@ -14425,6 +14510,7 @@ async function _fmktAutoCreateEnquiry(phone, visitId) {
     };
     const cRef = await db.collection("clients").add(newClient);
     clients.push({id:cRef.id,...newClient});
+    _rebuildClientNameCache();
     // Create enquiry
     const enqNo = await generateENQNumber();
     const newEnq = {
