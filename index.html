@@ -856,7 +856,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div class="page-title" id="page-title">🏠 Dashboard</div>
     </div>
     <div class="topbar-right">
-      <input class="search-bar" id="global-search" placeholder="🔍 Search clients, enquiries..." oninput="globalSearch(this.value)"/>
+      <input class="search-bar" id="global-search" placeholder="🔍 Search clients, enquiries..." oninput="_debouncedGlobalSearch(this.value)"/>
       <button onclick="showTab('rooming',this)" style="background:#0f172a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🛏️ Rooming List</button>
       <!-- Notification Bell -->
       <div style="position:relative;display:inline-block">
@@ -3871,6 +3871,42 @@ function renderChart(){
 }
 
 // GLOBAL SEARCH
+
+// ─── Debounce wrapper — wait for user to pause typing before running the full search ───
+// This is the single biggest perf win: at 5,500 clients + 500 enquiries, running the full
+// search on every keystroke was slow. Waiting 220ms after the last keystroke collapses a
+// burst of typing into one search, which feels just as responsive and runs much less work.
+let _searchDebounceTimer = null;
+function _debouncedGlobalSearch(q) {
+  clearTimeout(_searchDebounceTimer);
+  // Empty string: run immediately (no debounce) so clearing the box is instant
+  if(!q || !q.trim()) { globalSearch(q); return; }
+  _searchDebounceTimer = setTimeout(() => globalSearch(q), 220);
+}
+
+// ─── Build a clientId → searchable-name lookup map ───
+// Avoids calling cName() (which does a linear clients.find) thousands of times per search.
+// At 5,500 clients × 500 enquiries that's ~2.75M scans per keystroke; this makes it O(1).
+function _buildClientNameMap() {
+  const m = new Map();
+  for(let i = 0; i < clients.length; i++) {
+    const c = clients[i];
+    const nm = `${c.firstName||""} ${c.lastName||""}`.trim() || c.mobile || c.companyName || "Unknown";
+    m.set(c.id, nm.toLowerCase());
+  }
+  return m;
+}
+
+// ─── Result cap for full search results ───
+let _searchResultLimit = 200;
+let _lastSearchQuery = "";
+function loadMoreSearchResults() {
+  _searchResultLimit += 200;
+  // Re-run the current query
+  const input = document.getElementById("global-search");
+  if(input) globalSearch(input.value);
+}
+
 function globalSearch(q){
   if(!q.trim()){
     if(document.getElementById("tab-search").classList.contains("active"))
@@ -3878,7 +3914,14 @@ function globalSearch(q){
     // Hide suggestions
     const sug=document.getElementById("search-suggestions");
     if(sug) sug.style.display="none";
+    _searchResultLimit = 200; // reset cap when query is cleared
+    _lastSearchQuery = "";
     return;
+  }
+  // Reset cap when the query changes (so new searches start at 200, not whatever Load More left it)
+  if(q !== _lastSearchQuery) {
+    _searchResultLimit = 200;
+    _lastSearchQuery = q;
   }
   // Show inline suggestions dropdown
   showSearchSuggestions(q);
@@ -3888,6 +3931,10 @@ function globalSearch(q){
   document.getElementById("tab-search").classList.add("active");
   document.getElementById("page-title").textContent=`🔍 "${q}"`;
   const ql=q.toLowerCase();
+
+  // Build a fast id→name map ONCE for this search call instead of calling cName() thousands of times
+  const clientNameMap = _buildClientNameMap();
+  const nameOf = id => clientNameMap.get(id) || ""; // lowercase for .includes() tests
 
   // Primary client matches — use pre-calculated index for speed
   // Falls back to inline check if _searchIndex missing (old data before re-fetch)
@@ -3948,9 +3995,12 @@ function globalSearch(q){
 
   const fe=enquiries.filter(e=>{
     const base = e._searchIndex || `${e.destination} ${e.source} ${e.category||""}`.toLowerCase();
-    return base.includes(ql) || cName(e.clientId).toLowerCase().includes(ql);
+    return base.includes(ql) || nameOf(e.clientId).includes(ql);
   });
-  const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""} ${b.category||""}`.toLowerCase().includes(ql));
+  const fb=allBookings.filter(b=>{
+    const base = b._searchIndex || `${b.destination||""} ${b.category||""}`.toLowerCase();
+    return base.includes(ql) || nameOf(b.clientId).includes(ql);
+  });
 
   // Permission: owner (id=1) can delete, staff cannot
   const _canDelete = CURRENT_USER && CURRENT_USER.id === 1;
@@ -3991,26 +4041,35 @@ function globalSearch(q){
       ${_delBtn('bookings',b.id)}
     </div>`;
 
+  // ─── Apply result cap to each section to keep rendering fast at large match counts ───
+  const fcSlice = fc.slice(0, _searchResultLimit);
+  const famSlice = familyMatches.slice(0, _searchResultLimit);
+  const feSlice = fe.slice(0, _searchResultLimit);
+  const fbSlice = fb.slice(0, _searchResultLimit);
+  const totalMatches = fc.length + familyMatches.length + fe.length + fb.length;
+  const shownMatches = fcSlice.length + famSlice.length + feSlice.length + fbSlice.length;
+  const hasMoreMatches = shownMatches < totalMatches;
+
   document.getElementById("search-results").innerHTML=`
-    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div>
+    ${fc.length?`<div class="section-title">👥 Clients (${fc.length}${fc.length>fcSlice.length?`, showing ${fcSlice.length}`:""})</div>
     <div class="card" style="padding:0;overflow:hidden">
       <div class="tbl-scroll clients-table-scroll">
-        ${_buildClientsTableShell(fc.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
+        ${_buildClientsTableShell(fcSlice.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
       </div>
     </div>`:""
   }
-    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">Family Members (${familyMatches.length})</div>
+    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">Family Members (${familyMatches.length}${familyMatches.length>famSlice.length?`, showing ${famSlice.length}`:""})</div>
     <div class="card" style="border-left:4px solid #8b5cf6;padding:0;overflow:hidden">
       <div class="tbl-scroll clients-table-scroll">
-        ${_buildClientsTableShell(familyMatches.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
+        ${_buildClientsTableShell(famSlice.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
       </div>
       <div style="padding:8px 14px;background:#faf5ff;border-top:1px solid #e9d5ff;font-size:11px;color:#7c3aed">
         ℹ️ These clients were found via their family link to a matching client. Click Profile to see full details.
       </div>
     </div>`:""}
-    ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div>
+    ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length}${fe.length>feSlice.length?`, showing ${feSlice.length}`:""})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>CATEGORY</th><th>RATING</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th></tr></thead>
-    <tbody>${fe.map(e=>`<tr>
+    <tbody>${feSlice.map(e=>`<tr>
       <td>
         <strong>${cName(e.clientId)}</strong>
         ${e.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>`:""}
@@ -4022,9 +4081,9 @@ function globalSearch(q){
       <td>${enqActionBtns(e)}</td>
     </tr>`).join("")}</tbody></table></div>`:""
   }
-    ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div>
+    ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length}${fb.length>fbSlice.length?`, showing ${fbSlice.length}`:""})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
-    <tbody>${fb.map(b=>`<tr>
+    <tbody>${fbSlice.map(b=>`<tr>
       <td>
         <strong>${cName(b.clientId)}</strong>
         ${b.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600">${b.familyRelation||"Family"} of ${b.primaryClientName}</div>`:""}
@@ -4036,6 +4095,14 @@ function globalSearch(q){
       <td>${bkActionBtns(b)}</td>
     </tr>`).join("")}</tbody></table></div>`:""
   }
+    ${hasMoreMatches?`<div style="margin:16px 0;padding:14px;text-align:center;background:#fff7ed;border:2px solid #fed7aa;border-radius:12px">
+      <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+        Showing ${shownMatches.toLocaleString()} of ${totalMatches.toLocaleString()} total matches
+      </div>
+      <button onclick="loadMoreSearchResults()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+        ⬇ Load more results (next 200)
+      </button>
+    </div>`:""}
     ${!fc.length&&!familyMatches.length&&!fe.length&&!fb.length?`<div class="empty" style="padding:40px"><div style="font-size:32px;margin-bottom:8px">🔍</div>No results found for "${q}"</div>`:""}`;
 }
 
@@ -4055,14 +4122,38 @@ function showSearchSuggestions(q){
   if(q.length<2){sug.style.display="none";return;}
   const ql=q.toLowerCase();
   const matches=[];
-  clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.companyName||""}`.toLowerCase().includes(ql)).slice(0,5).forEach(c=>{
-    matches.push({type:"client",icon:"👤",label:`${c.firstName} ${c.lastName}`,sub:`${c.mobile}${c.altMobile?" · "+c.altMobile:""} · ${c.city||""}${c.familyName?" · 👨‍👩‍👧 "+c.familyName:""}`,id:c.id});
+  // Build fast id→name map once (instead of calling cName per enquiry/booking)
+  const clientNameMap = _buildClientNameMap();
+  const nameOf = id => clientNameMap.get(id) || "";
+  // Helper: display name (preserves original case) — used when we need to show the name to the user
+  const displayName = id => {
+    const c = clients.find(x => x.id === id);
+    if(!c) return "Unknown";
+    return `${c.firstName||""} ${c.lastName||""}`.trim() || c.mobile || c.companyName || "Unknown";
+  };
+  clients.filter(c=>(c._searchIndex ? c._searchIndex.includes(ql)
+    : `${c.firstName} ${c.lastName} ${c.mobile} ${c.companyName||""}`.toLowerCase().includes(ql))).slice(0,5).forEach(c=>{
+    matches.push({type:"client",icon:"👤",label:`${c.firstName||""} ${c.lastName||""}`.trim()||c.mobile||"Unknown",sub:`${c.mobile}${c.altMobile?" · "+c.altMobile:""} · ${c.city||""}${c.familyName?" · 👨‍👩‍👧 "+c.familyName:""}`,id:c.id});
   });
-  enquiries.filter(e=>`${cName(e.clientId)} ${e.destination||""}`.toLowerCase().includes(ql)).slice(0,3).forEach(e=>{
-    matches.push({type:"enq",icon:"🎯",label:cName(e.clientId),sub:`${e.destination||""} · ${e.rating} · ${e.status}`,id:e.id});
+  // Enquiries: check _searchIndex first, then cached client name — no repeated full-array scans
+  const enqMatches = [];
+  for(let i = 0; i < enquiries.length && enqMatches.length < 3; i++) {
+    const e = enquiries[i];
+    const base = e._searchIndex || `${e.destination||""}`.toLowerCase();
+    if(base.includes(ql) || nameOf(e.clientId).includes(ql)) enqMatches.push(e);
+  }
+  enqMatches.forEach(e=>{
+    matches.push({type:"enq",icon:"🎯",label:displayName(e.clientId),sub:`${e.destination||""} · ${e.rating||""} · ${e.status||""}`,id:e.id});
   });
-  allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""}`.toLowerCase().includes(ql)).slice(0,3).forEach(b=>{
-    matches.push({type:"bk",icon:"✈️",label:cName(b.clientId),sub:`${b.destination||b.category||""} · ${b.travelDate||""}`,id:b.id});
+  // Bookings: same optimization
+  const bkMatches = [];
+  for(let i = 0; i < allBookings.length && bkMatches.length < 3; i++) {
+    const b = allBookings[i];
+    const base = b._searchIndex || `${b.destination||""}`.toLowerCase();
+    if(base.includes(ql) || nameOf(b.clientId).includes(ql)) bkMatches.push(b);
+  }
+  bkMatches.forEach(b=>{
+    matches.push({type:"bk",icon:"✈️",label:displayName(b.clientId),sub:`${b.destination||b.category||""} · ${b.travelDate||""}`,id:b.id});
   });
   if(!matches.length){sug.style.display="none";return;}
   sug.style.display="";
