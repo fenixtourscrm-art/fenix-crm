@@ -9222,10 +9222,8 @@ function qbInitPasteHandler() {
   const doc = document.getElementById('qb-document');
   if(!doc) return;
 
-  // ── Block copy/cut from the entire quotation canvas ──
-  doc.addEventListener('copy',  e => { e.preventDefault(); });
-  doc.addEventListener('cut',   e => { e.preventDefault(); });
-  doc.addEventListener('contextmenu', e => { e.preventDefault(); });
+  // Note: copy/cut/context-menu used to be blocked here — removed per user request
+  // so staff can copy text between fields inside the CRM.
 
   // ── Bug 1 fix: auto-title-case on blur (when user clicks away from an editable field) ──
   // Using `focusout` (not `blur`) so it bubbles — one listener covers all current AND future editables.
@@ -9255,32 +9253,32 @@ function qbInitPasteHandler() {
     sel.addRange(range);
   });
 
-  // ── Input rules: numbers-only + title case ──
+  // ── Input rules: numbers-only + title case (Bug 1 fix) ──
+  // On every keystroke:
+  //   1. Pricing number columns stay numbers-only (unchanged)
+  //   2. Flight date/time/baggage stay untouched (numbers, codes like "30KG + 7KG")
+  //   3. Everything else gets title-cased properly via qbTitleCase() —
+  //      which correctly handles WHY → Why, wHY → Why, wHy → Why, including
+  //      the itinerary day content (user wants title case everywhere, no sentence case).
   doc.addEventListener('input', function(e) {
     const el = e.target;
     if(!el.classList.contains('qb-editable')) return;
 
-    const tag  = el.closest('td, li, div');
-    const row  = el.closest('tr');
-    const td   = el.closest('td');
+    const row = el.closest('tr');
+    const td  = el.closest('td');
 
-    // Identify column index in table rows
+    // Column index inside a table row (for pricing/flight exclusions)
     let colIdx = -1;
-    if(row && td) {
-      colIdx = [...row.querySelectorAll('td')].indexOf(td);
-    }
+    if(row && td) colIdx = [...row.querySelectorAll('td')].indexOf(td);
 
-    // ── Number-only fields ──
-    // Pricing table: col 1 = Flight Fare, col 2 = Land Package, col 3 = Total
+    // ── Number-only fields (pricing cols 1/2/3) ──
     const isPricingRow = row?.closest('#qb-pricing-table');
     const isNumberField = isPricingRow && (colIdx === 1 || colIdx === 2 || colIdx === 3);
-
     if(isNumberField) {
       const pos = window.getSelection()?.anchorOffset || 0;
       const cleaned = el.innerText.replace(/[^0-9.,]/g, '');
       if(el.innerText !== cleaned) {
         el.innerText = cleaned;
-        // Restore caret position
         try {
           const range = document.createRange();
           const sel2  = window.getSelection();
@@ -9291,64 +9289,34 @@ function qbInitPasteHandler() {
           sel2.addRange(range);
         } catch(ex) {}
       }
-      return; // skip title case for number fields
-    }
-
-    // ── Title Case: first letter of every word capitalised ──
-    // Applied to: package title, duration, subtitle, day titles,
-    // airline, sector, destination, hotel name, room, inclusions, exclusions
-    // Skip: day content (handled separately below), baggage, time, date
-    const isDayContent  = el.closest('.qb-day-block') && !el.classList.contains('qb-day-title');
-    const isBaggageCol  = row?.closest('#qb-flights-table') && colIdx === 4;
-    const isTimeCol     = row?.closest('#qb-flights-table') && colIdx === 3;
-    const isDateCol     = row?.closest('#qb-flights-table') && colIdx === 0;
-    const skipTitleCase = isDayContent || isBaggageCol || isTimeCol || isDateCol;
-
-    // ── Sentence case for day content ──
-    // Rule: First letter of each sentence always capital, everything else forced lowercase
-    if(isDayContent && el.innerText.length > 0) {
-      const original = el.innerText;
-      const sel3 = window.getSelection();
-      const offset = sel3?.anchorOffset || 0;
-
-      // Split into sentences, capitalize first letter, force rest to lowercase
-      const converted = original
-        .toLowerCase()
-        .replace(/(^\s*\w|[.!?]\s+\w)/g, c => c.toUpperCase());
-
-      if(original !== converted) {
-        el.innerText = converted;
-        try {
-          const range2 = document.createRange();
-          const sel4   = window.getSelection();
-          const tnode  = el.firstChild || el;
-          range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
-          range2.collapse(true);
-          sel4.removeAllRanges();
-          sel4.addRange(range2);
-        } catch(ex) {}
-      }
       return;
     }
 
-    if(!skipTitleCase && el.innerText.length > 0) {
-      const original = el.innerText;
-      // Convert: first letter of each word to uppercase, rest lowercase
-      const converted = original.replace(/(?:^|\s)\S/g, c => c.toUpperCase());
-      if(original !== converted) {
-        const sel3 = window.getSelection();
-        const offset = sel3?.anchorOffset || 0;
-        el.innerText = converted;
-        try {
-          const range2 = document.createRange();
-          const sel4   = window.getSelection();
-          const tnode  = el.firstChild || el;
-          range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
-          range2.collapse(true);
-          sel4.removeAllRanges();
-          sel4.addRange(range2);
-        } catch(ex) {}
-      }
+    // ── Skip title-case for fields where it would break things ──
+    // Flight table: baggage (col 4 — contains "KG+", "7KG+7KG"), time (col 3 — "09:05 - 10:30"),
+    // date (col 0 — "04 May 2026" works either way but codes shouldn't change case)
+    const isBaggageCol = row?.closest('#qb-flights-table') && colIdx === 4;
+    const isTimeCol    = row?.closest('#qb-flights-table') && colIdx === 3;
+    const isDateCol    = row?.closest('#qb-flights-table') && colIdx === 0;
+    if(isBaggageCol || isTimeCol || isDateCol) return;
+
+    // ── Title-case everything else, including day content ──
+    if(el.innerText.length === 0) return;
+    const original = el.innerText;
+    const converted = qbTitleCase(original);
+    if(original !== converted) {
+      const sel3 = window.getSelection();
+      const offset = sel3?.anchorOffset || 0;
+      el.innerText = converted;
+      try {
+        const range2 = document.createRange();
+        const sel4   = window.getSelection();
+        const tnode  = el.firstChild || el;
+        range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
+        range2.collapse(true);
+        sel4.removeAllRanges();
+        sel4.addRange(range2);
+      } catch(ex) {}
     }
   });
 
