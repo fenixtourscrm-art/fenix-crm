@@ -8404,6 +8404,23 @@ function qbGenerateQuoteNo() {
 let qbPreviewMode = false;
 let qbSavedQuotes = [];
 
+// ─── Bug 1 fix: Auto-title-case on all Quotation Builder editable fields ───
+// Handles every case: "wHy" → "Why", "WHY" → "Why", "wHY" → "Why", "hello world" → "Hello World",
+// as well as pasted text from outside the CRM.
+// Runs on BLUR (when user clicks away) — doesn't disrupt typing mid-word.
+// Paste handling is done in qbInitPasteHandler below so there's only one source of truth.
+function qbTitleCase(text) {
+  if(!text) return '';
+  // Lowercase the entire word, then uppercase the first letter.
+  // This is what fixes "WHY" → "Why", "wHY" → "Why", "wHy" → "Why".
+  // \S+ matches non-whitespace, so "  Hello   World" keeps its spacing.
+  // The inner replace finds the first letter (skipping leading punctuation like "(04" → "(04") and uppercases it.
+  return text.replace(/\S+/g, word => {
+    const lower = word.toLowerCase();
+    return lower.replace(/[a-z]/, c => c.toUpperCase());
+  });
+}
+
 // ── Default template data ──
 function qbDefaultData() {
   return {
@@ -8599,7 +8616,7 @@ function qbRenderDocument(data) {
 
     <!-- Image Section -->
     <div class="qb-section" id="qb-images-section">
-      <div id="qb-images-grid" style="display:grid;grid-template-columns:${data.images.length===1?'1fr':'1fr 1fr'};gap:8px;margin-bottom:8px">
+      <div id="qb-images-grid" style="display:grid;grid-template-columns:${data.images.length===1?'1fr':data.images.length===2?'1fr 1fr':data.images.length===4?'1fr 1fr':'1fr 1fr 1fr'};gap:8px;margin-bottom:8px">
         ${data.images.map((img,i) => qbImageCell(img, i)).join('')}
         ${data.images.length === 0 ? '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet — use the button below to add</div>' : ''}
       </div>
@@ -8926,8 +8943,12 @@ function qbDayBlock(d, i) {
 }
 
 function qbImageCell(img, i) {
-  const isSingle = _qbImages.length === 1;
-  const imgHeight = isSingle ? '280px' : '160px';
+  // Bug 3 fix: image height adjusts based on grid layout to look balanced at any count
+  const n = _qbImages.length;
+  const imgHeight = n === 1 ? '280px'     // single wide image
+                  : n === 2 ? '200px'     // two side by side
+                  : n === 4 ? '180px'     // 2×2 grid
+                  : '140px';              // 3-column layout (3, 5, 6+ images)
   return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:${imgHeight}">
     <img src="${img}" style="width:100%;height:${imgHeight};object-fit:cover" onerror="this.style.display='none'">
     <button onclick="qbRemoveImage(${i})" class="qb-no-print" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
@@ -9007,9 +9028,20 @@ function qbReplaceImage(i) {
 function qbRefreshImages() {
   const grid = document.getElementById('qb-images-grid');
   if(!grid) return;
-  const cols = _qbImages.length === 1 ? '1fr' : '1fr 1fr';
+  // ─── Bug 3 fix: smart grid columns based on image count ───
+  //   0: empty placeholder
+  //   1: single column (full width)
+  //   2: two columns
+  //   3: three columns (no blank cell)
+  //   4: 2×2 grid
+  //   5+: three-column grid (will wrap into multiple rows naturally, no blanks)
+  const n = _qbImages.length;
+  const cols = n === 1 ? '1fr'
+             : n === 2 ? '1fr 1fr'
+             : n === 4 ? '1fr 1fr'
+             : '1fr 1fr 1fr'; // 3, 5, 6, 7, ...
   grid.style.gridTemplateColumns = cols;
-  grid.innerHTML = _qbImages.length
+  grid.innerHTML = n
     ? _qbImages.map((img,i) => qbImageCell(img,i)).join('')
     : '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet</div>';
 }
@@ -9195,11 +9227,22 @@ function qbInitPasteHandler() {
   doc.addEventListener('cut',   e => { e.preventDefault(); });
   doc.addEventListener('contextmenu', e => { e.preventDefault(); });
 
-  // ── Paste: strip formatting, plain text only ──
+  // ── Bug 1 fix: auto-title-case on blur (when user clicks away from an editable field) ──
+  // Using `focusout` (not `blur`) so it bubbles — one listener covers all current AND future editables.
+  doc.addEventListener('focusout', function(e) {
+    const el = e.target.closest('.qb-editable');
+    if(!el) return;
+    const before = el.innerText;
+    const after = qbTitleCase(before);
+    if(before !== after) el.innerText = after;
+  });
+
+  // ── Paste: strip formatting, plain text only, AND auto-title-case (Bug 1 fix) ──
   doc.addEventListener('paste', function(e) {
     if(!e.target.closest('.qb-editable')) return;
     e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const raw = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const text = qbTitleCase(raw); // auto-format on paste from outside
     const sel = window.getSelection();
     if(!sel.rangeCount) return;
     sel.deleteFromDocument();
