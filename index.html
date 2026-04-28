@@ -5908,17 +5908,22 @@ This links families by ID instead of name.`)) return;
 // Helper: view all enquiries for a specific client (called from duplicate warning link)
 function viewEnquiries(clientId) {
   closeOverlay(); // Close the add enquiry modal
-  switchTab("tab-enq"); // Switch to Enquiry tab
-  
-  // Filter enquiries by this client
   const client = clients.find(c => c.id === clientId);
-  if(!client || !client.mobile) return;
+  if(!client) return;
   
-  // Use the existing search box to filter by mobile
-  const searchBox = document.getElementById("enq-search");
-  if(searchBox) {
-    searchBox.value = client.mobile;
-    searchBox.dispatchEvent(new Event('input')); // Trigger the search
+  // Switch to Enquiry tab if function exists
+  if(typeof showTab === "function") showTab("enq");
+  
+  // Use the global search box to filter by mobile number
+  const searchBox = document.getElementById("global-search");
+  if(searchBox && client.mobile) {
+    searchBox.value = String(client.mobile).trim();
+    // Trigger the existing debounced search handler
+    if(typeof _debouncedGlobalSearch === "function") {
+      _debouncedGlobalSearch(searchBox.value);
+    } else {
+      searchBox.dispatchEvent(new Event('input', {bubbles: true}));
+    }
   }
 }
 
@@ -5926,25 +5931,30 @@ function viewEnquiries(clientId) {
 // Finds all existing enquiries for a given client ID by matching mobile number.
 // Returns array of {id, destination, category, status, createdAt, staffName} for display.
 function findExistingEnquiries(clientId) {
+  // Defensive: if data isn't loaded yet, skip duplicate check (safer to allow than to error)
+  if(!Array.isArray(clients) || !Array.isArray(enquiries)) return [];
+  if(!clientId) return [];
+
   const client = clients.find(c => c.id === clientId);
   if(!client || !client.mobile) return [];
-  
-  const mobile = client.mobile.trim();
+
+  const mobile = String(client.mobile).trim();
   if(!mobile) return [];
 
-  // Find all enquiries where the client's mobile matches
+  // Find all enquiries where the client's mobile matches.
+  // Also exclude soft-deleted/trashed enquiries if such a flag exists.
   return enquiries.filter(enq => {
+    if(enq.deleted || enq.trashed) return false; // skip trashed
     const enqClient = clients.find(c => c.id === enq.clientId);
-    return enqClient && enqClient.mobile && enqClient.mobile.trim() === mobile;
+    return enqClient && enqClient.mobile && String(enqClient.mobile).trim() === mobile;
   }).map(enq => {
-    const staff = staffList.find(s => s.id === enq.staffId);
     return {
       id: enq.id,
       destination: enq.destination || "(No destination)",
       category: enq.category || "Unknown",
       status: enq.status || "Active",
       createdAt: enq.createdAt || "",
-      staffName: staff ? staff.name : "Unassigned",
+      staffName: typeof sName === "function" ? sName(enq.staffId) : "Unassigned",
       enquiryNo: enq.enquiryNo || ""
     };
   });
