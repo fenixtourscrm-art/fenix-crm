@@ -4385,8 +4385,9 @@ function openModal(type){
     ` : null;
 
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
+    <div id="duplicate-enq-warning" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:6px;padding:10px;margin-bottom:12px;font-size:13px;color:#92400e"></div>
     <div class="form-grid">
-      ${lockedClientHtml || `<div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select></div>`}
+      ${lockedClientHtml || `<div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client" onchange="checkClientDuplicateEnquiries()">${cOpts()}</select></div>`}
       <div class="fg"><label>Service Category</label><select id="e-category" onchange="updateEnqForm()">${SERVICE_CATS.map(c=>`<option ${ex&&ex.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
     </div>
     <div id="enq-dynamic-fields"></div>
@@ -4422,6 +4423,11 @@ function openModal(type){
     if(ex && ex.staffId) document.getElementById("e-staff").value=ex.staffId;
     updateSourceSub();
     updateEnqForm(ex);
+    
+    // Check for duplicate enquiries if client is pre-selected
+    if(clientEl && clientEl.value && clientEl.value !== "0") {
+      setTimeout(checkClientDuplicateEnquiries, 100); // Small delay to ensure DOM is ready
+    }
   
   } else if(type==="booking_from_enquiry"){
     const e = window._bookingFromEnquiry;
@@ -5899,6 +5905,115 @@ This links families by ID instead of name.`)) return;
   alert(`✅ Done! Assigned familyId to ${updated} clients across ${Object.keys(groups).length} family groups.`);
 }
 
+// Helper: view all enquiries for a specific client (called from duplicate warning link)
+function viewEnquiries(clientId) {
+  closeOverlay(); // Close the add enquiry modal
+  switchTab("tab-enq"); // Switch to Enquiry tab
+  
+  // Filter enquiries by this client
+  const client = clients.find(c => c.id === clientId);
+  if(!client || !client.mobile) return;
+  
+  // Use the existing search box to filter by mobile
+  const searchBox = document.getElementById("enq-search");
+  if(searchBox) {
+    searchBox.value = client.mobile;
+    searchBox.dispatchEvent(new Event('input')); // Trigger the search
+  }
+}
+
+// ─── DUPLICATE ENQUIRY DETECTION (early warning + pre-save check) ───
+// Finds all existing enquiries for a given client ID by matching mobile number.
+// Returns array of {id, destination, category, status, createdAt, staffName} for display.
+function findExistingEnquiries(clientId) {
+  const client = clients.find(c => c.id === clientId);
+  if(!client || !client.mobile) return [];
+  
+  const mobile = client.mobile.trim();
+  if(!mobile) return [];
+
+  // Find all enquiries where the client's mobile matches
+  return enquiries.filter(enq => {
+    const enqClient = clients.find(c => c.id === enq.clientId);
+    return enqClient && enqClient.mobile && enqClient.mobile.trim() === mobile;
+  }).map(enq => {
+    const staff = staffList.find(s => s.id === enq.staffId);
+    return {
+      id: enq.id,
+      destination: enq.destination || "(No destination)",
+      category: enq.category || "Unknown",
+      status: enq.status || "Active",
+      createdAt: enq.createdAt || "",
+      staffName: staff ? staff.name : "Unassigned",
+      enquiryNo: enq.enquiryNo || ""
+    };
+  });
+}
+
+// Called when staff selects a client in the dropdown — shows early warning if duplicates exist
+function checkClientDuplicateEnquiries() {
+  const clientSel = document.getElementById("e-client");
+  const warningDiv = document.getElementById("duplicate-enq-warning");
+  if(!clientSel || !warningDiv) return;
+
+  const clientId = clientSel.value;
+  if(!clientId || clientId === "0") {
+    warningDiv.style.display = "none";
+    return;
+  }
+
+  const existing = findExistingEnquiries(clientId);
+  if(existing.length === 0) {
+    warningDiv.style.display = "none";
+    return;
+  }
+
+  // Show warning with count and a summary
+  const client = clients.find(c => c.id === clientId);
+  const clientName = client ? cName(client.id) : "this client";
+  
+  let summary = existing.slice(0, 3).map(e => 
+    `• ${e.destination} (${e.category}) - ${e.status} - by ${e.staffName}`
+  ).join("<br>");
+  
+  if(existing.length > 3) {
+    summary += `<br>• ... and ${existing.length - 3} more`;
+  }
+
+  warningDiv.innerHTML = `
+    <strong>⚠️ Warning: ${clientName} already has ${existing.length} enquiry/enquiries:</strong><br>
+    <div style="margin-top:6px;font-size:12px;line-height:1.6">${summary}</div>
+    <div style="margin-top:8px;font-size:12px">
+      <a href="#" onclick="viewEnquiries('${clientId}'); return false;" style="color:#c2410c;font-weight:600;text-decoration:underline">View all enquiries for this client</a>
+    </div>
+  `;
+  warningDiv.style.display = "block";
+}
+
+// Pre-save confirmation modal — asks if staff really want to create another enquiry
+async function confirmDuplicateEnquiry(clientId) {
+  const existing = findExistingEnquiries(clientId);
+  if(existing.length === 0) return true; // No duplicates, proceed
+
+  const client = clients.find(c => c.id === clientId);
+  const clientName = client ? cName(client.id) : "this client";
+
+  const summary = existing.map(e => 
+    `  • ${e.destination} (${e.category}) - ${e.status} - by ${e.staffName}`
+  ).join("\n");
+
+  const confirmed = confirm(
+    `⚠️ DUPLICATE ENQUIRY WARNING\n\n` +
+    `${clientName} already has ${existing.length} existing enquiry/enquiries:\n\n` +
+    `${summary}\n\n` +
+    `Are you sure you want to create ANOTHER enquiry for this client?\n\n` +
+    `👉 Click OK to create it anyway (if this is genuinely a new trip)\n` +
+    `👉 Click Cancel to stop and check the existing enquiries first`
+  );
+
+  return confirmed;
+}
+
 async function saveEnquiry(isEdit) {
   const clientSel = document.getElementById("e-client");
   if(!clientSel || !clientSel.value || clientSel.value==="0") return alert("⚠️ Please select a Client!");
@@ -5945,6 +6060,15 @@ async function saveEnquiry(isEdit) {
   const selectedClient = clients.find(c => c.id === clientSel.value);
   if(!selectedClient) {
     return alert("⚠️ The selected client could not be found. Please close this form and try again.");
+  }
+
+  // ─── DUPLICATE ENQUIRY CHECK (only for new enquiries, not edits) ───
+  // Check if this client already has enquiries. If yes, ask for confirmation before creating another.
+  if(!isEdit) {
+    const shouldProceed = await confirmDuplicateEnquiry(clientSel.value);
+    if(!shouldProceed) {
+      return; // User cancelled — don't save
+    }
   }
 
   const gv = id => document.getElementById(id)?.value?.trim() || "";
