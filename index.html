@@ -1197,6 +1197,13 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <button class="btn btn-ghost" onclick="mktNextMonth()" style="padding:5px 12px">Next ›</button>
         <span style="font-size:11px;color:#94a3b8;margin-left:4px" id="mkt-entry-count"></span>
       </div>
+      <!-- Search and Filter bar -->
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <input type="text" id="mkt-search" placeholder="🔍 Search client name or notes..." oninput="renderMarketing()" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"/>
+        <select id="mkt-staff-filter" onchange="renderMarketing()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <option value="">All Staff</option>
+        </select>
+      </div>
       <div class="card"><table><thead><tr>
         <th>DATE</th><th>STAFF</th><th>CLIENT</th><th>MARKETING CALLS</th><th>NEW CLIENTS</th><th>CALL OUTCOME</th><th>NOTES</th><th>ACTION</th>
       </tr></thead><tbody id="mkt-tbody"></tbody></table></div>
@@ -2343,9 +2350,11 @@ let _eqSelectedCities = [];
 let _eqCityPool = [];
 
 function eqLoadCities(type) {
-  const key = type === 'intl'
-    ? document.getElementById('eq-country')?.value
-    : document.getElementById('eq-state')?.value;
+  // Bug fix: look for the correct dynamic ID instead of hardcoded eq-country/eq-state
+  const stateCountryEl = type === 'intl'
+    ? (document.getElementById('eq-country') || document.getElementById('e-dest-intl'))
+    : (document.getElementById('eq-state') || document.getElementById('e-dest-dom'));
+  const key = stateCountryEl?.value;
   const col = document.getElementById('eq-city-col');
   if(!col) return;
   if(!key) { col.style.display = 'none'; return; }
@@ -2372,7 +2381,8 @@ function eqRenderTags() {
     tagsEl.insertBefore(tag, search);
   });
   const hidden = document.getElementById('e-dest-custom');
-  const countryState = document.getElementById('eq-country')?.value || document.getElementById('eq-state')?.value || '';
+  const stateCountryEl = document.getElementById('eq-country') || document.getElementById('eq-state') || document.getElementById('e-dest-intl') || document.getElementById('e-dest-dom');
+  const countryState = stateCountryEl?.value || '';
   if(hidden) hidden.value = _eqSelectedCities.length ? countryState + ' — ' + _eqSelectedCities.join(', ') : countryState;
 }
 
@@ -5044,6 +5054,21 @@ function renderMktCalls(){
     labelEl.textContent = monthNames[parseInt(m)-1]+" "+y + (viewMonth===tm?" (This Month)":"");
   }
 
+  // Populate staff filter dropdown (only once or when STAFF changes)
+  const staffFilter = document.getElementById("mkt-staff-filter");
+  if(staffFilter && staffFilter.options.length === 1) { // only has "All Staff" option
+    STAFF.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.name;
+      staffFilter.appendChild(opt);
+    });
+  }
+
+  // Get filter values
+  const searchText = (document.getElementById("mkt-search")?.value || "").toLowerCase().trim();
+  const selectedStaffId = document.getElementById("mkt-staff-filter")?.value || "";
+
   // KPI cards always show current month
   const mListCurrent=marketing.filter(m=>m.date.startsWith(tm));
   const totalCalls=mListCurrent.reduce((s,m)=>s+m.calls,0);
@@ -5055,8 +5080,24 @@ function renderMktCalls(){
   if(clientsEl)clientsEl.textContent=totalClients;
   if(rateEl)rateEl.textContent=totalCalls>0?Math.round(totalClients/totalCalls*100)+"%":"0%";
 
-  // Table shows selected month only
-  const mListView=marketing.filter(m=>m.date.startsWith(viewMonth));
+  // Table shows selected month, filtered by search and staff
+  let mListView=marketing.filter(m=>m.date.startsWith(viewMonth));
+  
+  // Apply staff filter
+  if(selectedStaffId) {
+    mListView = mListView.filter(m => String(m.staffId) === String(selectedStaffId));
+  }
+
+  // Apply search filter (client name or notes)
+  if(searchText) {
+    mListView = mListView.filter(m => {
+      const c = m.clientId ? clients.find(x => x.id === m.clientId) : null;
+      const clientName = c ? `${c.firstName||""} ${c.lastName||""}`.toLowerCase() : "";
+      const notes = (m.notes || "").toLowerCase();
+      return clientName.includes(searchText) || notes.includes(searchText);
+    });
+  }
+
   const countEl=document.getElementById("mkt-entry-count");
   if(countEl) countEl.textContent = mListView.length+" entries · "+mListView.reduce((s,m)=>s+m.calls,0)+" calls";
 
@@ -5086,7 +5127,7 @@ function renderMktCalls(){
           <button class="btn btn-warn" style="font-size:10px;padding:3px 8px" onclick="del('marketing','${m.id}')">✕</button>
         </div>
       </td></tr>`;
-  }).join("")||`<tr><td colspan="8" class="empty">No marketing entries for this month</td></tr>`;
+  }).join("")||`<tr><td colspan="8" class="empty">No marketing entries found</td></tr>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -6981,7 +7022,7 @@ function updateEnqForm(ex) {
 
   const domDestSel = (destId, label) => `
     <div class="fg"><label>${label}</label>
-      <select id="eq-state" onchange="eqLoadCities('dom')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+      <select id="${destId}" onchange="eqLoadCities('dom')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
         <option value="">-- Select State --</option>
         ${Object.keys(BK_DOM_CITY_MAP).sort().map(s=>'<option value="'+s+'">'+s+'</option>').join("")}
       </select>
