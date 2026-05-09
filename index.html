@@ -816,6 +816,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('currency',this)"><span class="nav-icon">💱</span>Currency</div>
     <div class="nav-section">Team</div>
     <div class="nav-item" onclick="showTab('tasks',this)"><span class="nav-icon">📋</span>Tasks<span class="nav-badge" id="task-badge" style="display:none">!</span></div>
+    <div class="nav-item" onclick="showTab('commands',this)"><span class="nav-icon">📢</span>Commands<span class="nav-badge" id="cmd-badge" style="display:none;background:#dc2626;color:#fff">0</span></div>
     <div class="nav-item" onclick="showTab('reports',this)"><span class="nav-icon">📊</span>Daily Reports</div>
     <div class="nav-item" onclick="showTab('marketing',this)"><span class="nav-icon">📣</span>Marketing</div>
     <div class="nav-item" onclick="showTab('targets',this)"><span class="nav-icon">🎯</span>Targets</div>
@@ -1159,6 +1160,39 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         </div>
         <div id="tasks-list"></div>
       </div>
+    </div>
+
+    <!-- COMMANDS FROM BOSS -->
+    <div class="tab" id="tab-commands">
+      <!-- Header -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div>
+          <div class="section-title" style="margin:0">📢 Commands from Boss</div>
+          <div style="font-size:12px;color:#64748b;margin-top:3px" id="cmd-header-sub">Loading...</div>
+        </div>
+        <button id="cmd-add-btn" class="btn btn-primary" onclick="openModal('command')" style="display:none">+ Add Command</button>
+      </div>
+
+      <!-- Filter bar (owner sees all, staff only sees theirs) -->
+      <div id="cmd-filter-bar" style="display:none;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+        <select id="cmd-filter-staff" onchange="renderCommands()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <option value="">All Staff</option>
+        </select>
+        <select id="cmd-filter-type" onchange="renderCommands()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <option value="">All Types</option>
+          <option value="ticketing">✈️ Ticketing</option>
+          <option value="hotel">🏨 Hotel</option>
+          <option value="general">📝 General</option>
+        </select>
+        <select id="cmd-filter-status" onchange="renderCommands()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <option value="pending">⏳ Pending</option>
+          <option value="done">✅ Done</option>
+          <option value="">All</option>
+        </select>
+      </div>
+
+      <!-- Commands list -->
+      <div id="cmd-list"></div>
     </div>
 
     <!-- DAILY REPORTS -->
@@ -2455,6 +2489,7 @@ let tasks=[];
 let reports=[];
 let marketing=[];
 let targets=[];
+let commands=[]; // Boss commands to specific staff members
 let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
@@ -2543,6 +2578,8 @@ function renderAll(){
   try{renderReports();}catch(e){console.error('renderReports:',e);}
   try{renderMktCalls();}catch(e){console.error('renderMktCalls:',e);}
   try{renderTargets();}catch(e){console.error('renderTargets:',e);}
+  try{renderCommands();}catch(e){console.error('renderCommands:',e);}
+  try{updateCommandBadge();}catch(e){console.error('updateCommandBadge:',e);}
   try{updateBadges();}catch(e){console.error('updateBadges:',e);}
 }
 function updateBadges(){
@@ -3913,6 +3950,355 @@ function renderReports(){
 }
 
 // MARKETING
+// ══════════════════════════════════════════════════════════════
+//  COMMANDS FROM BOSS
+// ══════════════════════════════════════════════════════════════
+
+// Update the red badge on the Commands nav item
+function updateCommandBadge() {
+  const badge = document.getElementById("cmd-badge");
+  if(!badge) return;
+  const myId = CURRENT_USER?.id;
+  if(!myId) return;
+  const isOwner = myId === 1;
+
+  // Count pending commands relevant to current user
+  const pending = commands.filter(c => {
+    if(c.done) return false;
+    if(isOwner) return true;           // Owner sees all pending
+    return c.assignedTo === myId;      // Staff sees only their own
+  });
+
+  if(pending.length > 0) {
+    badge.textContent = pending.length;
+    badge.style.display = "";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+// Render the dynamic fields inside the command modal based on type
+function cmdTypeChanged() {
+  const type = document.getElementById("cmd-type")?.value;
+  const container = document.getElementById("cmd-type-fields");
+  if(!container) return;
+
+  if(type === "ticketing") {
+    container.innerHTML = `
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:10px;letter-spacing:.5px">✈️ TICKETING DETAILS</div>
+        <div class="form-grid">
+          <div class="fg"><label>Date <span style="color:#dc2626">*</span></label><input type="date" id="cmd-date" value="${today()}"/></div>
+          <div class="fg"><label>From <span style="color:#dc2626">*</span></label><input id="cmd-from" placeholder="e.g. AMD"/></div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>To <span style="color:#dc2626">*</span></label><input id="cmd-to" placeholder="e.g. BOM"/></div>
+          <div class="fg"><label>Flight No <span style="color:#dc2626">*</span></label><input id="cmd-flight" placeholder="e.g. 6E 1533-1485"/></div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>Price (₹) per person</label><input id="cmd-price" placeholder="e.g. 5500"/></div>
+          <div class="fg"><label>Fare Type</label>
+            <select id="cmd-fare">
+              <option>Corporate</option>
+              <option>Regular</option>
+              <option>Student</option>
+              <option>Senior Citizen</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>No. of Passengers</label><input type="number" id="cmd-pax" value="1" min="1"/></div>
+          <div class="fg"><label>Traveller Name(s)</label><input id="cmd-traveller" placeholder="e.g. Mr. Raj Sharma"/></div>
+        </div>
+      </div>`;
+  } else if(type === "hotel") {
+    container.innerHTML = `
+      <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:10px;letter-spacing:.5px">🏨 HOTEL DETAILS</div>
+        <div class="form-grid">
+          <div class="fg"><label>City <span style="color:#dc2626">*</span></label><input id="cmd-city" placeholder="e.g. Mumbai"/></div>
+          <div class="fg"><label>Hotel Name <span style="color:#dc2626">*</span></label><input id="cmd-hotel" placeholder="e.g. Taj Mahal Palace"/></div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>Check-in Date <span style="color:#dc2626">*</span></label><input type="date" id="cmd-checkin"/></div>
+          <div class="fg"><label>Check-out Date <span style="color:#dc2626">*</span></label><input type="date" id="cmd-checkout"/></div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>Room Category</label><input id="cmd-roomcat" placeholder="e.g. Deluxe / Suite"/></div>
+          <div class="fg"><label>Meal Plan</label>
+            <select id="cmd-meal">
+              <option value="CP">CP (Breakfast)</option>
+              <option value="MAP">MAP (Breakfast + Dinner)</option>
+              <option value="AP">AP (All Meals)</option>
+              <option value="EP">EP (No Meals)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-grid">
+          <div class="fg"><label>Occupancy</label>
+            <select id="cmd-occupancy">
+              <option>Single</option>
+              <option>Double</option>
+              <option>Triple</option>
+              <option>Quad</option>
+            </select>
+          </div>
+          <div class="fg"><label>No. of Rooms</label><input type="number" id="cmd-rooms" value="1" min="1"/></div>
+        </div>
+        <div class="form-grid g1">
+          <div class="fg"><label>Traveller Name(s) <span style="color:#dc2626">*</span></label><input id="cmd-traveller" placeholder="e.g. Mr. Raj Sharma, Mrs. Priya Sharma"/></div>
+        </div>
+      </div>`;
+  } else {
+    container.innerHTML = `
+      <div class="form-grid g1">
+        <div class="fg"><label>Command / Instruction <span style="color:#dc2626">*</span></label>
+          <textarea id="cmd-text" rows="4" placeholder="Type your command here..."></textarea>
+        </div>
+      </div>`;
+  }
+}
+
+// Save command to Firestore
+async function saveCommand() {
+  if(CURRENT_USER?.id !== 1) return alert("Only the owner can send commands.");
+  const type     = document.getElementById("cmd-type")?.value;
+  const staffId  = parseInt(document.getElementById("cmd-staff")?.value);
+  const notes    = document.getElementById("cmd-notes")?.value?.trim() || "";
+
+  if(!staffId) return alert("Please select a staff member.");
+
+  let data = {
+    type,
+    assignedTo: staffId,
+    assignedBy: CURRENT_USER.id,
+    notes,
+    done: false,
+    doneBy: null,
+    doneAt: null,
+    createdAt: new Date().toISOString(),
+    createdBy: CURRENT_USER.id
+  };
+
+  // Collect type-specific fields
+  if(type === "ticketing") {
+    const date    = document.getElementById("cmd-date")?.value;
+    const from    = document.getElementById("cmd-from")?.value?.trim().toUpperCase();
+    const to      = document.getElementById("cmd-to")?.value?.trim().toUpperCase();
+    const flight  = document.getElementById("cmd-flight")?.value?.trim().toUpperCase();
+    const price   = document.getElementById("cmd-price")?.value?.trim();
+    const fare    = document.getElementById("cmd-fare")?.value;
+    const pax     = parseInt(document.getElementById("cmd-pax")?.value) || 1;
+    const traveller = document.getElementById("cmd-traveller")?.value?.trim();
+    if(!date || !from || !to || !flight) return alert("Please fill Date, From, To and Flight No.");
+    Object.assign(data, {date, from, to, flight, price, fare, pax, traveller});
+  } else if(type === "hotel") {
+    const city      = document.getElementById("cmd-city")?.value?.trim();
+    const hotel     = document.getElementById("cmd-hotel")?.value?.trim();
+    const checkin   = document.getElementById("cmd-checkin")?.value;
+    const checkout  = document.getElementById("cmd-checkout")?.value;
+    const roomcat   = document.getElementById("cmd-roomcat")?.value?.trim();
+    const meal      = document.getElementById("cmd-meal")?.value;
+    const occupancy = document.getElementById("cmd-occupancy")?.value;
+    const rooms     = parseInt(document.getElementById("cmd-rooms")?.value) || 1;
+    const traveller = document.getElementById("cmd-traveller")?.value?.trim();
+    if(!city || !hotel || !checkin || !checkout || !traveller)
+      return alert("Please fill City, Hotel Name, Check-in/out dates and Traveller Name.");
+    Object.assign(data, {city, hotel, checkin, checkout, roomcat, meal, occupancy, rooms, traveller});
+  } else {
+    const text = document.getElementById("cmd-text")?.value?.trim();
+    if(!text) return alert("Please enter a command.");
+    data.text = text;
+  }
+
+  try {
+    await db.collection("commands").add(data);
+    closeOverlay();
+    showTab("commands");
+  } catch(e) {
+    alert("Error saving command: " + e.message);
+  }
+}
+
+// Mark a command as done
+async function markCommandDone(cmdId) {
+  const cmd = commands.find(c => c.id === cmdId);
+  if(!cmd) return;
+  // Only assigned staff or owner can mark done
+  if(CURRENT_USER?.id !== 1 && CURRENT_USER?.id !== cmd.assignedTo) return;
+  try {
+    await db.collection("commands").doc(cmdId).update({
+      done: true,
+      doneBy: CURRENT_USER.id,
+      doneAt: new Date().toISOString()
+    });
+  } catch(e) { alert("Error: " + e.message); }
+}
+
+// Delete a command (owner only)
+async function deleteCommand(cmdId) {
+  if(CURRENT_USER?.id !== 1) return;
+  if(!confirm("Delete this command?")) return;
+  try {
+    await db.collection("commands").doc(cmdId).delete();
+  } catch(e) { alert("Error: " + e.message); }
+}
+
+// Render the commands list
+function renderCommands() {
+  const container = document.getElementById("cmd-list");
+  if(!container) return;
+
+  const myId    = CURRENT_USER?.id;
+  const isOwner = myId === 1;
+
+  // Show/hide the Add button and filter bar (owner only)
+  const addBtn   = document.getElementById("cmd-add-btn");
+  const filterBar = document.getElementById("cmd-filter-bar");
+  if(addBtn)    addBtn.style.display    = isOwner ? "" : "none";
+  if(filterBar) filterBar.style.display = isOwner ? "flex" : "none";
+
+  // Populate staff filter (owner only, once)
+  const staffSel = document.getElementById("cmd-filter-staff");
+  if(staffSel && staffSel.options.length === 1) {
+    STAFF.slice(1).forEach(s => {
+      const o = document.createElement("option");
+      o.value = s.id; o.textContent = s.name;
+      staffSel.appendChild(o);
+    });
+  }
+
+  // Update sub-header text
+  const sub = document.getElementById("cmd-header-sub");
+  if(sub) sub.textContent = isOwner
+    ? "Post ticketing, hotel or general instructions to your staff"
+    : "Commands assigned to you by the boss";
+
+  // Get filters (owner only)
+  const filterStaff  = isOwner ? (document.getElementById("cmd-filter-staff")?.value  || "") : "";
+  const filterType   = isOwner ? (document.getElementById("cmd-filter-type")?.value   || "") : "";
+  const filterStatus = document.getElementById("cmd-filter-status")?.value ?? "pending";
+
+  // Filter commands
+  let list = commands.filter(c => {
+    if(!isOwner && c.assignedTo !== myId) return false; // Staff sees only their own
+    if(filterStaff  && String(c.assignedTo) !== String(filterStaff)) return false;
+    if(filterType   && c.type !== filterType) return false;
+    if(filterStatus === "pending" && c.done)  return false;
+    if(filterStatus === "done"    && !c.done) return false;
+    return true;
+  });
+
+  // Sort: pending first, then by date descending
+  list.sort((a,b) => {
+    if(a.done !== b.done) return a.done ? 1 : -1;
+    return (b.createdAt||"").localeCompare(a.createdAt||"");
+  });
+
+  if(list.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:60px 20px;color:#94a3b8">
+        <div style="font-size:48px;margin-bottom:12px">📭</div>
+        <div style="font-size:15px;font-weight:600;color:#64748b">No commands here</div>
+        <div style="font-size:13px;margin-top:6px">${isOwner ? "Click '+ Add Command' to send one to your staff." : "You have no pending commands from the boss."}</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = list.map(c => {
+    const staff     = STAFF.find(s => s.id === c.assignedTo);
+    const staffName = staff ? staff.name : "Unknown";
+    const doneByName = c.doneBy ? (STAFF.find(s => s.id === c.doneBy)?.name || "Someone") : "";
+    const doneAtStr  = c.doneAt ? new Date(c.doneAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "";
+    const createdStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "";
+
+    // Type badge
+    const typeBadge = c.type === "ticketing"
+      ? `<span style="background:#dbeafe;color:#1d4ed8;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">✈️ Ticketing</span>`
+      : c.type === "hotel"
+      ? `<span style="background:#dcfce7;color:#15803d;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">🏨 Hotel</span>`
+      : `<span style="background:#f3f4f6;color:#374151;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">📝 General</span>`;
+
+    // Status badge
+    const statusBadge = c.done
+      ? `<span style="background:#dcfce7;color:#15803d;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">✅ Done</span>`
+      : `<span style="background:#fef3c7;color:#b45309;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">⏳ Pending</span>`;
+
+    // Type-specific details block
+    let detailsHtml = "";
+    if(c.type === "ticketing") {
+      detailsHtml = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px;background:#eff6ff;border-radius:10px;padding:12px">
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">DATE</div><div style="font-size:13px;font-weight:700">${c.date||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">ROUTE</div><div style="font-size:13px;font-weight:700">${c.from||"?"} → ${c.to||"?"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">FLIGHT</div><div style="font-size:13px;font-weight:700">${c.flight||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">PRICE / PAX</div><div style="font-size:13px;font-weight:700">${c.price ? "₹"+c.price : "—"} · ${c.pax||1} pax</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">FARE TYPE</div><div style="font-size:13px;font-weight:700">${c.fare||"—"}</div></div>
+          ${c.traveller?`<div style="grid-column:1/-1"><div style="font-size:10px;color:#64748b;font-weight:600">TRAVELLER</div><div style="font-size:13px;font-weight:700">${c.traveller}</div></div>`:""}
+        </div>`;
+    } else if(c.type === "hotel") {
+      detailsHtml = `
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:12px;background:#f0fdf4;border-radius:10px;padding:12px">
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">CITY</div><div style="font-size:13px;font-weight:700">${c.city||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">HOTEL</div><div style="font-size:13px;font-weight:700">${c.hotel||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">CHECK-IN</div><div style="font-size:13px;font-weight:700">${c.checkin||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">CHECK-OUT</div><div style="font-size:13px;font-weight:700">${c.checkout||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">ROOM</div><div style="font-size:13px;font-weight:700">${c.roomcat||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">MEAL PLAN</div><div style="font-size:13px;font-weight:700">${c.meal||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">OCCUPANCY</div><div style="font-size:13px;font-weight:700">${c.occupancy||"—"}</div></div>
+          <div><div style="font-size:10px;color:#64748b;font-weight:600">NO. OF ROOMS</div><div style="font-size:13px;font-weight:700">${c.rooms||1}</div></div>
+          ${c.traveller?`<div style="grid-column:1/-1"><div style="font-size:10px;color:#64748b;font-weight:600">TRAVELLER NAME(S)</div><div style="font-size:13px;font-weight:700">${c.traveller}</div></div>`:""}
+        </div>`;
+    } else {
+      detailsHtml = `<div style="margin-top:10px;font-size:14px;color:#0f172a;line-height:1.6;background:#f8fafc;border-radius:8px;padding:12px">${c.text||"—"}</div>`;
+    }
+
+    // Done info
+    const doneInfo = c.done
+      ? `<div style="font-size:11px;color:#15803d;margin-top:8px">✅ Marked done by <strong>${doneByName}</strong> on ${doneAtStr}</div>`
+      : "";
+
+    // Notes
+    const notesHtml = c.notes
+      ? `<div style="margin-top:8px;font-size:12px;color:#64748b;font-style:italic">📝 ${c.notes}</div>`
+      : "";
+
+    // Action buttons
+    const actionBtns = !c.done
+      ? `<button onclick="markCommandDone('${c.id}')" class="btn btn-primary" style="font-size:12px;padding:6px 14px">✅ Mark Done</button>`
+      : "";
+    const deleteBtn = isOwner
+      ? `<button onclick="deleteCommand('${c.id}')" class="btn btn-warn" style="font-size:11px;padding:4px 10px">🗑️ Delete</button>`
+      : "";
+
+    return `
+      <div style="background:#fff;border:1.5px solid ${c.done?"#bbf7d0":"#e2e8f0"};border-radius:14px;padding:18px;margin-bottom:14px;${c.done?"opacity:0.75":""}">
+        <!-- Header row -->
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            ${typeBadge}
+            ${statusBadge}
+            ${isOwner ? `<span style="font-size:11px;color:#94a3b8">→ <strong style="color:#374151">${staffName}</strong></span>` : ""}
+          </div>
+          <div style="font-size:11px;color:#94a3b8">${createdStr}</div>
+        </div>
+
+        <!-- Details -->
+        ${detailsHtml}
+        ${notesHtml}
+        ${doneInfo}
+
+        <!-- Actions -->
+        <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+          ${actionBtns}
+          ${deleteBtn}
+        </div>
+      </div>`;
+  }).join("");
+
+  updateCommandBadge();
+}
+
 function renderMarketing(){renderMktCalls();}
 
 // TARGETS
@@ -4720,6 +5106,33 @@ function openModal(type){
     </div></div>
     <div class="form-grid g1"><div class="fg"><label>Notes / Discussion</label><textarea id="mc-notes" rows="2" placeholder="Any extra details..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMktCall()">Save Call Log</button>`;
+  } else if(type==="command"){
+    // Only owner can add commands
+    if(CURRENT_USER?.id !== 1) return;
+    const staffOpts = STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
+    mb.innerHTML=`<div class="modal-title">📢 Add Command <button class="x" onclick="safeCloseOverlay()">✕</button></div>
+    <div class="form-grid g1">
+      <div class="fg"><label>Command Type <span style="color:#dc2626">*</span></label>
+        <select id="cmd-type" onchange="cmdTypeChanged()">
+          <option value="ticketing">✈️ Ticketing</option>
+          <option value="hotel">🏨 Hotel</option>
+          <option value="general">📝 General</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-grid g1">
+      <div class="fg"><label>Assign To <span style="color:#dc2626">*</span></label>
+        <select id="cmd-staff">${staffOpts}</select>
+      </div>
+    </div>
+    <div id="cmd-type-fields"></div>
+    <div class="form-grid g1">
+      <div class="fg"><label>Additional Notes</label>
+        <textarea id="cmd-notes" rows="2" placeholder="Any extra instructions..."></textarea>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;margin-top:8px" onclick="saveCommand()">📢 Send Command</button>`;
+    setTimeout(cmdTypeChanged, 50);
   } else if(type==="addstaff"){
     mb.innerHTML=`<div class="modal-title">Add Staff Member <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Full Name</label><input id="ns-name" placeholder="e.g. Mr. Raj Patel"/></div><div class="fg"><label>Role / Department</label><input id="ns-role" placeholder="e.g. Sales Executive"/></div></div>
@@ -5563,7 +5976,7 @@ async function renderAttendance() {
 
 // ── Load Data ────────────────────────────────────
 function loadFromFirestore() {
-  const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets"];
+  const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets","commands"];
   const loadedSet = new Set();
   let initialRenderDone = false;
 
@@ -5653,6 +6066,7 @@ function loadFromFirestore() {
       if(col==="reports")   reports    = docs;
       if(col==="marketing") marketing  = docs;
       if(col==="targets")   targets    = docs;
+      if(col==="commands")  { commands = docs; renderCommands(); updateCommandBadge(); }
 
       loadedSet.add(col);
 
