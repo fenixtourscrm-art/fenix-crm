@@ -1884,9 +1884,30 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <option value="General">📝 General</option>
     </select>
     <select id="cmd-filter-status" onchange="renderCommands()" style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;background:#fff;color:#374151">
-      <option value="">🔄 All Status</option>
       <option value="Pending">⏳ Pending</option>
+      <option value="">🔄 All Status</option>
       <option value="Done">✅ Done</option>
+    </select>
+    <select id="cmd-filter-priority" onchange="renderCommands()" style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;background:#fff;color:#374151">
+      <option value="">⭐ All Priority</option>
+      <option value="Urgent">🔴 Urgent</option>
+      <option value="Normal">🟡 Normal</option>
+    </select>
+    <select id="cmd-filter-date" onchange="renderCommands()" style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;background:#fff;color:#374151">
+      <option value="today">📅 Today</option>
+      <option value="all">📆 All Days</option>
+    </select>
+  </div>
+  <!-- Staff view filters -->
+  <div id="cmd-staff-filters" style="display:none;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+    <select id="cmd-filter-status-staff" onchange="renderCommands()" style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;background:#fff;color:#374151">
+      <option value="Pending">⏳ Pending</option>
+      <option value="">🔄 All</option>
+      <option value="Done">✅ Done</option>
+    </select>
+    <select id="cmd-filter-date-staff" onchange="renderCommands()" style="padding:7px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:12px;background:#fff;color:#374151">
+      <option value="today">📅 Today</option>
+      <option value="all">📆 All Days</option>
     </select>
   </div>
 
@@ -1895,7 +1916,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
 
 <!-- ════ COMMAND FORM OVERLAY ════ -->
 <div id="cmd-form-overlay" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:3000;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:18px;padding:28px;width:min(520px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+  <div style="background:#fff;border-radius:18px;padding:28px;width:min(560px,96vw);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div style="font-size:15px;font-weight:800;color:#0f172a">📢 New Command</div>
       <button onclick="closeCmdForm()" style="background:#f1f5f9;border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px">✕</button>
@@ -1911,109 +1932,140 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       </div>
     </div>
 
-    <!-- Assign to -->
+    <!-- Assign to + Priority (common) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Assign To</label>
+        <select id="cmd-assign" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff;color:#374151"></select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Priority</label>
+        <select id="cmd-priority" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff;color:#374151">
+          <option value="Normal">🟡 Normal</option>
+          <option value="Urgent">🔴 Urgent</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Deadline date (common to all types) -->
     <div style="margin-bottom:14px">
-      <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Assign To</label>
-      <select id="cmd-assign" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;background:#fff;color:#374151"></select>
+      <label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">⏰ Deadline / Due Date</label>
+      <input id="cmd-deadline" type="date" style="width:100%;padding:9px 12px;border:1.5px solid #f97316;border-radius:10px;font-size:13px;box-sizing:border-box"/>
     </div>
 
     <!-- ── TICKETING FIELDS ── -->
     <div id="cmd-fields-ticketing">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Date</label>
-          <input id="cmd-t-date" type="date" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+      <div style="background:#f0f9ff;border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:#0369a1;margin-bottom:10px">✈️ FLIGHT DETAILS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Travel Date</label>
+            <input id="cmd-t-date" type="date" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">From</label>
+            <input id="cmd-t-from" type="text" placeholder="e.g. AMD" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">To</label>
+            <input id="cmd-t-to" type="text" placeholder="e.g. BOM" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Flight No</label>
+            <input id="cmd-t-flight" type="text" placeholder="e.g. 6E 1533" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Price / Pax (₹)</label>
+            <input id="cmd-t-price" type="number" placeholder="5500" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Fare Type</label>
+            <select id="cmd-t-faretype" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px">
+              <option value="Corporate">Corporate</option>
+              <option value="Regular">Regular</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">No. of Passengers</label>
+            <input id="cmd-t-pax" type="number" placeholder="2" min="1" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Traveller Name</label>
+            <input id="cmd-t-name" type="text" placeholder="e.g. Rahana Madam" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">From</label>
-          <input id="cmd-t-from" type="text" placeholder="e.g. AMD" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">To</label>
-          <input id="cmd-t-to" type="text" placeholder="e.g. BOM" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Flight No</label>
-          <input id="cmd-t-flight" type="text" placeholder="e.g. 6E 1533" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Price / Pax (₹)</label>
-          <input id="cmd-t-price" type="number" placeholder="5500" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Fare Type</label>
-          <select id="cmd-t-faretype" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px">
-            <option value="Corporate">Corporate</option>
-            <option value="Regular">Regular</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">No. of Passengers</label>
-          <input id="cmd-t-pax" type="number" placeholder="2" min="1" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Traveller Name</label>
-          <input id="cmd-t-name" type="text" placeholder="e.g. Rahana Madam" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">📝 Additional Notes</label>
+        <textarea id="cmd-t-note" rows="3" placeholder="Any special instructions..." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
       </div>
     </div>
 
     <!-- ── HOTEL FIELDS ── -->
     <div id="cmd-fields-hotel" style="display:none">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">City</label>
-          <input id="cmd-h-city" type="text" placeholder="e.g. Mumbai" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+      <div style="background:#f0fdf4;border-radius:10px;padding:14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:10px">🏨 HOTEL DETAILS</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">City</label>
+            <input id="cmd-h-city" type="text" placeholder="e.g. Mumbai" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Hotel Name</label>
+            <input id="cmd-h-hotel" type="text" placeholder="e.g. Taj Lands End" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Check-in</label>
+            <input id="cmd-h-checkin" type="date" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Check-out</label>
+            <input id="cmd-h-checkout" type="date" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Room Category</label>
+            <input id="cmd-h-roomcat" type="text" placeholder="e.g. Deluxe" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Meal Plan</label>
+            <select id="cmd-h-meal" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px">
+              <option value="CP">CP (Breakfast)</option>
+              <option value="MAP">MAP (Breakfast + Dinner)</option>
+              <option value="AP">AP (All Meals)</option>
+              <option value="EP">EP (Room Only)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Occupancy</label>
+            <select id="cmd-h-occ" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px">
+              <option value="Single">Single</option>
+              <option value="Double">Double</option>
+              <option value="Triple">Triple</option>
+              <option value="Quad">Quad</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">No. of Rooms</label>
+            <input id="cmd-h-rooms" type="number" placeholder="1" min="1" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
+          <div style="grid-column:1/-1">
+            <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Traveller Name</label>
+            <input id="cmd-h-name" type="text" placeholder="e.g. Rahana Madam" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
+          </div>
         </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Hotel Name</label>
-          <input id="cmd-h-hotel" type="text" placeholder="e.g. Taj Lands End" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Check-in</label>
-          <input id="cmd-h-checkin" type="date" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Check-out</label>
-          <input id="cmd-h-checkout" type="date" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Room Category</label>
-          <input id="cmd-h-roomcat" type="text" placeholder="e.g. Deluxe" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Meal Plan</label>
-          <select id="cmd-h-meal" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px">
-            <option value="CP">CP (Breakfast)</option>
-            <option value="MAP">MAP (Breakfast + Dinner)</option>
-            <option value="AP">AP (All Meals)</option>
-            <option value="EP">EP (Room Only)</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Occupancy</label>
-          <select id="cmd-h-occ" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px">
-            <option value="Single">Single</option>
-            <option value="Double">Double</option>
-            <option value="Triple">Triple</option>
-            <option value="Quad">Quad</option>
-          </select>
-        </div>
-        <div>
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">No. of Rooms</label>
-          <input id="cmd-h-rooms" type="number" placeholder="1" min="1" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
-        <div style="grid-column:1/-1">
-          <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Traveller Name</label>
-          <input id="cmd-h-name" type="text" placeholder="e.g. Rahana Madam" style="width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;box-sizing:border-box"/>
-        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">📝 Additional Notes</label>
+        <textarea id="cmd-h-note" rows="3" placeholder="Any special instructions..." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;resize:vertical;box-sizing:border-box"></textarea>
       </div>
     </div>
 
     <!-- ── GENERAL FIELDS ── -->
     <div id="cmd-fields-general" style="display:none;margin-bottom:10px">
-      <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">Instruction / Message</label>
-      <textarea id="cmd-g-note" rows="4" placeholder="Type your instruction here..." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px">📝 Instruction / Message</label>
+        <textarea id="cmd-g-note" rows="5" placeholder="Type your instruction here..." style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+      </div>
     </div>
 
     <div style="display:flex;gap:10px;margin-top:18px">
@@ -18740,109 +18792,126 @@ function renderCommands() {
   const container = document.getElementById('cmd-list');
   if (!container) return;
 
-  // Show/hide add button & owner filters
   const addBtn = document.getElementById('cmd-add-btn-wrap');
   const ownerFilters = document.getElementById('cmd-owner-filters');
+  const staffFilters = document.getElementById('cmd-staff-filters');
   if (addBtn) addBtn.style.display = isOwner ? 'block' : 'none';
   if (ownerFilters) {
     ownerFilters.style.display = isOwner ? 'flex' : 'none';
     if (isOwner) {
-      // populate staff filter
       const sf = document.getElementById('cmd-filter-staff');
       if (sf && sf.options.length <= 1) {
-        STAFF.forEach(s => {
-          const o = document.createElement('option');
-          o.value = s.id; o.textContent = s.name;
-          sf.appendChild(o);
-        });
+        STAFF.forEach(s => { const o = document.createElement('option'); o.value = s.id; o.textContent = s.name; sf.appendChild(o); });
       }
     }
   }
+  if (staffFilters) staffFilters.style.display = (!isOwner) ? 'flex' : 'none';
 
-  // Filter
-  const filterStaff  = isOwner ? (document.getElementById('cmd-filter-staff')?.value  || '') : '';
-  const filterType   = isOwner ? (document.getElementById('cmd-filter-type')?.value   || '') : '';
-  const filterStatus = isOwner ? (document.getElementById('cmd-filter-status')?.value || '') : '';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  const filterStaff    = isOwner ? (document.getElementById('cmd-filter-staff')?.value    || '') : '';
+  const filterType     = isOwner ? (document.getElementById('cmd-filter-type')?.value     || '') : '';
+  const filterStatus   = isOwner ? (document.getElementById('cmd-filter-status')?.value   ?? 'Pending') : (document.getElementById('cmd-filter-status-staff')?.value ?? 'Pending');
+  const filterPriority = isOwner ? (document.getElementById('cmd-filter-priority')?.value || '') : '';
+  const filterDate     = isOwner ? (document.getElementById('cmd-filter-date')?.value     || 'today') : (document.getElementById('cmd-filter-date-staff')?.value || 'today');
 
   let list = _commands.filter(c => {
-    if (!isOwner && c.assignedTo != uid) return false; // staff only sees their own
-    if (filterStaff  && c.assignedTo != filterStaff)  return false;
-    if (filterType   && c.type !== filterType)         return false;
-    if (filterStatus && c.status !== filterStatus)     return false;
+    if (!isOwner && c.assignedTo != uid) return false;
+    if (filterStaff    && c.assignedTo != filterStaff)    return false;
+    if (filterType     && c.type !== filterType)           return false;
+    if (filterStatus   && c.status !== filterStatus)       return false;
+    if (filterPriority && c.priority !== filterPriority)   return false;
+    if (filterDate === 'today') {
+      const cDate = c.createdAt?.toDate ? c.createdAt.toDate().toISOString().split('T')[0] : '';
+      if (cDate !== todayStr) return false;
+    }
     return true;
   });
 
+  list.sort((a,b) => {
+    if (a.priority === 'Urgent' && b.priority !== 'Urgent') return -1;
+    if (b.priority === 'Urgent' && a.priority !== 'Urgent') return 1;
+    return 0;
+  });
+
   if (!list.length) {
-    container.innerHTML = `<div style="text-align:center;padding:40px;color:#94a3b8;font-size:14px">📭 No commands found</div>`;
+    container.innerHTML = `<div style="text-align:center;padding:40px;color:#94a3b8;font-size:14px">📭 No commands found${filterDate==='today'?' for today — try switching to All Days':''}</div>`;
     return;
   }
 
   const typeEmoji = { Ticketing:'✈️', Hotel:'🏨', General:'📝' };
-  const statusColor = { Pending:'#f97316', Done:'#10b981' };
+  const priorityBadge = p => p === 'Urgent'
+    ? `<span style="padding:3px 8px;border-radius:20px;font-size:10px;font-weight:800;background:#fee2e2;color:#dc2626">🔴 URGENT</span>`
+    : `<span style="padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#fef9c3;color:#854d0e">🟡 Normal</span>`;
 
   container.innerHTML = list.map(c => {
     const assignName = sName(c.assignedTo) || 'Unknown';
     const postedBy   = sName(c.postedBy)   || 'Boss';
     const ts = c.createdAt?.toDate ? c.createdAt.toDate().toLocaleString('en-IN') : '';
     const isDone = c.status === 'Done';
-    const doneInfo = isDone ? `<span style="font-size:11px;color:#10b981">✅ Done by ${sName(c.doneBy)||'—'} at ${c.doneAt||''}</span>` : '';
+    const isUrgent = c.priority === 'Urgent';
+    const deadlineStr = c.deadline ? `<span style="font-size:11px;color:${c.deadline < todayStr && !isDone ? '#dc2626':'#64748b'}">⏰ Due: <b>${c.deadline}</b></span>` : '';
+    const doneInfo = isDone ? `<div style="margin-top:6px;font-size:11px;color:#10b981">✅ Done by ${sName(c.doneBy)||'—'} at ${c.doneAt||''}</div>` : '';
 
     let details = '';
     if (c.type === 'Ticketing') {
-      details = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:10px">
-          ${cell('📅 Date', c.date || '—')}
-          ${cell('🛫 From', c.from || '—')}
-          ${cell('🛬 To', c.to || '—')}
-          ${cell('✈️ Flight', c.flightNo || '—')}
-          ${cell('💰 Price/Pax', c.price ? '₹'+c.price : '—')}
-          ${cell('🎫 Fare Type', c.fareType || '—')}
-          ${cell('👥 Pax', c.pax || '—')}
-          ${cell('👤 Traveller', c.travellerName || '—')}
-        </div>`;
+      details = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:10px">
+        ${cell('🗓️ Travel Date', c.date||'—')}
+        ${cell('🛫 From', c.from||'—')}
+        ${cell('🛬 To', c.to||'—')}
+        ${cell('✈️ Flight', c.flightNo||'—')}
+        ${cell('💰 Price/Pax', c.price?'₹'+c.price:'—')}
+        ${cell('🎫 Fare Type', c.fareType||'—')}
+        ${cell('👥 Pax', c.pax||'—')}
+        ${cell('👤 Traveller', c.travellerName||'—')}
+      </div>${c.note?`<div style="margin-top:8px;background:#f8fafc;border-radius:8px;padding:9px;font-size:12px;color:#374151">📝 ${c.note}</div>`:''}`;
     } else if (c.type === 'Hotel') {
-      details = `
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:10px">
-          ${cell('🏙️ City', c.city || '—')}
-          ${cell('🏨 Hotel', c.hotelName || '—')}
-          ${cell('📅 Check-in', c.checkIn || '—')}
-          ${cell('📅 Check-out', c.checkOut || '—')}
-          ${cell('🛏️ Room Cat.', c.roomCategory || '—')}
-          ${cell('🍽️ Meal Plan', c.mealPlan || '—')}
-          ${cell('👥 Occupancy', c.occupancy || '—')}
-          ${cell('🔢 Rooms', c.noOfRooms || '—')}
-          ${cell('👤 Traveller', c.travellerName || '—')}
-        </div>`;
+      details = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:10px">
+        ${cell('🏙️ City', c.city||'—')}
+        ${cell('🏨 Hotel', c.hotelName||'—')}
+        ${cell('📅 Check-in', c.checkIn||'—')}
+        ${cell('📅 Check-out', c.checkOut||'—')}
+        ${cell('🛏️ Room Cat.', c.roomCategory||'—')}
+        ${cell('🍽️ Meal Plan', c.mealPlan||'—')}
+        ${cell('👥 Occupancy', c.occupancy||'—')}
+        ${cell('🔢 Rooms', c.noOfRooms||'—')}
+        ${cell('👤 Traveller', c.travellerName||'—')}
+      </div>${c.note?`<div style="margin-top:8px;background:#f8fafc;border-radius:8px;padding:9px;font-size:12px;color:#374151">📝 ${c.note}</div>`:''}`;
     } else {
-      details = `<div style="margin-top:10px;font-size:13px;color:#374151;background:#f8fafc;border-radius:8px;padding:10px">${c.note || '—'}</div>`;
+      details = `<div style="margin-top:10px;font-size:13px;color:#374151;background:#f8fafc;border-radius:8px;padding:10px">${c.note||'—'}</div>`;
     }
 
     const doneBtn = !isDone && !isOwner
       ? `<button onclick="markCmdDone('${c.id}')" style="padding:6px 14px;border:none;border-radius:8px;background:#10b981;color:#fff;font-size:12px;font-weight:700;cursor:pointer">✅ Mark Done</button>`
       : '';
+    const waBtn = `<button onclick="shareCmdWhatsApp('${c.id}')" style="padding:6px 12px;border:none;border-radius:8px;background:#25d366;color:#fff;font-size:12px;font-weight:700;cursor:pointer">📱 WA</button>`;
     const deleteBtn = isOwner
-      ? `<button onclick="deleteCommand('${c.id}')" style="padding:6px 14px;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer">🗑️ Delete</button>`
+      ? `<button onclick="deleteCommand('${c.id}')" style="padding:6px 12px;border:none;border-radius:8px;background:#fee2e2;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer">🗑️</button>`
       : '';
 
-    return `
-      <div style="background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid ${statusColor[c.status]||'#e2e8f0'}">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <span style="font-size:20px">${typeEmoji[c.type]||'📋'}</span>
-            <div>
-              <div style="font-size:13px;font-weight:800;color:#0f172a">${c.type} Command</div>
-              <div style="font-size:11px;color:#64748b">To: <b>${assignName}</b> · Posted by ${postedBy} · ${ts}</div>
+    const borderColor = isUrgent && !isDone ? '#dc2626' : isDone ? '#10b981' : '#f97316';
+
+    return `<div style="background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,0.07);border-left:4px solid ${borderColor}${isUrgent&&!isDone?';box-shadow:0 2px 16px rgba(220,38,38,0.15)':''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:22px">${typeEmoji[c.type]||'📋'}</span>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:800;color:#0f172a">${c.type} Command</span>
+              ${priorityBadge(c.priority||'Normal')}
+              <span style="padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;background:${isDone?'#d1fae5':'#fff7ed'};color:${isDone?'#065f46':'#c2410c'}">${c.status||'Pending'}</span>
             </div>
-          </div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <span style="padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${isDone?'#d1fae5':'#fff7ed'};color:${isDone?'#065f46':'#c2410c'}">${c.status||'Pending'}</span>
-            ${doneBtn}
-            ${deleteBtn}
+            <div style="font-size:11px;color:#64748b;margin-top:2px">To: <b>${assignName}</b> · By ${postedBy} · ${ts}</div>
+            <div style="margin-top:4px">${deadlineStr}</div>
           </div>
         </div>
-        ${details}
-        <div style="margin-top:8px">${doneInfo}</div>
-      </div>`;
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${doneBtn}${waBtn}${deleteBtn}
+        </div>
+      </div>
+      ${details}
+      ${doneInfo}
+    </div>`;
   }).join('');
 }
 
@@ -18852,6 +18921,41 @@ function cell(label, val) {
     <div style="font-size:12px;font-weight:600;color:#1e293b">${val}</div>
   </div>`;
 }
+
+function shareCmdWhatsApp(id) {
+  const c = _commands.find(x => x.id === id);
+  if (!c) return;
+  const assignName = sName(c.assignedTo) || 'Staff';
+  let msg = `📢 *COMMAND FROM BOSS*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+  msg += `📋 Type: *${c.type}*\n`;
+  msg += `👤 Assigned To: *${assignName}*\n`;
+  if (c.priority === 'Urgent') msg += `🔴 Priority: *URGENT*\n`;
+  if (c.deadline) msg += `⏰ Due: *${c.deadline}*\n`;
+  msg += `━━━━━━━━━━━━━━━━━━━━━━\n`;
+  if (c.type === 'Ticketing') {
+    msg += `🗓️ Travel Date: ${c.date||'—'}\n`;
+    msg += `🛫 From: ${c.from||'—'} → 🛬 To: ${c.to||'—'}\n`;
+    msg += `✈️ Flight: ${c.flightNo||'—'}\n`;
+    msg += `💰 Price/Pax: ₹${c.price||'—'} (${c.fareType||'—'})\n`;
+    msg += `👥 Passengers: ${c.pax||'—'}\n`;
+    msg += `👤 Traveller: ${c.travellerName||'—'}\n`;
+    if (c.note) msg += `📝 Notes: ${c.note}\n`;
+  } else if (c.type === 'Hotel') {
+    msg += `🏙️ City: ${c.city||'—'}\n`;
+    msg += `🏨 Hotel: ${c.hotelName||'—'}\n`;
+    msg += `📅 Check-in: ${c.checkIn||'—'} | Check-out: ${c.checkOut||'—'}\n`;
+    msg += `🛏️ Room: ${c.roomCategory||'—'} | ${c.occupancy||'—'}\n`;
+    msg += `🍽️ Meal: ${c.mealPlan||'—'} | Rooms: ${c.noOfRooms||'—'}\n`;
+    msg += `👤 Traveller: ${c.travellerName||'—'}\n`;
+    if (c.note) msg += `📝 Notes: ${c.note}\n`;
+  } else {
+    msg += `📝 ${c.note||'—'}\n`;
+  }
+  msg += `━━━━━━━━━━━━━━━━━━━━━━\n_Fenix Tours & Travels CRM_`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+}
+
 
 function openCmdForm() {
   if (CURRENT_USER?.id !== 1) return;
@@ -18885,12 +18989,16 @@ async function saveCommand() {
   if (CURRENT_USER?.id !== 1) return;
   const assignedTo = parseInt(document.getElementById('cmd-assign').value);
   if (!assignedTo) return alert('Please select a staff member.');
+  const deadline = document.getElementById('cmd-deadline').value;
+  const priority = document.getElementById('cmd-priority').value;
 
   const base = {
     type: _cmdType,
     assignedTo,
     postedBy: CURRENT_USER.id,
     status: 'Pending',
+    priority: priority || 'Normal',
+    deadline: deadline || '',
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   };
 
@@ -18904,9 +19012,10 @@ async function saveCommand() {
       price:        document.getElementById('cmd-t-price').value,
       fareType:     document.getElementById('cmd-t-faretype').value,
       pax:          document.getElementById('cmd-t-pax').value,
-      travellerName:document.getElementById('cmd-t-name').value.trim()
+      travellerName:document.getElementById('cmd-t-name').value.trim(),
+      note:         document.getElementById('cmd-t-note').value.trim()
     };
-    if (!extra.date || !extra.from || !extra.to) return alert('Please fill Date, From and To fields.');
+    if (!extra.from || !extra.to) return alert('Please fill From and To fields.');
   } else if (_cmdType === 'Hotel') {
     extra = {
       city:         document.getElementById('cmd-h-city').value.trim(),
@@ -18917,9 +19026,10 @@ async function saveCommand() {
       mealPlan:     document.getElementById('cmd-h-meal').value,
       occupancy:    document.getElementById('cmd-h-occ').value,
       noOfRooms:    document.getElementById('cmd-h-rooms').value,
-      travellerName:document.getElementById('cmd-h-name').value.trim()
+      travellerName:document.getElementById('cmd-h-name').value.trim(),
+      note:         document.getElementById('cmd-h-note').value.trim()
     };
-    if (!extra.city || !extra.checkIn || !extra.checkOut) return alert('Please fill City, Check-in and Check-out.');
+    if (!extra.city) return alert('Please fill City.');
   } else {
     extra = { note: document.getElementById('cmd-g-note').value.trim() };
     if (!extra.note) return alert('Please enter an instruction.');
