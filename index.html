@@ -859,6 +859,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="topbar-right">
       <input class="search-bar" id="global-search" placeholder="🔍 Search clients, enquiries..." oninput="_debouncedGlobalSearch(this.value)"/>
       <button onclick="showTab('rooming',this)" style="background:#0f172a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🛏️ Rooming List</button>
+      <button onclick="showTab('commands',this);initCommands();" style="position:relative;background:linear-gradient(135deg,#f97316,#dc2626);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">📢 Commands<span id="cmd-badge2" style="display:none;position:absolute;top:-6px;right:-6px;background:#fff;color:#dc2626;font-size:9px;font-weight:800;border-radius:99px;min-width:16px;height:16px;align-items:center;justify-content:center;padding:0 3px">0</span></button>
       <!-- Notification Bell -->
       <div style="position:relative;display:inline-block">
         <button id="notif-bell-btn" onclick="toggleNotifPanel()" style="background:none;border:none;cursor:pointer;font-size:22px;padding:4px 8px;border-radius:8px;position:relative;line-height:1" title="Notifications">
@@ -18721,14 +18722,16 @@ function updateCmdBadge() {
     if (isOwner) return true;
     return c.assignedTo == uid;
   });
-  const badge = document.getElementById('cmd-badge');
-  if (!badge) return;
-  if (pending.length > 0) {
-    badge.textContent = pending.length;
-    badge.style.display = 'inline-block';
-  } else {
-    badge.style.display = 'none';
-  }
+  ['cmd-badge','cmd-badge2'].forEach(id => {
+    const badge = document.getElementById(id);
+    if (!badge) return;
+    if (pending.length > 0) {
+      badge.textContent = pending.length;
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  });
 }
 
 function renderCommands() {
