@@ -2488,7 +2488,7 @@ const sBadge=s=>{const styles={"Active":"background:#eff6ff;color:#1d4ed8;border
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List",attendance:"🕐 Staff Attendance"};
+const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List",attendance:"🕐 Staff Attendance",commands:"📢 Commands from Boss"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -5536,7 +5536,11 @@ function loadFromFirestore() {
         }
       } else {
         // Real-time update after initial render
-        try { renderAll(); } catch(e) {}
+        // Commands have their own targeted render above — skip full renderAll for them
+        // to avoid expensive re-render of 5000+ clients/enquiries on every command change
+        if(col !== "commands") {
+          try { renderAll(); } catch(e) {}
+        }
       }
     }, err => {
       console.error("Firestore error on " + col + ":", err);
