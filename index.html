@@ -825,7 +825,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
     <div class="nav-item" onclick="showTab('trash',this)"><span class="nav-icon">🗑️</span>Trash<span class="nav-badge" id="trash-badge" style="display:none;background:#ef4444;color:#fff">!</span></div>
     <div class="nav-item" id="nav-fieldmkt" onclick="showTab('fieldmkt',this)" style="display:none"><span class="nav-icon">📍</span>Field Marketing<span class="nav-badge" id="fieldmkt-badge" style="display:none;background:#10b981;color:#fff">●</span></div>
     <div class="nav-item" onclick="showTab('rooming',this)"><span class="nav-icon">🛏️</span>Rooming List</div>
-    <div class="nav-item" onclick="showTab('commands',this)"><span class="nav-icon">📢</span>Commands<span class="nav-badge" id="cmd-badge" style="display:none;background:#dc2626;color:#fff">0</span></div>
     <div class="nav-section">System</div>
     <div class="nav-item" onclick="showTab('settings',this)"><span class="nav-icon">⚙️</span>Settings</div>
     <div class="nav-item" onclick="showTab('followup',this)"><span class="nav-icon">📅</span>Follow-up Calendar</div>
@@ -857,7 +856,7 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
       <div class="page-title" id="page-title">🏠 Dashboard</div>
     </div>
     <div class="topbar-right">
-      <input class="search-bar" id="global-search" placeholder="🔍 Search clients, enquiries..." oninput="globalSearch(this.value)"/>
+      <input class="search-bar" id="global-search" placeholder="🔍 Search clients, enquiries..." oninput="_debouncedGlobalSearch(this.value)"/>
       <button onclick="showTab('rooming',this)" style="background:#0f172a;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🛏️ Rooming List</button>
       <!-- Notification Bell -->
       <div style="position:relative;display:inline-block">
@@ -1197,6 +1196,13 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
         <span id="mkt-month-label" style="font-size:13px;font-weight:700;color:#0f172a;min-width:120px;text-align:center"></span>
         <button class="btn btn-ghost" onclick="mktNextMonth()" style="padding:5px 12px">Next ›</button>
         <span style="font-size:11px;color:#94a3b8;margin-left:4px" id="mkt-entry-count"></span>
+      </div>
+      <!-- Search and Filter bar -->
+      <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+        <input type="text" id="mkt-search" placeholder="🔍 Search client name or notes..." oninput="renderMarketing()" style="flex:1;min-width:200px;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none"/>
+        <select id="mkt-staff-filter" onchange="renderMarketing()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+          <option value="">All Staff</option>
+        </select>
       </div>
       <div class="card"><table><thead><tr>
         <th>DATE</th><th>STAFF</th><th>CLIENT</th><th>MARKETING CALLS</th><th>NEW CLIENTS</th><th>CALL OUTCOME</th><th>NOTES</th><th>ACTION</th>
@@ -2080,34 +2086,6 @@ body::before{content:"";position:fixed;inset:0;background-image:radial-gradient(
   </div>
 </div>
 
-<!-- COMMANDS FROM BOSS TAB -->
-<div class="tab" id="tab-commands">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-    <div>
-      <div class="section-title" style="margin:0">📢 Commands from Boss</div>
-      <div style="font-size:12px;color:#64748b;margin-top:3px" id="cmd-header-sub">Loading...</div>
-    </div>
-    <button id="cmd-add-btn" class="btn btn-primary" onclick="openModal('command')" style="display:none">+ Add Command</button>
-  </div>
-  <div id="cmd-filter-bar" style="display:none;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-    <select id="cmd-filter-staff" onchange="renderCommands()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
-      <option value="">All Staff</option>
-    </select>
-    <select id="cmd-filter-type" onchange="renderCommands()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
-      <option value="">All Types</option>
-      <option value="ticketing">✈️ Ticketing</option>
-      <option value="hotel">🏨 Hotel</option>
-      <option value="general">📝 General</option>
-    </select>
-    <select id="cmd-filter-status" onchange="renderCommands()" style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
-      <option value="pending">⏳ Pending</option>
-      <option value="done">✅ Done</option>
-      <option value="">All</option>
-    </select>
-  </div>
-  <div id="cmd-list"></div>
-</div>
-
 <!-- MODALS -->
 <div class="overlay" id="overlay"><div class="modal" id="modal-body"></div></div>
 <div class="overlay" id="day-overlay" onclick="closeDayOverlay(event)"><div class="modal" id="day-modal-body" style="max-width:460px"></div></div>
@@ -2372,9 +2350,11 @@ let _eqSelectedCities = [];
 let _eqCityPool = [];
 
 function eqLoadCities(type) {
-  const key = type === 'intl'
-    ? document.getElementById('eq-country')?.value
-    : document.getElementById('eq-state')?.value;
+  // Bug fix: look for the correct dynamic ID instead of hardcoded eq-country/eq-state
+  const stateCountryEl = type === 'intl'
+    ? (document.getElementById('eq-country') || document.getElementById('e-dest-intl'))
+    : (document.getElementById('eq-state') || document.getElementById('e-dest-dom'));
+  const key = stateCountryEl?.value;
   const col = document.getElementById('eq-city-col');
   if(!col) return;
   if(!key) { col.style.display = 'none'; return; }
@@ -2401,7 +2381,8 @@ function eqRenderTags() {
     tagsEl.insertBefore(tag, search);
   });
   const hidden = document.getElementById('e-dest-custom');
-  const countryState = document.getElementById('eq-country')?.value || document.getElementById('eq-state')?.value || '';
+  const stateCountryEl = document.getElementById('eq-country') || document.getElementById('eq-state') || document.getElementById('e-dest-intl') || document.getElementById('e-dest-dom');
+  const countryState = stateCountryEl?.value || '';
   if(hidden) hidden.value = _eqSelectedCities.length ? countryState + ' — ' + _eqSelectedCities.join(', ') : countryState;
 }
 
@@ -2474,11 +2455,37 @@ let tasks=[];
 let reports=[];
 let marketing=[];
 let targets=[];
-let commands=[];
 let nxt={client:10,enq:10,book:10,visa:10,task:10,report:10,mkt:10,target:10};
 
 // UTILS
-const cName=id=>{const sid=String(id);const cl=clients.find(x=>String(x.id)===sid);if(!cl) return "Unknown";const n=`${cl.firstName||''} ${cl.lastName||''}`.trim();return n||cl.mobile||cl.companyName||"Unknown";};
+// ─── Global cached lookup of clientId → display name ───
+// Rebuilt whenever the clients array changes (see snapshot handler below).
+// This turns cName() from O(n) (linear scan of 5500 clients) into O(1).
+// Without this cache, renderEnquiries/renderBookings froze the whole page.
+let _clientNameCache = new Map();
+function _rebuildClientNameCache() {
+  const m = new Map();
+  for(let i = 0; i < clients.length; i++) {
+    const c = clients[i];
+    const nm = `${c.firstName||""} ${c.lastName||""}`.trim() || c.mobile || c.companyName || "Unknown";
+    m.set(String(c.id), nm);
+  }
+  _clientNameCache = m;
+}
+const cName=id=>{
+  if(id === undefined || id === null || id === "") return "Unknown";
+  const sid=String(id);
+  const cached = _clientNameCache.get(sid);
+  if(cached) return cached;
+  // Fallback: cache miss (e.g. cache not built yet, or client deleted) — do the slow lookup
+  // and populate the cache so next call is fast.
+  const cl=clients.find(x=>String(x.id)===sid);
+  if(!cl) return "Unknown";
+  const n=`${cl.firstName||''} ${cl.lastName||''}`.trim();
+  const name = n||cl.mobile||cl.companyName||"Unknown";
+  _clientNameCache.set(sid, name);
+  return name;
+};
 const sName=id=>{const sid=String(id);const s=STAFF.find(x=>String(x.id)===sid);return s?s.name:"Unknown";};
 const fmt=n=>"₹"+Number(n).toLocaleString("en-IN");
 const today=()=>new Date().toISOString().split("T")[0];
@@ -2488,7 +2495,7 @@ const sBadge=s=>{const styles={"Active":"background:#eff6ff;color:#1d4ed8;border
 const tBadge=t=>{const m={"New":"b-new","Old":"b-old","Repeated":"b-repeated"};return `<span class="badge ${m[t]||'b-c'}">${t}</span>`;};
 
 // NAV
-const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List",attendance:"🕐 Staff Attendance",commands:"📢 Commands from Boss"};
+const TITLES={fieldmkt:"📍 Field Marketing",dashboard:"🏠 Dashboard",data:"👥 Client Data",enquiries:"🎯 Enquiries",bookings:"✈️ Tours Booking",visa:"🛂 Visa Application",tasks:"📋 Tasks",reports:"📊 Daily Reports",marketing:"📣 Marketing",targets:"🎯 Targets",settings:"⚙️ Settings",followup:"📅 Follow-up Calendar",bugreports:"🐛 Bug Reports",quiz:"🎓 Travel Academy",ai:"🤖 AI Assistant",destinations:"🗺️ Destination Map",trash:"🗑️ Trash",quotes:"📄 Quotes",currency:"💱 Currency Converter",rooming:"🛏️ Rooming List",attendance:"🕐 Staff Attendance"};
 function showTab(tab,el){
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n=>n.classList.remove("active"));
@@ -2536,8 +2543,6 @@ function renderAll(){
   try{renderReports();}catch(e){console.error('renderReports:',e);}
   try{renderMktCalls();}catch(e){console.error('renderMktCalls:',e);}
   try{renderTargets();}catch(e){console.error('renderTargets:',e);}
-  try{renderCommands();}catch(e){console.error('renderCommands:',e);}
-  try{updateCommandBadge();}catch(e){console.error('updateCommandBadge:',e);}
   try{updateBadges();}catch(e){console.error('updateBadges:',e);}
 }
 function updateBadges(){
@@ -2706,6 +2711,7 @@ function selectStaffFilter(staffName) {
 
   const title = document.getElementById("client-section-title");
   if(title) title.textContent = staffName ? `${staffName}'s Clients` : "All Clients";
+  _clientsRenderLimit = 500; // reset pagination on filter change
   renderClients();
 }
 
@@ -2729,6 +2735,7 @@ function filterClientCat(cat, el) {
   el.classList.add("active-filter");
   const title = document.getElementById("client-section-title");
   if(title) title.textContent = cat === "all" ? "All Clients" : cat + " Clients";
+  _clientsRenderLimit = 500; // reset pagination on filter change
   renderClients();
 }
 const CLIENT_CAT_STYLES = {
@@ -2915,6 +2922,144 @@ function clearBulkSelection() {
   document.getElementById('bulk-move-bar')?.remove();
 }
 
+// ─── Fix 3: render cap — only paint this many rows at a time ───
+let _clientsRenderLimit = 500;
+function loadMoreClients() {
+  _clientsRenderLimit += 500;
+  renderClients();
+}
+
+// Same pattern for enquiries and bookings — without these caps, rendering 500+ enquiries
+// and 200+ bookings at once was freezing the whole page.
+let _enqRenderLimit = 300;
+function loadMoreEnquiries() {
+  _enqRenderLimit += 300;
+  renderEnquiries();
+}
+let _bkRenderLimit = 300;
+function loadMoreBookings() {
+  _bkRenderLimit += 300;
+  renderBookingList();
+}
+
+// ─── Helper: format client creation timestamp ───
+// Shows "Just now", "5 min ago", "2 hrs ago", "Yesterday 3:45 PM", or full date for older
+function formatClientCreatedAt(iso) {
+  if(!iso) return "";
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return "";
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  const timeStr = d.toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit",hour12:true});
+
+  // "Just now" / "X min ago" — purely elapsed-time based, no calendar involved
+  if(diffMin < 1) return "Just now";
+  if(diffMin < 60) return `${diffMin} min ago`;
+
+  // ─── Calendar-date based checks for "Today" and "Yesterday" ───
+  // Previous version used elapsed-hours which was WRONG — a client added 40 hours ago
+  // (e.g. Saturday evening when today is Monday) would incorrectly show as "Yesterday".
+  // Correct way: compare the actual calendar date, not hours.
+  // Build midnight-aligned dates so we can compare day-by-day regardless of time.
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfCreated = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfToday - startOfCreated) / 86400000); // whole-day difference
+
+  if(dayDiff === 0) return `Today ${timeStr}`;
+  if(dayDiff === 1) return `Yesterday ${timeStr}`;
+  if(dayDiff > 1 && dayDiff < 7) return `${dayDiff} days ago`;
+  // Anything older (or, defensively, future-dated clock skew) → show full date
+  return d.toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"2-digit"}) + " " + timeStr;
+}
+
+// ─── Shared client row builder — used by Client Data table AND Search Results ───
+// Keeping one function for both prevents the two views from drifting apart.
+// `opts.showCheckbox` = false for search (bulk ops don't make sense there)
+function _buildClientRowHtml(c, opts) {
+  opts = opts || {};
+  const showCheckbox = opts.showCheckbox !== false; // default true
+  const cat = c.clientCategory || "Regular";
+  const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
+  const cbCell = showCheckbox
+    ? `<td style="padding:0 8px;width:36px;text-align:center">
+         <input type="checkbox" class="bulk-client-cb" data-id="${c.id}"
+           onchange="toggleBulkSelect('${c.id}',this)"
+           style="accent-color:#f97316;cursor:pointer;width:14px;height:14px">
+       </td>`
+    : "";
+  return `<tr>
+    ${cbCell}
+    <td class="col-sticky-first"><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-block;max-width:95px;overflow:hidden;text-overflow:ellipsis">${cs.icon} ${cat}</span></td>
+    <td style="font-size:11px;font-weight:700">${c.companyName?`<span style="font-weight:800;color:#0369a1">${c.companyName}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
+    <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
+      <div style="min-width:0;overflow:hidden">
+        <strong style="display:block;overflow:hidden;text-overflow:ellipsis">${c.firstName||''} ${c.lastName||''}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316">🔒</span>':""}
+        ${c.createdByName?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">By ${c.createdByName}</div>`:""}
+        ${c.createdAt?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">🕒 ${formatClientCreatedAt(c.createdAt)}</div>`:""}
+      </div>
+    </div></td>
+    <td>${c.gender||'—'}</td>
+    <td><div style="font-size:12px">${c.mobile||'—'}</div>${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:''}</td>
+    <td style="font-size:11px">${c.email||'—'}</td>
+    <td style="font-size:11px">${c.occupation||'—'}</td>
+    <td style="font-size:11px">${c.city||'—'}</td>
+    <td style="font-size:11px">${c.state||'—'}</td>
+    <td style="font-size:11px">${c.pincode||'—'}</td>
+    <td style="font-size:10px;color:#7c3aed">${c.familyName?`<span style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:2px 6px;display:inline-block;overflow:hidden;text-overflow:ellipsis;max-width:100%">👨‍👩‍👧 ${c.familyName}${c.isPrimaryClient?' 👑':''}</span>`:''}</td>
+    <td class="col-sticky-last">
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
+        <button class="btn" style="background:#0369a1;color:#fff;font-size:10px;padding:4px 10px;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
+        <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}',this)">Actions ▾</button>
+        <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
+        <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
+      </div>
+    </td>
+  </tr>`;
+}
+
+// ─── Shared table shell (colgroup + thead) for clients table ───
+// Reused by Client Data AND Search Results so columns stay aligned.
+function _buildClientsTableShell(tbodyHtml, opts) {
+  opts = opts || {};
+  const showCheckbox = opts.showCheckbox !== false;
+  const cbCol = showCheckbox ? `<col style="width:36px"/>` : "";
+  const cbTh  = showCheckbox ? `<th style="width:36px"></th>` : "";
+  return `<table class="tbl-base clients-table">
+    <colgroup>
+      ${cbCol}
+      <col class="c-cat"/>
+      <col class="c-company"/>
+      <col class="c-fname"/>
+      <col class="c-gender"/>
+      <col class="c-mobile"/>
+      <col class="c-email"/>
+      <col class="c-occ"/>
+      <col class="c-city"/>
+      <col class="c-state"/>
+      <col class="c-pin"/>
+      <col class="c-family"/>
+      <col class="c-actions"/>
+    </colgroup>
+    <thead><tr>
+      ${cbTh}
+      <th class="col-sticky-first">CATEGORY</th>
+      <th>COMPANY</th>
+      <th>NAME</th>
+      <th>GENDER</th>
+      <th>MOBILE / ALT</th>
+      <th>EMAIL</th>
+      <th>OCCUPATION</th>
+      <th>CITY</th>
+      <th>STATE</th>
+      <th>PIN</th>
+      <th>FAMILY</th>
+      <th class="col-sticky-last">ACTIONS</th>
+    </tr></thead>
+    <tbody>${tbodyHtml}</tbody>
+  </table>`;
+}
+
 function renderClients(){
   // Show Fix Names button only for owner
   const fixBtn = document.getElementById('fix-names-btn');
@@ -2935,41 +3080,34 @@ function renderClients(){
   list.sort((a,b) => (b.createdAt||"").localeCompare(a.createdAt||""));
   // Update counts on filter tabs
   _updateClientCatCounts();
-  document.getElementById("clients-tbody").innerHTML=list.map(c=>{
-    const cat = c.clientCategory || "Regular";
-    const cs = CLIENT_CAT_STYLES[cat] || {bg:"#f1f5f9",color:"#374151",icon:"👤"};
-    return `<tr>
-    <td style="padding:0 8px;width:36px;text-align:center">
-      <input type="checkbox" class="bulk-client-cb" data-id="${c.id}"
-        onchange="toggleBulkSelect('${c.id}',this)"
-        style="accent-color:#f97316;cursor:pointer;width:14px;height:14px">
-    </td>
-    <td class="col-sticky-first"><span style="background:${cs.bg};color:${cs.color};padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;white-space:nowrap;display:inline-block;max-width:95px;overflow:hidden;text-overflow:ellipsis">${cs.icon} ${cat}</span></td>
-    <td style="font-size:11px;font-weight:700">${c.companyName?`<span style="font-weight:800;color:#0369a1">${c.companyName}</span>`:'<span style="color:#cbd5e1">—</span>'}</td>
-    <td><div style="display:flex;align-items:center;gap:6px"><div class="avatar" style="width:24px;height:24px;font-size:9px;flex-shrink:0">${(c.firstName||"?")[0]}${(c.lastName||"")[0]||""}</div>
-      <div style="min-width:0;overflow:hidden">
-        <strong style="display:block;overflow:hidden;text-overflow:ellipsis">${c.firstName||''} ${c.lastName||''}</strong>${c.ownerOnly?'<span style="font-size:9px;color:#f97316">🔒</span>':""}
-        ${c.createdByName?`<div style="font-size:9px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis">By ${c.createdByName}</div>`:""}
-      </div>
-    </div></td>
-    <td>${c.gender||'—'}</td>
-    <td><div style="font-size:12px">${c.mobile||'—'}</div>${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:''}</td>
-    <td style="font-size:11px">${c.email||'—'}</td>
-    <td style="font-size:11px">${c.occupation||'—'}</td>
-    <td style="font-size:11px">${c.city||'—'}</td>
-    <td style="font-size:11px">${c.state||'—'}</td>
-    <td style="font-size:11px">${c.pincode||'—'}</td>
-    <td style="font-size:10px;color:#7c3aed">${c.familyName?`<span style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:6px;padding:2px 6px;display:inline-block;overflow:hidden;text-overflow:ellipsis;max-width:100%">👨‍👩‍👧 ${c.familyName}${c.isPrimaryClient?' 👑':''}</span>`:''}</td>
-    <td class="col-sticky-last">
-      <div style="display:flex;gap:4px;align-items:center;flex-wrap:nowrap">
-        <button class="btn" style="background:#0369a1;color:#fff;font-size:10px;padding:4px 10px;white-space:nowrap" onclick="openClientProfile('${c.id}')">👤 Profile</button>
-        <button class="btn btn-primary" style="font-size:10px;padding:4px 10px;white-space:nowrap" onclick="toggleActionMenu('${c.id}',this)">Actions ▾</button>
-        <button class="btn" style="background:#fff7ed;color:#ea580c;border:1px solid #fed7aa;font-size:10px;padding:4px 8px" onclick="editClient('${c.id}')">✏️</button>
-        <button class="btn btn-warn" style="font-size:10px;padding:4px 8px" onclick="del('clients','${c.id}')">✕</button>
-      </div>
-    </td>
-  </tr>`;
-  }).join("")||`<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
+
+  // ─── Fix 3: slice to render limit so we never paint thousands of DOM rows ───
+  const totalCount = list.length;
+  const visibleList = list.slice(0, _clientsRenderLimit);
+  const hasMore = totalCount > visibleList.length;
+
+  const rowsHtml = visibleList.map(c => _buildClientRowHtml(c, {showCheckbox: true})).join("");
+
+  // ─── Fix 3: footer row showing count + Load more button ───
+  const footerHtml = hasMore
+    ? `<tr><td colspan="12" style="padding:14px;text-align:center;background:#fff7ed;border-top:2px solid #fed7aa">
+         <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+           Showing ${visibleList.length.toLocaleString()} of ${totalCount.toLocaleString()} clients
+         </div>
+         <button onclick="loadMoreClients()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+           ⬇ Load more (next 500)
+         </button>
+       </td></tr>`
+    : (totalCount > 500
+        ? `<tr><td colspan="12" style="padding:10px;text-align:center;background:#f0fdf4;font-size:11px;color:#166534">
+             ✓ All ${totalCount.toLocaleString()} clients loaded
+           </td></tr>`
+        : "");
+
+  document.getElementById("clients-tbody").innerHTML =
+    (rowsHtml + footerHtml) ||
+    `<tr><td colspan="12" class="empty">No clients in this category</td></tr>`;
+
   // Recheck scroll arrows after data renders
   setTimeout(() => window._tblScrollUXRecheck?.(), 50);
 }
@@ -3105,9 +3243,10 @@ function filterEnq(f,el){
   enqFilter=f; // keep for backward compat
   document.querySelectorAll(".enq-filter").forEach(b=>b.classList.remove("active-filter"));
   el.classList.add("active-filter");
+  _enqRenderLimit = 300; // reset pagination on filter change
   renderEnquiries();
 }
-function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");renderEnquiries();}
+function filterCat(f,el){catFilter=f;document.querySelectorAll(".cat-filter").forEach(b=>b.classList.remove("active-filter"));el.classList.add("active-filter");_enqRenderLimit = 300;renderEnquiries();}
 
 function toggleEnqStaffMenu(btn) {
   const menu = document.getElementById("enq-staff-menu");
@@ -3181,6 +3320,13 @@ function renderEnquiries(){
 
   // Sort newest first
   list=[...list].sort((a,b)=>(b.createdAt||b.date||'').localeCompare(a.createdAt||a.date||''));
+
+  // ─── Render cap: only paint this many rows at a time to prevent page freeze ───
+  // With 500+ enquiries each calling cName() plus heavy HTML per row, rendering them all
+  // at once was crashing the page. We show newest first; oldest accessed via Load more.
+  const enqTotalCount = list.length;
+  list = list.slice(0, _enqRenderLimit);
+  const enqHasMore = enqTotalCount > list.length;
 
   // Group by date
   const groups={};
@@ -3272,6 +3418,17 @@ function renderEnquiries(){
   </tr>`;
       });
     });
+  }
+  // ─── Render cap footer ───
+  if(enqHasMore) {
+    rows += `<tr><td colspan="14" style="padding:14px;text-align:center;background:#fff7ed;border-top:2px solid #fed7aa">
+      <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+        Showing ${(enqTotalCount - (enqTotalCount - list.length)).toLocaleString()} of ${enqTotalCount.toLocaleString()} enquiries
+      </div>
+      <button onclick="loadMoreEnquiries()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+        ⬇ Load more (next 300)
+      </button>
+    </td></tr>`;
   }
   document.getElementById("enq-tbody").innerHTML=rows;
 }
@@ -3458,18 +3615,21 @@ function setBkMonthFilter(f, el) {
   bkMonthFilter = f;
   document.querySelectorAll(".bk-month-filter").forEach(b=>b.classList.remove("active-filter"));
   if(el) el.classList.add("active-filter");
+  _bkRenderLimit = 300; // reset pagination on filter change
   renderBookingList();
 }
 function setBkFilter(cat,el){
   bkFilter=cat;
   document.querySelectorAll(".bk-card").forEach(c=>c.classList.remove("active"));
   if(el)el.classList.add("active");
+  _bkRenderLimit = 300; // reset pagination on filter change
   renderBookingList();
 }
 function setDIFilter(di,el){
   bkDiFilter=di;
   document.querySelectorAll(".di-btn").forEach(b=>b.classList.remove("active"));
   if(el)el.classList.add("active");
+  _bkRenderLimit = 300; // reset pagination on filter change
   renderBookingList();
 }
 function openBookingModal(){
@@ -3522,7 +3682,14 @@ function renderBookingList(){
   const title=document.getElementById("bk-list-title");
   if(title)title.textContent=catLabel+monthLabel+" ("+list.length+")";
 
-  document.getElementById("book-tbody").innerHTML=list.map(b=>{
+  // ─── Render cap: slice to prevent page freeze with many bookings ───
+  // Sort newest first so the most relevant bookings show at the top
+  list = list.sort((a,b)=>(b.createdAt||b.travelDate||"").localeCompare(a.createdAt||a.travelDate||""));
+  const bkTotalCount = list.length;
+  const bkVisible = list.slice(0, _bkRenderLimit);
+  const bkHasMore = bkTotalCount > bkVisible.length;
+
+  const bkRowsHtml = bkVisible.map(b=>{
     const st=CAT_STYLES[b.category]||{bg:"#f1f5f9",color:"#374151"};
     const icon=BK_CATS.find(c=>c.id===b.category)?.icon||"📁";
     const isVisaPassport = b.category==="Visa"||b.category==="Passport";
@@ -3568,7 +3735,22 @@ function renderBookingList(){
         <button class="btn" style="font-size:9px;padding:3px 6px;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;white-space:nowrap" onclick="revertToEnquiry('${b.id}')">↩ Inquiry</button>
       </div></td>
     </tr>`;
-  }).join("")||`<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
+  }).join("");
+
+  const bkFooterHtml = bkHasMore
+    ? `<tr><td colspan="10" style="padding:14px;text-align:center;background:#fff7ed;border-top:2px solid #fed7aa">
+         <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+           Showing ${bkVisible.length.toLocaleString()} of ${bkTotalCount.toLocaleString()} bookings
+         </div>
+         <button onclick="loadMoreBookings()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+           ⬇ Load more (next 300)
+         </button>
+       </td></tr>`
+    : "";
+
+  document.getElementById("book-tbody").innerHTML =
+    (bkRowsHtml + bkFooterHtml) ||
+    `<tr><td colspan="10" class="empty">No bookings in this category</td></tr>`;
 }
 
 function editBk(id){window._editBkId=id;openModal("editbooking");}
@@ -3731,218 +3913,6 @@ function renderReports(){
 }
 
 // MARKETING
-// ══════════════════════════════════════════════════════════════
-//  COMMANDS FROM BOSS
-// ══════════════════════════════════════════════════════════════
-function updateCommandBadge(){
-  const badge=document.getElementById("cmd-badge");
-  if(!badge||!CURRENT_USER)return;
-  const isOwner=CURRENT_USER.id===1;
-  const pending=commands.filter(c=>!c.done&&(isOwner||c.assignedTo===CURRENT_USER.id));
-  if(pending.length>0){badge.textContent=pending.length;badge.style.display="";}
-  else badge.style.display="none";
-}
-function cmdTypeChanged(){
-  const type=document.getElementById("cmd-type")?.value;
-  const container=document.getElementById("cmd-type-fields");
-  if(!container)return;
-  if(type==="ticketing"){
-    container.innerHTML=`<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:10px">✈️ TICKETING DETAILS</div>
-      <div class="form-grid">
-        <div class="fg"><label>Date <span style="color:#dc2626">*</span></label><input type="date" id="cmd-date" value="${today()}"/></div>
-        <div class="fg"><label>From <span style="color:#dc2626">*</span></label><input id="cmd-from" placeholder="e.g. AMD"/></div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>To <span style="color:#dc2626">*</span></label><input id="cmd-to" placeholder="e.g. BOM"/></div>
-        <div class="fg"><label>Flight No <span style="color:#dc2626">*</span></label><input id="cmd-flight" placeholder="e.g. 6E 1533-1485"/></div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>Price (₹) per person</label><input id="cmd-price" placeholder="e.g. 5500"/></div>
-        <div class="fg"><label>Fare Type</label>
-          <select id="cmd-fare"><option>Corporate</option><option>Regular</option><option>Student</option><option>Senior Citizen</option></select>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>No. of Passengers</label><input type="number" id="cmd-pax" value="1" min="1"/></div>
-        <div class="fg"><label>Traveller Name(s)</label><input id="cmd-traveller" placeholder="e.g. Mr. Raj Sharma"/></div>
-      </div></div>`;
-  } else if(type==="hotel"){
-    container.innerHTML=`<div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;padding:14px;margin-bottom:12px">
-      <div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:10px">🏨 HOTEL DETAILS</div>
-      <div class="form-grid">
-        <div class="fg"><label>City <span style="color:#dc2626">*</span></label><input id="cmd-city" placeholder="e.g. Mumbai"/></div>
-        <div class="fg"><label>Hotel Name <span style="color:#dc2626">*</span></label><input id="cmd-hotel" placeholder="e.g. Taj Mahal Palace"/></div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>Check-in <span style="color:#dc2626">*</span></label><input type="date" id="cmd-checkin"/></div>
-        <div class="fg"><label>Check-out <span style="color:#dc2626">*</span></label><input type="date" id="cmd-checkout"/></div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>Room Category</label><input id="cmd-roomcat" placeholder="e.g. Deluxe / Suite"/></div>
-        <div class="fg"><label>Meal Plan</label>
-          <select id="cmd-meal"><option value="CP">CP (Breakfast)</option><option value="MAP">MAP (B+D)</option><option value="AP">AP (All Meals)</option><option value="EP">EP (No Meals)</option></select>
-        </div>
-      </div>
-      <div class="form-grid">
-        <div class="fg"><label>Occupancy</label>
-          <select id="cmd-occupancy"><option>Single</option><option>Double</option><option>Triple</option><option>Quad</option></select>
-        </div>
-        <div class="fg"><label>No. of Rooms</label><input type="number" id="cmd-rooms" value="1" min="1"/></div>
-      </div>
-      <div class="form-grid g1"><div class="fg"><label>Traveller Name(s) <span style="color:#dc2626">*</span></label>
-        <input id="cmd-traveller" placeholder="e.g. Mr. Raj Sharma, Mrs. Priya Sharma"/>
-      </div></div></div>`;
-  } else {
-    container.innerHTML=`<div class="form-grid g1"><div class="fg"><label>Command / Instruction <span style="color:#dc2626">*</span></label>
-      <textarea id="cmd-text" rows="4" placeholder="Type your command here..."></textarea></div></div>`;
-  }
-}
-async function saveCommand(){
-  if(CURRENT_USER?.id!==1)return alert("Only the owner can send commands.");
-  const type=document.getElementById("cmd-type")?.value;
-  const staffId=parseInt(document.getElementById("cmd-staff")?.value);
-  const notes=document.getElementById("cmd-notes")?.value?.trim()||"";
-  if(!staffId)return alert("Please select a staff member.");
-  let data={type,assignedTo:staffId,assignedBy:CURRENT_USER.id,notes,
-    done:false,doneBy:null,doneAt:null,
-    createdAt:new Date().toISOString(),createdBy:CURRENT_USER.id};
-  if(type==="ticketing"){
-    const date=document.getElementById("cmd-date")?.value;
-    const from=document.getElementById("cmd-from")?.value?.trim().toUpperCase();
-    const to=document.getElementById("cmd-to")?.value?.trim().toUpperCase();
-    const flight=document.getElementById("cmd-flight")?.value?.trim().toUpperCase();
-    if(!date||!from||!to||!flight)return alert("Please fill Date, From, To and Flight No.");
-    Object.assign(data,{date,from,to,flight,
-      price:document.getElementById("cmd-price")?.value?.trim(),
-      fare:document.getElementById("cmd-fare")?.value,
-      pax:parseInt(document.getElementById("cmd-pax")?.value)||1,
-      traveller:document.getElementById("cmd-traveller")?.value?.trim()});
-  } else if(type==="hotel"){
-    const city=document.getElementById("cmd-city")?.value?.trim();
-    const hotel=document.getElementById("cmd-hotel")?.value?.trim();
-    const checkin=document.getElementById("cmd-checkin")?.value;
-    const checkout=document.getElementById("cmd-checkout")?.value;
-    const traveller=document.getElementById("cmd-traveller")?.value?.trim();
-    if(!city||!hotel||!checkin||!checkout||!traveller)
-      return alert("Please fill City, Hotel, Check-in/out and Traveller Name.");
-    Object.assign(data,{city,hotel,checkin,checkout,traveller,
-      roomcat:document.getElementById("cmd-roomcat")?.value?.trim(),
-      meal:document.getElementById("cmd-meal")?.value,
-      occupancy:document.getElementById("cmd-occupancy")?.value,
-      rooms:parseInt(document.getElementById("cmd-rooms")?.value)||1});
-  } else {
-    const text=document.getElementById("cmd-text")?.value?.trim();
-    if(!text)return alert("Please enter a command.");
-    data.text=text;
-  }
-  try{await db.collection("commands").add(data);closeOverlay();showTab("commands");}
-  catch(e){alert("Error: "+e.message);}
-}
-async function markCommandDone(cmdId){
-  const cmd=commands.find(c=>c.id===cmdId);
-  if(!cmd)return;
-  if(CURRENT_USER?.id!==1&&CURRENT_USER?.id!==cmd.assignedTo)return;
-  try{await db.collection("commands").doc(cmdId).update({done:true,doneBy:CURRENT_USER.id,doneAt:new Date().toISOString()});}
-  catch(e){alert("Error: "+e.message);}
-}
-async function deleteCommand(cmdId){
-  if(CURRENT_USER?.id!==1)return;
-  if(!confirm("Delete this command?"))return;
-  try{await db.collection("commands").doc(cmdId).delete();}
-  catch(e){alert("Error: "+e.message);}
-}
-function renderCommands(){
-  const container=document.getElementById("cmd-list");
-  if(!container||!CURRENT_USER)return;
-  const isOwner=CURRENT_USER.id===1;
-  const addBtn=document.getElementById("cmd-add-btn");
-  const filterBar=document.getElementById("cmd-filter-bar");
-  if(addBtn)addBtn.style.display=isOwner?"":"none";
-  if(filterBar)filterBar.style.display=isOwner?"flex":"none";
-  const staffSel=document.getElementById("cmd-filter-staff");
-  if(staffSel&&staffSel.options.length===1){
-    STAFF.slice(1).forEach(s=>{const o=document.createElement("option");o.value=s.id;o.textContent=s.name;staffSel.appendChild(o);});
-  }
-  const sub=document.getElementById("cmd-header-sub");
-  if(sub)sub.textContent=isOwner?"Post ticketing, hotel or general instructions to your staff":"Commands assigned to you by the boss";
-  const filterStaff=isOwner?(document.getElementById("cmd-filter-staff")?.value||""):"";
-  const filterType=isOwner?(document.getElementById("cmd-filter-type")?.value||""):"";
-  const filterStatus=document.getElementById("cmd-filter-status")?.value??"pending";
-  let list=commands.filter(c=>{
-    if(!isOwner&&c.assignedTo!==CURRENT_USER.id)return false;
-    if(filterStaff&&String(c.assignedTo)!==String(filterStaff))return false;
-    if(filterType&&c.type!==filterType)return false;
-    if(filterStatus==="pending"&&c.done)return false;
-    if(filterStatus==="done"&&!c.done)return false;
-    return true;
-  });
-  list.sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return(b.createdAt||"").localeCompare(a.createdAt||"");});
-  if(list.length===0){
-    container.innerHTML=`<div style="text-align:center;padding:60px 20px;color:#94a3b8">
-      <div style="font-size:48px;margin-bottom:12px">📭</div>
-      <div style="font-size:15px;font-weight:600;color:#64748b">No commands here</div>
-      <div style="font-size:13px;margin-top:6px">${isOwner?"Click '+ Add Command' to send one to your staff.":"You have no pending commands from the boss."}</div>
-    </div>`;
-    updateCommandBadge();return;
-  }
-  const fmt=iso=>iso?new Date(iso).toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}):"";
-  container.innerHTML=list.map(c=>{
-    const staffName=STAFF.find(s=>s.id===c.assignedTo)?.name||"Unknown";
-    const doneByName=c.doneBy?(STAFF.find(s=>s.id===c.doneBy)?.name||"Someone"):"";
-    const typeBadge=c.type==="ticketing"
-      ?`<span style="background:#dbeafe;color:#1d4ed8;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">✈️ Ticketing</span>`
-      :c.type==="hotel"
-      ?`<span style="background:#dcfce7;color:#15803d;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">🏨 Hotel</span>`
-      :`<span style="background:#f3f4f6;color:#374151;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">📝 General</span>`;
-    const statusBadge=c.done
-      ?`<span style="background:#dcfce7;color:#15803d;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">✅ Done</span>`
-      :`<span style="background:#fef3c7;color:#b45309;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700">⏳ Pending</span>`;
-    let detailsHtml="";
-    if(c.type==="ticketing"){
-      detailsHtml=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;background:#eff6ff;border-radius:10px;padding:12px">
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">DATE</div><div style="font-size:13px;font-weight:700">${c.date||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">ROUTE</div><div style="font-size:13px;font-weight:700">${c.from||"?"} → ${c.to||"?"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">FLIGHT</div><div style="font-size:13px;font-weight:700">${c.flight||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">PRICE / PAX</div><div style="font-size:13px;font-weight:700">${c.price?"₹"+c.price:"—"} · ${c.pax||1} pax</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">FARE TYPE</div><div style="font-size:13px;font-weight:700">${c.fare||"—"}</div></div>
-        ${c.traveller?`<div style="grid-column:1/-1"><div style="font-size:10px;color:#64748b;font-weight:600">TRAVELLER</div><div style="font-size:13px;font-weight:700">${c.traveller}</div></div>`:""}
-      </div>`;
-    } else if(c.type==="hotel"){
-      detailsHtml=`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-top:12px;background:#f0fdf4;border-radius:10px;padding:12px">
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">CITY</div><div style="font-size:13px;font-weight:700">${c.city||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">HOTEL</div><div style="font-size:13px;font-weight:700">${c.hotel||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">CHECK-IN</div><div style="font-size:13px;font-weight:700">${c.checkin||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">CHECK-OUT</div><div style="font-size:13px;font-weight:700">${c.checkout||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">ROOM</div><div style="font-size:13px;font-weight:700">${c.roomcat||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">MEAL</div><div style="font-size:13px;font-weight:700">${c.meal||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">OCCUPANCY</div><div style="font-size:13px;font-weight:700">${c.occupancy||"—"}</div></div>
-        <div><div style="font-size:10px;color:#64748b;font-weight:600">ROOMS</div><div style="font-size:13px;font-weight:700">${c.rooms||1}</div></div>
-        ${c.traveller?`<div style="grid-column:1/-1"><div style="font-size:10px;color:#64748b;font-weight:600">TRAVELLER NAME(S)</div><div style="font-size:13px;font-weight:700">${c.traveller}</div></div>`:""}
-      </div>`;
-    } else {
-      detailsHtml=`<div style="margin-top:10px;font-size:14px;color:#0f172a;line-height:1.6;background:#f8fafc;border-radius:8px;padding:12px">${c.text||"—"}</div>`;
-    }
-    return `<div style="background:#fff;border:1.5px solid ${c.done?"#bbf7d0":"#e2e8f0"};border-radius:14px;padding:18px;margin-bottom:14px;${c.done?"opacity:0.8":""}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:4px">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-          ${typeBadge} ${statusBadge}
-          ${isOwner?`<span style="font-size:11px;color:#94a3b8">→ <strong style="color:#374151">${staffName}</strong></span>`:""}
-        </div>
-        <div style="font-size:11px;color:#94a3b8">${fmt(c.createdAt)}</div>
-      </div>
-      ${detailsHtml}
-      ${c.notes?`<div style="margin-top:8px;font-size:12px;color:#64748b;font-style:italic">📝 ${c.notes}</div>`:""}
-      ${c.done?`<div style="font-size:11px;color:#15803d;margin-top:8px">✅ Done by <strong>${doneByName}</strong> · ${fmt(c.doneAt)}</div>`:""}
-      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-        ${!c.done?`<button onclick="markCommandDone('${c.id}')" class="btn btn-primary" style="font-size:12px;padding:6px 14px">✅ Mark Done</button>`:""}
-        ${isOwner?`<button onclick="deleteCommand('${c.id}')" class="btn btn-warn" style="font-size:11px;padding:4px 10px">🗑️ Delete</button>`:""}
-      </div>
-    </div>`;
-  }).join("");
-  updateCommandBadge();
-}
-
 function renderMarketing(){renderMktCalls();}
 
 // TARGETS
@@ -3995,6 +3965,42 @@ function renderChart(){
 }
 
 // GLOBAL SEARCH
+
+// ─── Debounce wrapper — wait for user to pause typing before running the full search ───
+// This is the single biggest perf win: at 5,500 clients + 500 enquiries, running the full
+// search on every keystroke was slow. Waiting 220ms after the last keystroke collapses a
+// burst of typing into one search, which feels just as responsive and runs much less work.
+let _searchDebounceTimer = null;
+function _debouncedGlobalSearch(q) {
+  clearTimeout(_searchDebounceTimer);
+  // Empty string: run immediately (no debounce) so clearing the box is instant
+  if(!q || !q.trim()) { globalSearch(q); return; }
+  _searchDebounceTimer = setTimeout(() => globalSearch(q), 220);
+}
+
+// ─── Build a clientId → searchable-name lookup map ───
+// Avoids calling cName() (which does a linear clients.find) thousands of times per search.
+// At 5,500 clients × 500 enquiries that's ~2.75M scans per keystroke; this makes it O(1).
+function _buildClientNameMap() {
+  const m = new Map();
+  for(let i = 0; i < clients.length; i++) {
+    const c = clients[i];
+    const nm = `${c.firstName||""} ${c.lastName||""}`.trim() || c.mobile || c.companyName || "Unknown";
+    m.set(c.id, nm.toLowerCase());
+  }
+  return m;
+}
+
+// ─── Result cap for full search results ───
+let _searchResultLimit = 200;
+let _lastSearchQuery = "";
+function loadMoreSearchResults() {
+  _searchResultLimit += 200;
+  // Re-run the current query
+  const input = document.getElementById("global-search");
+  if(input) globalSearch(input.value);
+}
+
 function globalSearch(q){
   if(!q.trim()){
     if(document.getElementById("tab-search").classList.contains("active"))
@@ -4002,7 +4008,14 @@ function globalSearch(q){
     // Hide suggestions
     const sug=document.getElementById("search-suggestions");
     if(sug) sug.style.display="none";
+    _searchResultLimit = 200; // reset cap when query is cleared
+    _lastSearchQuery = "";
     return;
+  }
+  // Reset cap when the query changes (so new searches start at 200, not whatever Load More left it)
+  if(q !== _lastSearchQuery) {
+    _searchResultLimit = 200;
+    _lastSearchQuery = q;
   }
   // Show inline suggestions dropdown
   showSearchSuggestions(q);
@@ -4012,6 +4025,10 @@ function globalSearch(q){
   document.getElementById("tab-search").classList.add("active");
   document.getElementById("page-title").textContent=`🔍 "${q}"`;
   const ql=q.toLowerCase();
+
+  // Build a fast id→name map ONCE for this search call instead of calling cName() thousands of times
+  const clientNameMap = _buildClientNameMap();
+  const nameOf = id => clientNameMap.get(id) || ""; // lowercase for .includes() tests
 
   // Primary client matches — use pre-calculated index for speed
   // Falls back to inline check if _searchIndex missing (old data before re-fetch)
@@ -4072,9 +4089,12 @@ function globalSearch(q){
 
   const fe=enquiries.filter(e=>{
     const base = e._searchIndex || `${e.destination} ${e.source} ${e.category||""}`.toLowerCase();
-    return base.includes(ql) || cName(e.clientId).toLowerCase().includes(ql);
+    return base.includes(ql) || nameOf(e.clientId).includes(ql);
   });
-  const fb=allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""} ${b.category||""}`.toLowerCase().includes(ql));
+  const fb=allBookings.filter(b=>{
+    const base = b._searchIndex || `${b.destination||""} ${b.category||""}`.toLowerCase();
+    return base.includes(ql) || nameOf(b.clientId).includes(ql);
+  });
 
   // Permission: owner (id=1) can delete, staff cannot
   const _canDelete = CURRENT_USER && CURRENT_USER.id === 1;
@@ -4115,31 +4135,35 @@ function globalSearch(q){
       ${_delBtn('bookings',b.id)}
     </div>`;
 
+  // ─── Apply result cap to each section to keep rendering fast at large match counts ───
+  const fcSlice = fc.slice(0, _searchResultLimit);
+  const famSlice = familyMatches.slice(0, _searchResultLimit);
+  const feSlice = fe.slice(0, _searchResultLimit);
+  const fbSlice = fb.slice(0, _searchResultLimit);
+  const totalMatches = fc.length + familyMatches.length + fe.length + fb.length;
+  const shownMatches = fcSlice.length + famSlice.length + feSlice.length + fbSlice.length;
+  const hasMoreMatches = shownMatches < totalMatches;
+
   document.getElementById("search-results").innerHTML=`
-    ${fc.length?`<div class="section-title">👥 Clients (${fc.length})</div>
-    <div class="card"><table><thead><tr><th>CATEGORY</th><th>NAME</th><th>MOBILE</th><th>EMAIL</th><th>CITY</th><th>FAMILY</th><th>ACTIONS</th></tr></thead>
-    <tbody>${fc.map(c=>`<tr>
-      <td><span style="background:#f1f5f9;color:#374151;padding:2px 7px;border-radius:6px;font-size:10px;font-weight:700">${c.clientCategory||"Regular"}</span></td>
-      <td><strong>${c.firstName} ${c.lastName}</strong>${c.companyName?`<div style="font-size:10px;color:#0369a1">${c.companyName}</div>`:""}</td>
-      <td>${c.mobile}${c.altMobile?`<div style="font-size:10px;color:#94a3b8">📱 ${c.altMobile}</div>`:""}</td>
-      <td style="font-size:11px">${c.email}</td><td>${c.city}</td>
-      <td style="font-size:11px;color:#7c3aed">${c.familyName?`👨‍👩‍👧 ${c.familyName}`:""}</td>
-      <td>${actionBtns(c)}</td>
-    </tr>`).join("")}</tbody></table></div>`:""
+    ${fc.length?`<div class="section-title">👥 Clients (${fc.length}${fc.length>fcSlice.length?`, showing ${fcSlice.length}`:""})</div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="tbl-scroll clients-table-scroll">
+        ${_buildClientsTableShell(fcSlice.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
+      </div>
+    </div>`:""
   }
-    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">Family Members (${familyMatches.length})</div>
-    <div class="card" style="border-left:4px solid #8b5cf6"><table><thead><tr><th>NAME</th><th>RELATION</th><th>MOBILE</th><th>FAMILY GROUP</th><th>FOUND VIA</th><th>ACTIONS</th></tr></thead>
-    <tbody>${familyMatches.map(c=>`<tr style="background:#faf5ff">
-      <td><strong>${c.firstName} ${c.lastName}</strong>${c.isPrimaryClient?` <span style="background:#8b5cf6;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px">👑 Primary</span>`:""}</td>
-      <td style="font-size:11px;color:#7c3aed">${c.familyRelation||"—"}</td>
-      <td>${c.mobile}</td>
-      <td style="font-size:11px">${c.familyName}</td>
-      <td style="font-size:11px;color:#94a3b8">via ${c._foundViaFamily}</td>
-      <td>${familyActionBtns(c)}</td>
-    </tr>`).join("")}</tbody></table></div>`:""}
-    ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length})</div>
+    ${familyMatches.length?`<div class="section-title" style="color:#7c3aed">Family Members (${familyMatches.length}${familyMatches.length>famSlice.length?`, showing ${famSlice.length}`:""})</div>
+    <div class="card" style="border-left:4px solid #8b5cf6;padding:0;overflow:hidden">
+      <div class="tbl-scroll clients-table-scroll">
+        ${_buildClientsTableShell(famSlice.map(c => _buildClientRowHtml(c, {showCheckbox:false})).join(""), {showCheckbox:false})}
+      </div>
+      <div style="padding:8px 14px;background:#faf5ff;border-top:1px solid #e9d5ff;font-size:11px;color:#7c3aed">
+        ℹ️ These clients were found via their family link to a matching client. Click Profile to see full details.
+      </div>
+    </div>`:""}
+    ${fe.length?`<div class="section-title">🎯 Enquiries (${fe.length}${fe.length>feSlice.length?`, showing ${feSlice.length}`:""})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>CATEGORY</th><th>RATING</th><th>STATUS</th><th>STAFF</th><th>ACTIONS</th></tr></thead>
-    <tbody>${fe.map(e=>`<tr>
+    <tbody>${feSlice.map(e=>`<tr>
       <td>
         <strong>${cName(e.clientId)}</strong>
         ${e.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600">${e.familyRelation||"Family"} of ${e.primaryClientName}</div>`:""}
@@ -4151,9 +4175,9 @@ function globalSearch(q){
       <td>${enqActionBtns(e)}</td>
     </tr>`).join("")}</tbody></table></div>`:""
   }
-    ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length})</div>
+    ${fb.length?`<div class="section-title">✈️ Bookings (${fb.length}${fb.length>fbSlice.length?`, showing ${fbSlice.length}`:""})</div>
     <div class="card"><table><thead><tr><th>CLIENT</th><th>DESTINATION</th><th>DATE</th><th>AMOUNT</th><th>STATUS</th><th>ACTIONS</th></tr></thead>
-    <tbody>${fb.map(b=>`<tr>
+    <tbody>${fbSlice.map(b=>`<tr>
       <td>
         <strong>${cName(b.clientId)}</strong>
         ${b.primaryClientName?`<div style="font-size:9px;color:#7c3aed;font-weight:600">${b.familyRelation||"Family"} of ${b.primaryClientName}</div>`:""}
@@ -4165,6 +4189,14 @@ function globalSearch(q){
       <td>${bkActionBtns(b)}</td>
     </tr>`).join("")}</tbody></table></div>`:""
   }
+    ${hasMoreMatches?`<div style="margin:16px 0;padding:14px;text-align:center;background:#fff7ed;border:2px solid #fed7aa;border-radius:12px">
+      <div style="font-size:12px;color:#9a3412;margin-bottom:8px;font-weight:600">
+        Showing ${shownMatches.toLocaleString()} of ${totalMatches.toLocaleString()} total matches
+      </div>
+      <button onclick="loadMoreSearchResults()" class="btn btn-primary" style="font-size:12px;padding:8px 18px">
+        ⬇ Load more results (next 200)
+      </button>
+    </div>`:""}
     ${!fc.length&&!familyMatches.length&&!fe.length&&!fb.length?`<div class="empty" style="padding:40px"><div style="font-size:32px;margin-bottom:8px">🔍</div>No results found for "${q}"</div>`:""}`;
 }
 
@@ -4184,14 +4216,38 @@ function showSearchSuggestions(q){
   if(q.length<2){sug.style.display="none";return;}
   const ql=q.toLowerCase();
   const matches=[];
-  clients.filter(c=>`${c.firstName} ${c.lastName} ${c.mobile} ${c.companyName||""}`.toLowerCase().includes(ql)).slice(0,5).forEach(c=>{
-    matches.push({type:"client",icon:"👤",label:`${c.firstName} ${c.lastName}`,sub:`${c.mobile}${c.altMobile?" · "+c.altMobile:""} · ${c.city||""}${c.familyName?" · 👨‍👩‍👧 "+c.familyName:""}`,id:c.id});
+  // Build fast id→name map once (instead of calling cName per enquiry/booking)
+  const clientNameMap = _buildClientNameMap();
+  const nameOf = id => clientNameMap.get(id) || "";
+  // Helper: display name (preserves original case) — used when we need to show the name to the user
+  const displayName = id => {
+    const c = clients.find(x => x.id === id);
+    if(!c) return "Unknown";
+    return `${c.firstName||""} ${c.lastName||""}`.trim() || c.mobile || c.companyName || "Unknown";
+  };
+  clients.filter(c=>(c._searchIndex ? c._searchIndex.includes(ql)
+    : `${c.firstName} ${c.lastName} ${c.mobile} ${c.companyName||""}`.toLowerCase().includes(ql))).slice(0,5).forEach(c=>{
+    matches.push({type:"client",icon:"👤",label:`${c.firstName||""} ${c.lastName||""}`.trim()||c.mobile||"Unknown",sub:`${c.mobile}${c.altMobile?" · "+c.altMobile:""} · ${c.city||""}${c.familyName?" · 👨‍👩‍👧 "+c.familyName:""}`,id:c.id});
   });
-  enquiries.filter(e=>`${cName(e.clientId)} ${e.destination||""}`.toLowerCase().includes(ql)).slice(0,3).forEach(e=>{
-    matches.push({type:"enq",icon:"🎯",label:cName(e.clientId),sub:`${e.destination||""} · ${e.rating} · ${e.status}`,id:e.id});
+  // Enquiries: check _searchIndex first, then cached client name — no repeated full-array scans
+  const enqMatches = [];
+  for(let i = 0; i < enquiries.length && enqMatches.length < 3; i++) {
+    const e = enquiries[i];
+    const base = e._searchIndex || `${e.destination||""}`.toLowerCase();
+    if(base.includes(ql) || nameOf(e.clientId).includes(ql)) enqMatches.push(e);
+  }
+  enqMatches.forEach(e=>{
+    matches.push({type:"enq",icon:"🎯",label:displayName(e.clientId),sub:`${e.destination||""} · ${e.rating||""} · ${e.status||""}`,id:e.id});
   });
-  allBookings.filter(b=>`${cName(b.clientId)} ${b.destination||""}`.toLowerCase().includes(ql)).slice(0,3).forEach(b=>{
-    matches.push({type:"bk",icon:"✈️",label:cName(b.clientId),sub:`${b.destination||b.category||""} · ${b.travelDate||""}`,id:b.id});
+  // Bookings: same optimization
+  const bkMatches = [];
+  for(let i = 0; i < allBookings.length && bkMatches.length < 3; i++) {
+    const b = allBookings[i];
+    const base = b._searchIndex || `${b.destination||""}`.toLowerCase();
+    if(base.includes(ql) || nameOf(b.clientId).includes(ql)) bkMatches.push(b);
+  }
+  bkMatches.forEach(b=>{
+    matches.push({type:"bk",icon:"✈️",label:displayName(b.clientId),sub:`${b.destination||b.category||""} · ${b.travelDate||""}`,id:b.id});
   });
   if(!matches.length){sug.style.display="none";return;}
   sug.style.display="";
@@ -4208,6 +4264,23 @@ function showSearchSuggestions(q){
 // MODALS
 const cOpts=()=>clients.map(c=>`<option value="${c.id}">${c.firstName} ${c.lastName}</option>`).join("");
 const sOpts=()=>STAFF.map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
+
+// ─── Issue 2 fix helper: allow user to change locked client if truly needed ───
+// Replaces the green locked-client panel with a regular dropdown so the client can be changed
+function unlockEnqClient() {
+  const lockedPanel = document.getElementById("e-client")?.closest(".fg");
+  if(!lockedPanel) return;
+  const currentId = document.getElementById("e-client")?.value || "";
+  // Clear the prefilled ID so the save-time mismatch guard doesn't trigger falsely after unlock
+  window._prefilledClientId = null;
+  lockedPanel.innerHTML = `<label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select>`;
+  const sel = document.getElementById("e-client");
+  if(sel && currentId) {
+    sel.value = currentId;
+    // If the currentId doesn't exist in the dropdown, leave it empty rather than silent fallback
+    if(sel.value !== currentId) sel.value = "";
+  }
+}
 
 function openModal(type){
   const mb=document.getElementById("modal-body");
@@ -4299,9 +4372,32 @@ function openModal(type){
     const FU_STATUSES=["New Enquiry","Follow-up Pending","Quotation Sent","Confirmed Booking"];
     // SERVICE_CATS is defined globally
 
+    // ─── Issue 2 fix: if client is prefilled, show a LOCKED, clearly-visible client panel ───
+    // so staff can SEE which client this enquiry is for and the dropdown can't silently change it.
+    const prefilledClientObj = preClient ? clients.find(c => c.id === preClient) : null;
+    const lockedClientHtml = prefilledClientObj ? `
+      <div class="fg" style="grid-column:1/-1">
+        <label>Client <span style="color:#dc2626">*</span></label>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f0fdf4;border:2px solid #16a34a;border-radius:10px">
+          <div style="width:36px;height:36px;border-radius:50%;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0">
+            ${(prefilledClientObj.firstName||"?")[0]}${(prefilledClientObj.lastName||"")[0]||""}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:14px;color:#14532d">🔒 ${prefilledClientObj.firstName||""} ${prefilledClientObj.lastName||""}</div>
+            <div style="font-size:11px;color:#166534">📱 ${prefilledClientObj.mobile||"—"} · ${prefilledClientObj.city||"—"}</div>
+          </div>
+          <button type="button" onclick="unlockEnqClient()" style="padding:6px 12px;background:#fff;border:1.5px solid #16a34a;color:#16a34a;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0">
+            Change
+          </button>
+        </div>
+        <input type="hidden" id="e-client" value="${preClient}"/>
+      </div>
+    ` : null;
+
     mb.innerHTML=`<div class="modal-title">${isEdit?"Edit":"Add"} Enquiry <button class="x" onclick="safeCloseOverlay()">✕</button></div>
+    <div id="duplicate-enq-warning" style="display:none;background:#fef3c7;border:1.5px solid #f59e0b;border-radius:6px;padding:10px;margin-bottom:12px;font-size:13px;color:#92400e"></div>
     <div class="form-grid">
-      <div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client">${cOpts()}</select></div>
+      ${lockedClientHtml || `<div class="fg"><label>Client <span style="color:#dc2626">*</span></label><select id="e-client" onchange="checkClientDuplicateEnquiries()">${cOpts()}</select></div>`}
       <div class="fg"><label>Service Category</label><select id="e-category" onchange="updateEnqForm()">${SERVICE_CATS.map(c=>`<option ${ex&&ex.category===c?"selected":""}>${c}</option>`).join("")}</select></div>
     </div>
     <div id="enq-dynamic-fields"></div>
@@ -4322,11 +4418,26 @@ function openModal(type){
 
     // Set pre-filled client
     // Set client dropdown: use saved clientId when editing, or prefilledClientId for new
-    if(ex && ex.clientId) document.getElementById("e-client").value = ex.clientId;
-    else if(preClient) document.getElementById("e-client").value = preClient;
+    // (Only applies when dropdown is shown — when client is locked, value is already set via hidden input)
+    const clientEl = document.getElementById("e-client");
+    if(clientEl && clientEl.tagName === "SELECT") {
+      if(ex && ex.clientId) clientEl.value = ex.clientId;
+      else if(preClient) clientEl.value = preClient;
+      // Verify the value actually got set (dropdown silently falls back to first option if ID missing)
+      const targetId = (ex && ex.clientId) || preClient;
+      if(targetId && clientEl.value !== targetId) {
+        console.warn("Client ID", targetId, "not found in dropdown — resetting to empty");
+        clientEl.value = "";
+      }
+    }
     if(ex && ex.staffId) document.getElementById("e-staff").value=ex.staffId;
     updateSourceSub();
     updateEnqForm(ex);
+    
+    // Check for duplicate enquiries if client is pre-selected
+    if(clientEl && clientEl.value && clientEl.value !== "0") {
+      setTimeout(checkClientDuplicateEnquiries, 100); // Small delay to ensure DOM is ready
+    }
   
   } else if(type==="booking_from_enquiry"){
     const e = window._bookingFromEnquiry;
@@ -4609,23 +4720,6 @@ function openModal(type){
     </div></div>
     <div class="form-grid g1"><div class="fg"><label>Notes / Discussion</label><textarea id="mc-notes" rows="2" placeholder="Any extra details..."></textarea></div></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;padding:10px;margin-top:6px" onclick="saveMktCall()">Save Call Log</button>`;
-  } else if(type==="command"){
-    if(CURRENT_USER?.id !== 1) return;
-    const staffOpts = STAFF.slice(1).map(s=>`<option value="${s.id}">${s.name}</option>`).join("");
-    mb.innerHTML=`<div class="modal-title">📢 Add Command <button class="x" onclick="safeCloseOverlay()">✕</button></div>
-    <div class="form-grid g1"><div class="fg"><label>Command Type <span style="color:#dc2626">*</span></label>
-      <select id="cmd-type" onchange="cmdTypeChanged()">
-        <option value="ticketing">✈️ Ticketing</option>
-        <option value="hotel">🏨 Hotel</option>
-        <option value="general">📝 General</option>
-      </select></div></div>
-    <div class="form-grid g1"><div class="fg"><label>Assign To <span style="color:#dc2626">*</span></label>
-      <select id="cmd-staff">${staffOpts}</select></div></div>
-    <div id="cmd-type-fields"></div>
-    <div class="form-grid g1"><div class="fg"><label>Additional Notes</label>
-      <textarea id="cmd-notes" rows="2" placeholder="Any extra instructions..."></textarea></div></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;margin-top:8px" onclick="saveCommand()">📢 Send Command</button>`;
-    setTimeout(cmdTypeChanged, 50);
   } else if(type==="addstaff"){
     mb.innerHTML=`<div class="modal-title">Add Staff Member <button class="x" onclick="safeCloseOverlay()">✕</button></div>
     <div class="form-grid"><div class="fg"><label>Full Name</label><input id="ns-name" placeholder="e.g. Mr. Raj Patel"/></div><div class="fg"><label>Role / Department</label><input id="ns-role" placeholder="e.g. Sales Executive"/></div></div>
@@ -4960,6 +5054,21 @@ function renderMktCalls(){
     labelEl.textContent = monthNames[parseInt(m)-1]+" "+y + (viewMonth===tm?" (This Month)":"");
   }
 
+  // Populate staff filter dropdown (only once or when STAFF changes)
+  const staffFilter = document.getElementById("mkt-staff-filter");
+  if(staffFilter && staffFilter.options.length === 1) { // only has "All Staff" option
+    STAFF.forEach(s => {
+      const opt = document.createElement("option");
+      opt.value = s.id;
+      opt.textContent = s.name;
+      staffFilter.appendChild(opt);
+    });
+  }
+
+  // Get filter values
+  const searchText = (document.getElementById("mkt-search")?.value || "").toLowerCase().trim();
+  const selectedStaffId = document.getElementById("mkt-staff-filter")?.value || "";
+
   // KPI cards always show current month
   const mListCurrent=marketing.filter(m=>m.date.startsWith(tm));
   const totalCalls=mListCurrent.reduce((s,m)=>s+m.calls,0);
@@ -4971,8 +5080,24 @@ function renderMktCalls(){
   if(clientsEl)clientsEl.textContent=totalClients;
   if(rateEl)rateEl.textContent=totalCalls>0?Math.round(totalClients/totalCalls*100)+"%":"0%";
 
-  // Table shows selected month only
-  const mListView=marketing.filter(m=>m.date.startsWith(viewMonth));
+  // Table shows selected month, filtered by search and staff
+  let mListView=marketing.filter(m=>m.date.startsWith(viewMonth));
+  
+  // Apply staff filter
+  if(selectedStaffId) {
+    mListView = mListView.filter(m => String(m.staffId) === String(selectedStaffId));
+  }
+
+  // Apply search filter (client name or notes)
+  if(searchText) {
+    mListView = mListView.filter(m => {
+      const c = m.clientId ? clients.find(x => x.id === m.clientId) : null;
+      const clientName = c ? `${c.firstName||""} ${c.lastName||""}`.toLowerCase() : "";
+      const notes = (m.notes || "").toLowerCase();
+      return clientName.includes(searchText) || notes.includes(searchText);
+    });
+  }
+
   const countEl=document.getElementById("mkt-entry-count");
   if(countEl) countEl.textContent = mListView.length+" entries · "+mListView.reduce((s,m)=>s+m.calls,0)+" calls";
 
@@ -5002,7 +5127,7 @@ function renderMktCalls(){
           <button class="btn btn-warn" style="font-size:10px;padding:3px 8px" onclick="del('marketing','${m.id}')">✕</button>
         </div>
       </td></tr>`;
-  }).join("")||`<tr><td colspan="8" class="empty">No marketing entries for this month</td></tr>`;
+  }).join("")||`<tr><td colspan="8" class="empty">No marketing entries found</td></tr>`;
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -5098,6 +5223,22 @@ function draftRestore(type) {
   const stored = sessionStorage.getItem('fenix_draft_' + type);
   if(!stored) return false;
   const draft = JSON.parse(stored);
+
+  // ─── Safety: if this modal was opened for a specific client (Generate Enquiry from a
+  // client's row), the draft MUST NOT override that client. If the draft belongs to a
+  // different client, discard it entirely — restoring its notes/destination/etc onto
+  // a new client would itself be a bug. ───
+  if(type === 'enquiry' && window._prefilledClientId) {
+    if(draft['e-client'] && draft['e-client'] !== window._prefilledClientId) {
+      // Different client — drop the draft and tell the caller there's nothing to restore
+      sessionStorage.removeItem('fenix_draft_enquiry');
+      return false;
+    }
+    // Same client (or draft has no client): restore everything EXCEPT e-client, which
+    // must stay pointing at the prefilled client (and is a hidden input in locked mode).
+    delete draft['e-client'];
+  }
+
   let any = false;
   Object.entries(draft).forEach(([id, val]) => {
     const el = document.getElementById(id);
@@ -5422,7 +5563,7 @@ async function renderAttendance() {
 
 // ── Load Data ────────────────────────────────────
 function loadFromFirestore() {
-  const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets","commands"];
+  const collections = ["clients","enquiries","bookings","tasks","reports","marketing","targets"];
   const loadedSet = new Set();
   let initialRenderDone = false;
 
@@ -5505,14 +5646,13 @@ function loadFromFirestore() {
         }
         return {id: d.id, ...data, _searchIndex};
       });
-      if(col==="clients")   clients    = docs;
+      if(col==="clients")   { clients = docs; _rebuildClientNameCache(); }
       if(col==="enquiries") enquiries  = docs;
       if(col==="bookings")  allBookings= docs;
       if(col==="tasks")     tasks      = docs;
       if(col==="reports")   reports    = docs;
       if(col==="marketing") marketing  = docs;
       if(col==="targets")   targets    = docs;
-      if(col==="commands")  { commands = docs; renderCommands(); updateCommandBadge(); }
 
       loadedSet.add(col);
 
@@ -5534,13 +5674,10 @@ function loadFromFirestore() {
           clearTimeout(fallbackTimer);
           doInitialRender();
         }
-      } else {
+      } else if(!window._importInProgress) {
         // Real-time update after initial render
-        // Commands have their own targeted render above — skip full renderAll for them
-        // to avoid expensive re-render of 5000+ clients/enquiries on every command change
-        if(col !== "commands") {
-          try { renderAll(); } catch(e) {}
-        }
+        // Skipped during bulk import to prevent lag — single re-render at end instead
+        try { renderAll(); } catch(e) {}
       }
     }, err => {
       console.error("Firestore error on " + col + ":", err);
@@ -5809,9 +5946,182 @@ This links families by ID instead of name.`)) return;
   alert(`✅ Done! Assigned familyId to ${updated} clients across ${Object.keys(groups).length} family groups.`);
 }
 
+// Helper: view all enquiries for a specific client (called from duplicate warning link)
+function viewEnquiries(clientId) {
+  closeOverlay(); // Close the add enquiry modal
+  const client = clients.find(c => c.id === clientId);
+  if(!client) return;
+  
+  // Switch to Enquiry tab if function exists
+  if(typeof showTab === "function") showTab("enq");
+  
+  // Use the global search box to filter by mobile number
+  const searchBox = document.getElementById("global-search");
+  if(searchBox && client.mobile) {
+    searchBox.value = String(client.mobile).trim();
+    // Trigger the existing debounced search handler
+    if(typeof _debouncedGlobalSearch === "function") {
+      _debouncedGlobalSearch(searchBox.value);
+    } else {
+      searchBox.dispatchEvent(new Event('input', {bubbles: true}));
+    }
+  }
+}
+
+// ─── DUPLICATE ENQUIRY DETECTION (early warning + pre-save check) ───
+// Finds all existing enquiries for a given client ID by matching mobile number.
+// Returns array of {id, destination, category, status, createdAt, staffName} for display.
+function findExistingEnquiries(clientId) {
+  // Defensive: if data isn't loaded yet, skip duplicate check (safer to allow than to error)
+  if(!Array.isArray(clients) || !Array.isArray(enquiries)) return [];
+  if(!clientId) return [];
+
+  const client = clients.find(c => c.id === clientId);
+  if(!client || !client.mobile) return [];
+
+  const mobile = String(client.mobile).trim();
+  if(!mobile) return [];
+
+  // Find all enquiries where the client's mobile matches.
+  // Also exclude soft-deleted/trashed enquiries if such a flag exists.
+  return enquiries.filter(enq => {
+    if(enq.deleted || enq.trashed) return false; // skip trashed
+    const enqClient = clients.find(c => c.id === enq.clientId);
+    return enqClient && enqClient.mobile && String(enqClient.mobile).trim() === mobile;
+  }).map(enq => {
+    return {
+      id: enq.id,
+      destination: enq.destination || "(No destination)",
+      category: enq.category || "Unknown",
+      status: enq.status || "Active",
+      createdAt: enq.createdAt || "",
+      staffName: typeof sName === "function" ? sName(enq.staffId) : "Unassigned",
+      enquiryNo: enq.enquiryNo || ""
+    };
+  });
+}
+
+// Called when staff selects a client in the dropdown — shows early warning if duplicates exist
+function checkClientDuplicateEnquiries() {
+  const clientSel = document.getElementById("e-client");
+  const warningDiv = document.getElementById("duplicate-enq-warning");
+  if(!clientSel || !warningDiv) return;
+
+  const clientId = clientSel.value;
+  if(!clientId || clientId === "0") {
+    warningDiv.style.display = "none";
+    return;
+  }
+
+  const existing = findExistingEnquiries(clientId);
+  if(existing.length === 0) {
+    warningDiv.style.display = "none";
+    return;
+  }
+
+  // Show warning with count and a summary
+  const client = clients.find(c => c.id === clientId);
+  const clientName = client ? cName(client.id) : "this client";
+  
+  let summary = existing.slice(0, 3).map(e => 
+    `• ${e.destination} (${e.category}) - ${e.status} - by ${e.staffName}`
+  ).join("<br>");
+  
+  if(existing.length > 3) {
+    summary += `<br>• ... and ${existing.length - 3} more`;
+  }
+
+  warningDiv.innerHTML = `
+    <strong>⚠️ Warning: ${clientName} already has ${existing.length} enquiry/enquiries:</strong><br>
+    <div style="margin-top:6px;font-size:12px;line-height:1.6">${summary}</div>
+    <div style="margin-top:8px;font-size:12px">
+      <a href="#" onclick="viewEnquiries('${clientId}'); return false;" style="color:#c2410c;font-weight:600;text-decoration:underline">View all enquiries for this client</a>
+    </div>
+  `;
+  warningDiv.style.display = "block";
+}
+
+// Pre-save confirmation modal — asks if staff really want to create another enquiry
+async function confirmDuplicateEnquiry(clientId) {
+  const existing = findExistingEnquiries(clientId);
+  if(existing.length === 0) return true; // No duplicates, proceed
+
+  const client = clients.find(c => c.id === clientId);
+  const clientName = client ? cName(client.id) : "this client";
+
+  const summary = existing.map(e => 
+    `  • ${e.destination} (${e.category}) - ${e.status} - by ${e.staffName}`
+  ).join("\n");
+
+  const confirmed = confirm(
+    `⚠️ DUPLICATE ENQUIRY WARNING\n\n` +
+    `${clientName} already has ${existing.length} existing enquiry/enquiries:\n\n` +
+    `${summary}\n\n` +
+    `Are you sure you want to create ANOTHER enquiry for this client?\n\n` +
+    `👉 Click OK to create it anyway (if this is genuinely a new trip)\n` +
+    `👉 Click Cancel to stop and check the existing enquiries first`
+  );
+
+  return confirmed;
+}
+
 async function saveEnquiry(isEdit) {
   const clientSel = document.getElementById("e-client");
   if(!clientSel || !clientSel.value || clientSel.value==="0") return alert("⚠️ Please select a Client!");
+
+  // ─── SAFETY CHECK: prevent wrong-client bug ───
+  // If the enquiry was opened via "Generate Enquiry" from a specific client, that client's ID
+  // was stored in _prefilledClientId. If the dropdown silently fell back to a different client
+  // (because the client list reloaded or the ID wasn't in the dropdown), save would use the
+  // WRONG client. If there's a mismatch, default to saving for the INTENDED client — that's
+  // the safe choice when in doubt.
+  if(!isEdit && window._prefilledClientId && window._prefilledClientId !== clientSel.value) {
+    const intendedClient = clients.find(c => c.id === window._prefilledClientId);
+    const actualClient   = clients.find(c => c.id === clientSel.value);
+    const intendedName = intendedClient ? `${intendedClient.firstName||""} ${intendedClient.lastName||""}`.trim() : "(unknown)";
+    const actualName   = actualClient   ? `${actualClient.firstName||""} ${actualClient.lastName||""}`.trim()   : "(unknown)";
+
+    if(intendedClient) {
+      // We have a valid intended client — offer to use it (safe default)
+      const useIntended = confirm(
+        `⚠️ CLIENT MISMATCH DETECTED\n\n` +
+        `You opened this enquiry for: ${intendedName}\n` +
+        `But the form is trying to save for: ${actualName}\n\n` +
+        `This usually happens due to a leftover draft from a previous session.\n\n` +
+        `👉 Click OK to save correctly for ${intendedName} (recommended).\n` +
+        `👉 Click Cancel if you actually meant ${actualName} — you'll need to unlock the client first.`
+      );
+      if(useIntended) {
+        // Force the save to use the intended (locked) client
+        clientSel.value = window._prefilledClientId;
+      } else {
+        // User explicitly wants the other client — but we can't silently allow that
+        // because the green lock panel said someone else. Refuse and make them unlock.
+        return alert(
+          `To save this enquiry for ${actualName}, please click "Change" on the green client panel first to unlock it, then select ${actualName} manually.\n\nThis prevents accidental wrong-client saves.`
+        );
+      }
+    } else {
+      // Intended client not found (deleted?) — refuse to proceed
+      return alert("⚠️ The client this enquiry was opened for could not be found. Please close this form and start again.");
+    }
+  }
+
+  // Verify the selected client actually exists in our client list (catches stale IDs)
+  const selectedClient = clients.find(c => c.id === clientSel.value);
+  if(!selectedClient) {
+    return alert("⚠️ The selected client could not be found. Please close this form and try again.");
+  }
+
+  // ─── DUPLICATE ENQUIRY CHECK (only for new enquiries, not edits) ───
+  // Check if this client already has enquiries. If yes, ask for confirmation before creating another.
+  if(!isEdit) {
+    const shouldProceed = await confirmDuplicateEnquiry(clientSel.value);
+    if(!shouldProceed) {
+      return; // User cancelled — don't save
+    }
+  }
+
   const gv = id => document.getElementById(id)?.value?.trim() || "";
   const gi = id => parseInt(document.getElementById(id)?.value)||0;
 
@@ -6392,7 +6702,7 @@ async function del(arr,id) {
                  : data.name||data.clientName||data.destination||data.title||id;
     }
     await trashMove(col, id, data, sectionLabels[arr]||arr, itemName);
-    if(arr==="clients")   clients   =clients.filter(x=>x.id!==id);
+    if(arr==="clients")   { clients = clients.filter(x=>x.id!==id); _rebuildClientNameCache(); }
     if(arr==="enquiries") enquiries =enquiries.filter(x=>x.id!==id);
     if(arr==="bookings")  allBookings=allBookings.filter(x=>x.id!==id);
     if(arr==="tasks")     tasks     =tasks.filter(x=>x.id!==id);
@@ -6712,7 +7022,7 @@ function updateEnqForm(ex) {
 
   const domDestSel = (destId, label) => `
     <div class="fg"><label>${label}</label>
-      <select id="eq-state" onchange="eqLoadCities('dom')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
+      <select id="${destId}" onchange="eqLoadCities('dom')" style="width:100%;padding:9px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;outline:none">
         <option value="">-- Select State --</option>
         ${Object.keys(BK_DOM_CITY_MAP).sort().map(s=>'<option value="'+s+'">'+s+'</option>').join("")}
       </select>
@@ -8269,6 +8579,23 @@ function qbGenerateQuoteNo() {
 let qbPreviewMode = false;
 let qbSavedQuotes = [];
 
+// ─── Bug 1 fix: Auto-title-case on all Quotation Builder editable fields ───
+// Handles every case: "wHy" → "Why", "WHY" → "Why", "wHY" → "Why", "hello world" → "Hello World",
+// as well as pasted text from outside the CRM.
+// Runs on BLUR (when user clicks away) — doesn't disrupt typing mid-word.
+// Paste handling is done in qbInitPasteHandler below so there's only one source of truth.
+function qbTitleCase(text) {
+  if(!text) return '';
+  // Lowercase the entire word, then uppercase the first letter.
+  // This is what fixes "WHY" → "Why", "wHY" → "Why", "wHy" → "Why".
+  // \S+ matches non-whitespace, so "  Hello   World" keeps its spacing.
+  // The inner replace finds the first letter (skipping leading punctuation like "(04" → "(04") and uppercases it.
+  return text.replace(/\S+/g, word => {
+    const lower = word.toLowerCase();
+    return lower.replace(/[a-z]/, c => c.toUpperCase());
+  });
+}
+
 // ── Default template data ──
 function qbDefaultData() {
   return {
@@ -8464,7 +8791,7 @@ function qbRenderDocument(data) {
 
     <!-- Image Section -->
     <div class="qb-section" id="qb-images-section">
-      <div id="qb-images-grid" style="display:grid;grid-template-columns:${data.images.length===1?'1fr':'1fr 1fr'};gap:8px;margin-bottom:8px">
+      <div id="qb-images-grid" style="display:grid;grid-template-columns:${data.images.length===1?'1fr':data.images.length===2?'1fr 1fr':data.images.length===4?'1fr 1fr':'1fr 1fr 1fr'};gap:8px;margin-bottom:8px">
         ${data.images.map((img,i) => qbImageCell(img, i)).join('')}
         ${data.images.length === 0 ? '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet — use the button below to add</div>' : ''}
       </div>
@@ -8791,8 +9118,12 @@ function qbDayBlock(d, i) {
 }
 
 function qbImageCell(img, i) {
-  const isSingle = _qbImages.length === 1;
-  const imgHeight = isSingle ? '280px' : '160px';
+  // Bug 3 fix: image height adjusts based on grid layout to look balanced at any count
+  const n = _qbImages.length;
+  const imgHeight = n === 1 ? '280px'     // single wide image
+                  : n === 2 ? '200px'     // two side by side
+                  : n === 4 ? '180px'     // 2×2 grid
+                  : '140px';              // 3-column layout (3, 5, 6+ images)
   return `<div style="position:relative;background:#f1f5f9;border-radius:8px;overflow:hidden;min-height:${imgHeight}">
     <img src="${img}" style="width:100%;height:${imgHeight};object-fit:cover" onerror="this.style.display='none'">
     <button onclick="qbRemoveImage(${i})" class="qb-no-print" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:4px;padding:2px 6px;font-size:11px;cursor:pointer">✕</button>
@@ -8872,9 +9203,20 @@ function qbReplaceImage(i) {
 function qbRefreshImages() {
   const grid = document.getElementById('qb-images-grid');
   if(!grid) return;
-  const cols = _qbImages.length === 1 ? '1fr' : '1fr 1fr';
+  // ─── Bug 3 fix: smart grid columns based on image count ───
+  //   0: empty placeholder
+  //   1: single column (full width)
+  //   2: two columns
+  //   3: three columns (no blank cell)
+  //   4: 2×2 grid
+  //   5+: three-column grid (will wrap into multiple rows naturally, no blanks)
+  const n = _qbImages.length;
+  const cols = n === 1 ? '1fr'
+             : n === 2 ? '1fr 1fr'
+             : n === 4 ? '1fr 1fr'
+             : '1fr 1fr 1fr'; // 3, 5, 6, 7, ...
   grid.style.gridTemplateColumns = cols;
-  grid.innerHTML = _qbImages.length
+  grid.innerHTML = n
     ? _qbImages.map((img,i) => qbImageCell(img,i)).join('')
     : '<div style="grid-column:1/-1;border:2px dashed #cbd5e1;border-radius:8px;padding:20px;text-align:center;color:#94a3b8;font-size:12px">No images yet</div>';
 }
@@ -9055,16 +9397,25 @@ function qbInitPasteHandler() {
   const doc = document.getElementById('qb-document');
   if(!doc) return;
 
-  // ── Block copy/cut from the entire quotation canvas ──
-  doc.addEventListener('copy',  e => { e.preventDefault(); });
-  doc.addEventListener('cut',   e => { e.preventDefault(); });
-  doc.addEventListener('contextmenu', e => { e.preventDefault(); });
+  // Note: copy/cut/context-menu used to be blocked here — removed per user request
+  // so staff can copy text between fields inside the CRM.
 
-  // ── Paste: strip formatting, plain text only ──
+  // ── Bug 1 fix: auto-title-case on blur (when user clicks away from an editable field) ──
+  // Using `focusout` (not `blur`) so it bubbles — one listener covers all current AND future editables.
+  doc.addEventListener('focusout', function(e) {
+    const el = e.target.closest('.qb-editable');
+    if(!el) return;
+    const before = el.innerText;
+    const after = qbTitleCase(before);
+    if(before !== after) el.innerText = after;
+  });
+
+  // ── Paste: strip formatting, plain text only, AND auto-title-case (Bug 1 fix) ──
   doc.addEventListener('paste', function(e) {
     if(!e.target.closest('.qb-editable')) return;
     e.preventDefault();
-    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const raw = (e.clipboardData || window.clipboardData).getData('text/plain');
+    const text = qbTitleCase(raw); // auto-format on paste from outside
     const sel = window.getSelection();
     if(!sel.rangeCount) return;
     sel.deleteFromDocument();
@@ -9077,32 +9428,32 @@ function qbInitPasteHandler() {
     sel.addRange(range);
   });
 
-  // ── Input rules: numbers-only + title case ──
+  // ── Input rules: numbers-only + title case (Bug 1 fix) ──
+  // On every keystroke:
+  //   1. Pricing number columns stay numbers-only (unchanged)
+  //   2. Flight date/time/baggage stay untouched (numbers, codes like "30KG + 7KG")
+  //   3. Everything else gets title-cased properly via qbTitleCase() —
+  //      which correctly handles WHY → Why, wHY → Why, wHy → Why, including
+  //      the itinerary day content (user wants title case everywhere, no sentence case).
   doc.addEventListener('input', function(e) {
     const el = e.target;
     if(!el.classList.contains('qb-editable')) return;
 
-    const tag  = el.closest('td, li, div');
-    const row  = el.closest('tr');
-    const td   = el.closest('td');
+    const row = el.closest('tr');
+    const td  = el.closest('td');
 
-    // Identify column index in table rows
+    // Column index inside a table row (for pricing/flight exclusions)
     let colIdx = -1;
-    if(row && td) {
-      colIdx = [...row.querySelectorAll('td')].indexOf(td);
-    }
+    if(row && td) colIdx = [...row.querySelectorAll('td')].indexOf(td);
 
-    // ── Number-only fields ──
-    // Pricing table: col 1 = Flight Fare, col 2 = Land Package, col 3 = Total
+    // ── Number-only fields (pricing cols 1/2/3) ──
     const isPricingRow = row?.closest('#qb-pricing-table');
     const isNumberField = isPricingRow && (colIdx === 1 || colIdx === 2 || colIdx === 3);
-
     if(isNumberField) {
       const pos = window.getSelection()?.anchorOffset || 0;
       const cleaned = el.innerText.replace(/[^0-9.,]/g, '');
       if(el.innerText !== cleaned) {
         el.innerText = cleaned;
-        // Restore caret position
         try {
           const range = document.createRange();
           const sel2  = window.getSelection();
@@ -9113,64 +9464,34 @@ function qbInitPasteHandler() {
           sel2.addRange(range);
         } catch(ex) {}
       }
-      return; // skip title case for number fields
-    }
-
-    // ── Title Case: first letter of every word capitalised ──
-    // Applied to: package title, duration, subtitle, day titles,
-    // airline, sector, destination, hotel name, room, inclusions, exclusions
-    // Skip: day content (handled separately below), baggage, time, date
-    const isDayContent  = el.closest('.qb-day-block') && !el.classList.contains('qb-day-title');
-    const isBaggageCol  = row?.closest('#qb-flights-table') && colIdx === 4;
-    const isTimeCol     = row?.closest('#qb-flights-table') && colIdx === 3;
-    const isDateCol     = row?.closest('#qb-flights-table') && colIdx === 0;
-    const skipTitleCase = isDayContent || isBaggageCol || isTimeCol || isDateCol;
-
-    // ── Sentence case for day content ──
-    // Rule: First letter of each sentence always capital, everything else forced lowercase
-    if(isDayContent && el.innerText.length > 0) {
-      const original = el.innerText;
-      const sel3 = window.getSelection();
-      const offset = sel3?.anchorOffset || 0;
-
-      // Split into sentences, capitalize first letter, force rest to lowercase
-      const converted = original
-        .toLowerCase()
-        .replace(/(^\s*\w|[.!?]\s+\w)/g, c => c.toUpperCase());
-
-      if(original !== converted) {
-        el.innerText = converted;
-        try {
-          const range2 = document.createRange();
-          const sel4   = window.getSelection();
-          const tnode  = el.firstChild || el;
-          range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
-          range2.collapse(true);
-          sel4.removeAllRanges();
-          sel4.addRange(range2);
-        } catch(ex) {}
-      }
       return;
     }
 
-    if(!skipTitleCase && el.innerText.length > 0) {
-      const original = el.innerText;
-      // Convert: first letter of each word to uppercase, rest lowercase
-      const converted = original.replace(/(?:^|\s)\S/g, c => c.toUpperCase());
-      if(original !== converted) {
-        const sel3 = window.getSelection();
-        const offset = sel3?.anchorOffset || 0;
-        el.innerText = converted;
-        try {
-          const range2 = document.createRange();
-          const sel4   = window.getSelection();
-          const tnode  = el.firstChild || el;
-          range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
-          range2.collapse(true);
-          sel4.removeAllRanges();
-          sel4.addRange(range2);
-        } catch(ex) {}
-      }
+    // ── Skip title-case for fields where it would break things ──
+    // Flight table: baggage (col 4 — contains "KG+", "7KG+7KG"), time (col 3 — "09:05 - 10:30"),
+    // date (col 0 — "04 May 2026" works either way but codes shouldn't change case)
+    const isBaggageCol = row?.closest('#qb-flights-table') && colIdx === 4;
+    const isTimeCol    = row?.closest('#qb-flights-table') && colIdx === 3;
+    const isDateCol    = row?.closest('#qb-flights-table') && colIdx === 0;
+    if(isBaggageCol || isTimeCol || isDateCol) return;
+
+    // ── Title-case everything else, including day content ──
+    if(el.innerText.length === 0) return;
+    const original = el.innerText;
+    const converted = qbTitleCase(original);
+    if(original !== converted) {
+      const sel3 = window.getSelection();
+      const offset = sel3?.anchorOffset || 0;
+      el.innerText = converted;
+      try {
+        const range2 = document.createRange();
+        const sel4   = window.getSelection();
+        const tnode  = el.firstChild || el;
+        range2.setStart(tnode, Math.min(offset, (tnode.textContent||'').length));
+        range2.collapse(true);
+        sel4.removeAllRanges();
+        sel4.addRange(range2);
+      } catch(ex) {}
     }
   });
 
@@ -10919,7 +11240,7 @@ async function restoreItem(trashId) {
     // Refresh the restored item's section in local data immediately
     const col = item.originalCollection;
     const restoredData = { ...item.originalData, id: item.originalDocId };
-    if(col === 'clients')    { clients.push(restoredData); renderClients(); }
+    if(col === 'clients')    { clients.push(restoredData); _rebuildClientNameCache(); renderClients(); }
     else if(col === 'enquiries') { enquiries.push(restoredData); renderEnquiries(); }
     else if(col === 'bookings')  { allBookings.push(restoredData); renderBookings(); }
     else if(col === 'tasks')     { tasks.push(restoredData); renderTasks(); }
@@ -11980,8 +12301,21 @@ async function importClientExcel(event, importCategory) {
     const existingMobiles = new Set(clients.map(c => String(c.mobile||"").replace(/\D/g,"")));
 
     let imported = 0, skipped = 0, errors = 0;
-    const BATCH = 10;
 
+    // ─── Fix: suppress re-renders during bulk import ───
+    window._importInProgress = true;
+
+    // ─── Fix: Firestore batched writes (up to 500 per batch, we use 400 for safety) ───
+    const BATCH_SIZE = 400;
+    let currentBatch = db.batch();
+    let batchCount = 0;
+
+    // Common metadata for every imported client
+    const nowIso = new Date().toISOString();
+    const createdById = CURRENT_USER ? CURRENT_USER.id : 0;
+    const createdByName = CURRENT_USER ? CURRENT_USER.name : "Unknown";
+
+    try {
     for(let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
@@ -11994,6 +12328,20 @@ async function importClientExcel(event, importCategory) {
         return "";
       };
 
+      // ─── Fuzzy matcher for common misspellings (e.g. "MOBAIL" instead of "MOBILE") ───
+      // Only runs when exact matches failed — won't change behavior for properly named columns.
+      // Takes an array of prefixes (like ["mob","phon"]) and returns first matching column value.
+      const getColByPrefix = (prefixes) => {
+        for(const prefix of prefixes) {
+          const found = Object.keys(row).find(r => {
+            const clean = r.toLowerCase().trim().replace(/[^a-z]/g,""); // strip spaces, dots, digits
+            return clean.startsWith(prefix);
+          });
+          if(found && row[found] !== undefined && row[found] !== "") return String(row[found]).trim();
+        }
+        return "";
+      };
+
       // Support both separate first/last name columns AND combined "Name" column
       const firstName   = toTitleCase(getCol("First Name","firstname","first_name","fname") ||
                           getCol("Account Name","Name","name","account name","full name","fullname").split(/\s+/)[0] || "");
@@ -12001,8 +12349,13 @@ async function importClientExcel(event, importCategory) {
                           (() => { const n = getCol("Account Name","Name","name","account name","full name","fullname").trim().split(/\s+/); return n.slice(1).join(" "); })();
       const lastName    = toTitleCase(lastNameRaw);
       const companyName = toTitleCase(getCol("Company Name","company","company name","firm","organisation","organization","firm name"));
-      const mobile      = getCol("Mobile","mobile","Mobile No","Mobile Number","mob","phone","Phone","Phone No","contact");
-      const email       = getCol("Email","email","e-mail","E-mail","E Mail","mail");
+      // Mobile: try exact matches first (including common misspellings), then fuzzy prefix match
+      const mobile      = getCol("Mobile","mobile","Mobile No","Mobile Number","mob","phone","Phone","Phone No","contact",
+                                  "MOBAIL","Mobail","mobail","MOBIEL","Mobiel","mobiel","MOBILR","Mobilr","mobilr",
+                                  "Cell","cell","Cell No","Cellphone","WhatsApp","WhatsApp No","Whatsapp")
+                          || getColByPrefix(["mob","phon","cell","whats"]);
+      const email       = getCol("Email","email","e-mail","E-mail","E Mail","mail")
+                          || getColByPrefix(["email","mail","eml"]);
       const city        = toTitleCase(getCol("City","city","town"));
       const state       = toTitleCase(getCol("State","state"));
       const pincode     = getCol("Pincode","pincode","pin code","pin","zip","zipcode","postal code");
@@ -12014,17 +12367,24 @@ async function importClientExcel(event, importCategory) {
       const kycDate     = getCol("KYC Date","kyc date");
       // phone handled in mobile fallback above
 
-      // Skip empty rows
-      if(!firstName && !lastName && !companyName) { skipped++; continue; }
-
-      // Clean mobile
+      // ─── Fix: skip a row ONLY if it has absolutely nothing usable.
+      // Previously this skipped rows that had a mobile but no name, which meant
+      // Excel files containing just phone numbers were fully discarded.
+      // Now: as long as there's at least a name, company, OR mobile, keep it.
+      // Clean mobile first so we can check it in the empty-row test.
       const cleanMobile = String(mobile||"").replace(/\D/g,"").slice(-10);
+
+      // Truly empty row — nothing to save
+      if(!firstName && !lastName && !companyName && !cleanMobile) {
+        skipped++;
+        continue;
+      }
 
       // Skip duplicate mobiles
       if(cleanMobile && existingMobiles.has(cleanMobile)) { skipped++; continue; }
       if(cleanMobile) existingMobiles.add(cleanMobile);
 
-      // Save to Firestore
+      // Queue this client in the current Firestore batch
       try {
         const data = {
           firstName, lastName,
@@ -12043,28 +12403,67 @@ async function importClientExcel(event, importCategory) {
           kycDate: kycDate || "",
           clientCategory: importCategory || "Regular",
           importedFrom: file.name,
+          createdAt: nowIso,
+          createdBy: createdById,
+          createdByName: createdByName,
         };
-        await fbAdd("clients", data);
+        const newRef = db.collection("clients").doc(); // auto-generate ID
+        currentBatch.set(newRef, data);
+        batchCount++;
         imported++;
+
+        // Commit batch when full, then start a new one
+        if(batchCount >= BATCH_SIZE) {
+          await currentBatch.commit();
+          currentBatch = db.batch();
+          batchCount = 0;
+        }
       } catch(err) {
         errors++;
         console.warn("Row error:", err, row);
       }
 
-      // Update progress
-      const pct = Math.round(((i+1) / rows.length) * 90) + 10;
-      setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+      // Update progress (every 25 rows to avoid UI churn)
+      if(i % 25 === 0 || i === rows.length - 1) {
+        const pct = Math.round(((i+1) / rows.length) * 90) + 10;
+        setProgress(pct, `Importing... ${i+1} of ${rows.length}`, `✅ ${imported} imported · ⏭️ ${skipped} skipped`);
+      }
+    }
 
-      // Batch delay to avoid Firebase rate limits
-      if((i+1) % BATCH === 0) await new Promise(r => setTimeout(r, 200));
+    // Commit any leftover items in the final batch
+    if(batchCount > 0) {
+      await currentBatch.commit();
+    }
+
+    } finally {
+      // ─── Fix: always clear the import flag and do one final render ───
+      window._importInProgress = false;
+      try { renderAll(); } catch(e) { console.warn("post-import render:", e); }
     }
 
     setProgress(100, "Import complete!", `✅ ${imported} imported · ⏭️ ${skipped} skipped · ❌ ${errors} errors`);
     await new Promise(r => setTimeout(r, 1500));
     document.getElementById("import-overlay")?.remove();
-    alert(`✅ Import complete!\n\n• ${imported} clients imported\n• ${skipped} skipped (duplicates or empty)\n• ${errors} errors`);
+
+    // ─── Diagnostic: if 0 imported from a non-empty file, show column headers found ───
+    // so the user can quickly spot misspellings (e.g. "MOBAIL" instead of "Mobile")
+    if(imported === 0 && rows.length > 0) {
+      const headersFound = rows.length > 0 ? Object.keys(rows[0]).join(", ") : "(none detected)";
+      alert(
+        `⚠️ Import completed but 0 clients were saved.\n\n` +
+        `• ${skipped} rows were skipped (duplicates or empty)\n` +
+        `• ${errors} errors\n\n` +
+        `Column headers detected in your file:\n${headersFound}\n\n` +
+        `The import expects columns like: Mobile (or Phone), First Name, Last Name, Email, City.\n` +
+        `If your file uses a different name (e.g. "MOBAIL" or "Contact No"), either rename the column in Excel, ` +
+        `or tell me what names your file uses so I can add support for them.`
+      );
+    } else {
+      alert(`✅ Import complete!\n\n• ${imported} clients imported\n• ${skipped} skipped (duplicates or empty)\n• ${errors} errors`);
+    }
 
   } catch(err) {
+    window._importInProgress = false; // safety reset if outer try failed before flag set
     document.getElementById("import-overlay")?.remove();
     console.error("Import error:", err);
     alert("❌ Import failed: " + err.message + "\n\nMake sure the file is a valid .xls or .xlsx file.");
@@ -13478,6 +13877,7 @@ async function _fmktMoveToClient(visitId) {
       const ref = await db.collection("clients").add(newClient);
       clientId = ref.id;
       clients.push({ id: clientId, ...newClient });
+      _rebuildClientNameCache();
       alert(`✅ New client created: ${firstName} ${lastName}`);
     }
 
@@ -14296,6 +14696,7 @@ async function _fmktAutoCreateEnquiry(phone, visitId) {
     };
     const cRef = await db.collection("clients").add(newClient);
     clients.push({id:cRef.id,...newClient});
+    _rebuildClientNameCache();
     // Create enquiry
     const enqNo = await generateENQNumber();
     const newEnq = {
